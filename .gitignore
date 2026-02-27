@@ -2,6 +2,7 @@
 openig_home/logs/
 openig_home/tmp/
 openig_home/data/
+/tmp/
 
 # Docker volumes (nếu mount local)
 mysql_data/
@@ -14,3 +15,4 @@ wordpress_data/
 .idea/
 *.iml
 .vscode/
+*.log
