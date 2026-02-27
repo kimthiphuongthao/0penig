@@ -1,7 +1,7 @@
 {
-    "name": "wordpress-sso",
-    "baseURI": "http://wordpress",
-    "condition": "${not(matches(request.uri.path, '^/openig')) and not(matches(request.uri.path, '^/app2'))}",
+    "name": "app2-whoami",
+    "baseURI": "http://whoami",
+    "condition": "${matches(request.uri.path, '^/app2(/.*)?$')}",
     "heap": [
         {
             "name": "KeycloakIssuer",
@@ -61,25 +61,30 @@
             }
         },
         {
-            "name": "WpCredentialLookup",
-            "type": "FileAttributesFilter",
+            "name": "App2HeaderFilter",
+            "type": "HeaderFilter",
             "config": {
-                "file": "/opt/openig/credentials/credentials.csv",
-                "key": "keycloak_username",
-                "value": "${attributes.openid['user_info']['preferred_username']}",
-                "target": "${attributes.wp_credentials}"
+                "messageType": "REQUEST",
+                "add": {
+                    "X-Authenticated-User": [
+                        "${attributes.openid != null && attributes.openid['user_info'] != null && attributes.openid['user_info']['preferred_username'] != null ? attributes.openid['user_info']['preferred_username'] : 'anonymous'}"
+                    ],
+                    "X-OpenIG-Node": [
+                        "${env['OPENIG_NODE_NAME'] != null ? env['OPENIG_NODE_NAME'] : 'unknown'}"
+                    ]
+                }
             }
         },
         {
-            "name": "WpSessionInjector",
+            "name": "App2PathStripper",
             "type": "ScriptableFilter",
             "config": {
                 "type": "application/x-groovy",
-                "file": "CredentialInjector.groovy"
+                "source": "def path = request.uri.path ?: '/'\nif (path.startsWith('/app2')) {\n    def newPath = path.substring(5)\n    if (newPath.isEmpty()) {\n        newPath = '/'\n    } else if (!newPath.startsWith('/')) {\n        newPath = '/' + newPath\n    }\n    request.uri.path = newPath\n}\nreturn next.handle(context, request)"
             }
         },
         {
-            "name": "WordPressProxy",
+            "name": "App2Proxy",
             "type": "ClientHandler",
             "config": {
                 "soTimeout": "10 seconds"
@@ -91,10 +96,10 @@
         "config": {
             "filters": [
                 "OidcFilter",
-                "WpCredentialLookup",
-                "WpSessionInjector"
+                "App2HeaderFilter",
+                "App2PathStripper"
             ],
-            "handler": "WordPressProxy"
+            "handler": "App2Proxy"
         }
     }
 }

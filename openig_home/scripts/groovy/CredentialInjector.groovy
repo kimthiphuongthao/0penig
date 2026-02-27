@@ -108,8 +108,12 @@ if (wpSessionCookies == null || wpSessionCookies.isEmpty()) {
         conn.disconnect()
 
     } catch (Exception e) {
-        logger.error("[CredentialInjector] Exception during WP login for '" + wpUsername + "': " + e.message)
-        // Non-fatal: continue, WordPress will show its login page
+        logger.error("[CredentialInjector] Exception during WP login for '" + wpUsername + "'", e)
+        session.remove('wp_session_cookies')
+        def errResp = new Response(Status.BAD_GATEWAY)
+        errResp.entity.setString("<html><body><h2>SSO login failed. Please retry or contact support.</h2></body></html>")
+        errResp.headers.put('Content-Type', ['text/html'])
+        return errResp
     }
 }
 

@@ -1,0 +1,15 @@
+{
+    "name": "00-wp-logout-intercept",
+    "condition": "${matches(request.uri.path, '^/wp-login[.]php$') and request.uri.query != null and matches(request.uri.query, '(^|&)action=logout($|&)')}",
+    "handler": {
+        "type": "StaticResponseHandler",
+        "config": {
+            "status": 302,
+            "reason": "Found",
+            "headers": {
+                "Location": [ "/openid/logout" ]
+            },
+            "entity": ""
+        }
+    }
+}

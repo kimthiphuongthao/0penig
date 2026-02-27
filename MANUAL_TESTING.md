@@ -57,6 +57,7 @@ Tài liệu này hướng dẫn chi tiết từng bước kiểm thử luồng S
 Sau khi Pass **Bước 5** (bạn đang ở Dashboard WordPress):
 
 1. **Test Stickyness:** Hãy thử click vòng quanh các menu trong WordPress (VD: Posts, Pages). Mọi thứ phản hồi nhanh chóng (HTTP 200). Bạn vẫn luôn kết nối với cùng 1 node OpenIG nhờ thiết lập `hash $cookie_JSESSIONID` trên Nginx.
+   - Mở thêm tab `http://localhost/app2/` để xem header `X-OpenIG-Node` hiển thị node nào (openig-1 hoặc openig-2) đang phục vụ.
 2. **Test Failover:** Bạn có thể qua terminal, stop 1 node OpenIG hiện tại đang chạy (VD: `docker compose stop openig-1`). Sau đó quay lại Browser, nhấn F5 / Refresh lại trang WordPress:
    - Request sẽ được đẩy sang node OpenIG còn lại.
    - Vì OpenIG dùng chung `JWT_SHARED_SECRET` và token Keycloak có hiệu lực, bạn vẫn sẽ duy trì session và nhìn thấy Dashboard WordPress mà không bị "văng" ra bắt đăng nhập lại.
@@ -70,5 +71,45 @@ Sau khi Pass **Bước 5** (bạn đang ở Dashboard WordPress):
    - **Username:** `bob`
    - **Password:** `bob123`
 3. **Kỳ vọng:** Bạn sẽ truy cập vào WordPress thành công, nhưng với tư cách là `bob` (vai trò Author — sẽ thấy ít menu admin hơn alice).
+
+---
+
+## 🧪 Kịch bản: Single Logout (SLO) — Đăng xuất đồng thời 2 ứng dụng
+
+Kịch bản này chứng minh rằng khi đăng xuất khỏi **một ứng dụng**, tất cả các ứng dụng còn lại trong hệ thống **đều bị đăng xuất theo** — đây là tính năng Single Logout (SLO).
+
+### Bước 1: Truy cập App2 (ứng dụng thứ hai)
+1. Mở cửa sổ ẩn danh mới.
+2. Vào địa chỉ: `http://localhost/app2/`
+3. **Kỳ vọng:** Trình duyệt redirect sang Keycloak login. Đăng nhập với `alice/alice123`.
+4. Sau khi đăng nhập, trang hiển thị thông tin request headers, trong đó có dòng:
+   - `X-Authenticated-User: alice`
+   - `X-OpenIG-Node: openig-1` *(hoặc `openig-2` tùy node đang phục vụ)*
+   → Xác nhận App2 đã nhận diện được user qua SSO và node đang xử lý request.
+
+### Bước 2: Truy cập WordPress trong cùng phiên (SSO)
+1. Trong **cùng cửa sổ trình duyệt đó**, mở tab mới, vào: `http://localhost/wp-admin/`
+2. **Kỳ vọng:** WordPress Dashboard hiển thị **ngay lập tức, không cần đăng nhập lại**.
+   → Chứng minh SSO: cùng một phiên Keycloak, cả 2 app đều được xác thực.
+
+### Bước 3: Đăng xuất khỏi WordPress
+1. Trong tab WordPress, click vào tên `alice` góc trên phải → chọn **Log Out**.
+2. **Kỳ vọng ngầm (tự động):**
+   - OpenIG chặn request logout (`/wp-login.php?action=logout`).
+   - Redirect sang `/openid/logout` → OpenIG xóa session JSESSIONID.
+   - Tiếp tục redirect sang Keycloak end_session endpoint → Keycloak hủy phiên SSO.
+
+### Bước 4: Kiểm tra SLO trên App2
+1. Quay lại tab đang mở `http://localhost/app2/`, nhấn **F5** (Refresh).
+2. **Tiêu chuẩn đạt (Pass Criteria):**
+   - Trình duyệt **redirect về trang đăng nhập Keycloak** — không hiển thị nội dung App2.
+   - URL trên thanh địa chỉ chuyển sang dạng `http://localhost:8080/realms/sso-realm/...`
+   → **SLO thành công**: dù chưa logout trực tiếp trên App2, App2 đã bị đăng xuất theo.
+
+### Bước 5: Kiểm tra lại WordPress
+1. Vào lại `http://localhost/wp-admin/`.
+2. **Tiêu chuẩn đạt:** Redirect về Keycloak login — không còn truy cập được Dashboard.
+
+> **Tóm tắt SLO:** Một lần đăng xuất trên WordPress → cả WordPress lẫn App2 đều yêu cầu đăng nhập lại. Keycloak đóng vai trò trung tâm xóa phiên SSO cho toàn hệ thống.
 
 Chúc bạn test thành công!

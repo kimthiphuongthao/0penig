@@ -59,6 +59,7 @@ services:
       JWT_SHARED_SECRET: "U1NPLUxhYi1Kd3RTZWNyZXQtMzJieXRlcy1LRVlcIVwh"
       KEYCLOAK_INTERNAL_URL: "http://keycloak:8080"
       KEYCLOAK_BROWSER_URL: "http://localhost:8080"
+      OPENIG_NODE_NAME: "openig-1"
     networks:
       - backend
     depends_on:
@@ -82,6 +83,7 @@ services:
       JWT_SHARED_SECRET: "U1NPLUxhYi1Kd3RTZWNyZXQtMzJieXRlcy1LRVlcIVwh"
       KEYCLOAK_INTERNAL_URL: "http://keycloak:8080"
       KEYCLOAK_BROWSER_URL: "http://localhost:8080"
+      OPENIG_NODE_NAME: "openig-2"
     networks:
       - backend
     depends_on:
@@ -152,6 +154,16 @@ services:
     depends_on:
       mysql:
         condition: service_healthy
+    restart: unless-stopped
+
+  # ----------------------------------------------------------
+  # WhoAmI — simple header echo app for demo App2
+  # ----------------------------------------------------------
+  whoami:
+    image: traefik/whoami:latest
+    container_name: sso-whoami
+    networks:
+      - backend
     restart: unless-stopped
 
   # ----------------------------------------------------------

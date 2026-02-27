@@ -10,6 +10,7 @@ Mỗi khi anh muốn quay lại, chỉ cần nói:
 | # | Tag Git | Thời điểm | Mô tả trạng thái |
 |---|---------|-----------|-----------------|
 | **1** | `checkpoint/2026-02-27-working-state` | 2026-02-27 10:35 +07 | OpenIG HA working state — OIDC compliance check passed (0 critical, 5 warnings). Stack: Nginx → OpenIG-1/2 → WordPress ← Keycloak. CredentialInjector.groovy hoạt động. |
+| **2** | `checkpoint/2` | 2026-02-27 16:40 +07 | Single Logout (SLO) và HA Sticky Session Test PASSED. Đã cập nhật OpenIG nodes trả về Header phân biệt. Hoàn thiện Document. |
 
 ---
 

@@ -40,7 +40,10 @@
         "phone",
         "offline_access",
         "microprofile-jwt"
-      ]
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost/##http://localhost/wp-admin/##http://localhost/app2/"
+      }
     }
   ],
   "users": [
