@@ -1,0 +1,21 @@
+{
+    "heap": [
+        {
+            "name": "Router",
+            "type": "Router",
+            "config": {
+                "directory": "/opt/openig/config/routes"
+            }
+        },
+        {
+            "name": "JwtSession",
+            "type": "JwtSession",
+            "config": {
+                "cookieName": "IG_SSO",
+                "sessionTimeout": "8 hours",
+                "sharedSecret": "U1NPLUxhYi1Kd3RTZWNyZXQtMzJieXRlcy1LRVkhISE="
+            }
+        }
+    ],
+    "handler": "Router"
+}

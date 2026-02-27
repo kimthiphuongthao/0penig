@@ -1,0 +1,176 @@
+# ============================================================
+# SSO Lab: OpenIG (HA) + Keycloak + WordPress + MySQL
+# Browser  → Nginx (port 80) → openig-1 / openig-2
+#                                     ↓
+#                              WordPress (internal)
+#                                     ↑
+#                              Keycloak (port 8080, browser + internal)
+# ============================================================
+
+networks:
+  # Browser-facing: Nginx, Keycloak
+  frontend:
+    driver: bridge
+  # Internal only: OpenIG ↔ WordPress ↔ Keycloak ↔ MySQL
+  backend:
+    driver: bridge
+
+volumes:
+  mysql_data:
+  wordpress_data:
+
+services:
+
+  # ----------------------------------------------------------
+  # Load Balancer — Nginx
+  # Distributes traffic across openig-1 and openig-2
+  # ----------------------------------------------------------
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: sso-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - frontend
+      - backend
+    depends_on:
+      - openig-1
+      - openig-2
+    restart: unless-stopped
+
+  # ----------------------------------------------------------
+  # OpenIG node 1
+  # JwtSession sharedSecret must be identical on both nodes
+  # so any node can decrypt the session cookie from the other
+  # ----------------------------------------------------------
+  openig-1:
+    image: openidentityplatform/openig
+    platform: linux/amd64
+    container_name: sso-openig-1
+    user: root   # lab only — needed for write access to mounted volume on macOS
+    # NOT exposed to host — accessed only through Nginx
+    volumes:
+      - ./openig_home:/opt/openig
+      - ./docker/openig/server.xml:/usr/local/tomcat/conf/server.xml:ro
+    environment:
+      OPENIG_BASE: /opt/openig
+      JWT_SHARED_SECRET: "U1NPLUxhYi1Kd3RTZWNyZXQtMzJieXRlcy1LRVlcIVwh"
+      KEYCLOAK_INTERNAL_URL: "http://keycloak:8080"
+      KEYCLOAK_BROWSER_URL: "http://localhost:8080"
+    networks:
+      - backend
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ----------------------------------------------------------
+  # OpenIG node 2 — identical config to node 1
+  # ----------------------------------------------------------
+  openig-2:
+    image: openidentityplatform/openig
+    platform: linux/amd64
+    container_name: sso-openig-2
+    user: root   # lab only
+    volumes:
+      - ./openig_home:/opt/openig
+      - ./docker/openig/server.xml:/usr/local/tomcat/conf/server.xml:ro
+    environment:
+      OPENIG_BASE: /opt/openig
+      JWT_SHARED_SECRET: "U1NPLUxhYi1Kd3RTZWNyZXQtMzJieXRlcy1LRVlcIVwh"
+      KEYCLOAK_INTERNAL_URL: "http://keycloak:8080"
+      KEYCLOAK_BROWSER_URL: "http://localhost:8080"
+    networks:
+      - backend
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ----------------------------------------------------------
+  # Keycloak — SSO Provider
+  # Exposed on 8080 so browser can reach /realms/.../auth endpoint
+  # OpenIG uses Docker DNS (keycloak:8080) for token/userinfo calls
+  # ----------------------------------------------------------
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0
+    container_name: sso-keycloak
+    ports:
+      - "8080:8080"
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_DB: mysql
+      KC_DB_URL: jdbc:mysql://mysql:3306/keycloak?useSSL=false&allowPublicKeyRetrieval=true
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: keycloak_pass
+      KC_HOSTNAME: "localhost"
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+      # Import realm on startup if not already imported
+      KC_IMPORT: /opt/keycloak/data/import/realm-export.json
+    command: start-dev --import-realm
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import:ro
+    networks:
+      - frontend
+      - backend
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && timeout 3 cat <&3 | grep -q '200 OK'"]
+      interval: 15s
+      timeout: 10s
+      retries: 15
+      start_period: 90s
+    restart: unless-stopped
+
+  # ----------------------------------------------------------
+  # WordPress — Legacy App (simulated)
+  # NOT exposed to host — browser must go through OpenIG
+  # OpenIG injects WP credentials on behalf of user
+  # ----------------------------------------------------------
+  wordpress:
+    image: wordpress:6-apache
+    container_name: sso-wordpress
+    # port 80 only on backend network — not exposed
+    environment:
+      WORDPRESS_DB_HOST: mysql:3306
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress_pass
+      # Pre-set admin credentials to match credentials store
+      WORDPRESS_TABLE_PREFIX: wp_
+    volumes:
+      - wordpress_data:/var/www/html
+    networks:
+      - backend
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ----------------------------------------------------------
+  # MySQL — shared DB for Keycloak + WordPress
+  # ----------------------------------------------------------
+  mysql:
+    image: mysql:8.0
+    container_name: sso-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root_pass
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_pass"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped

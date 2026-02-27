@@ -1,0 +1,16 @@
+# OpenIG runtime files
+openig_home/logs/
+openig_home/tmp/
+openig_home/data/
+
+# Docker volumes (nếu mount local)
+mysql_data/
+wordpress_data/
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+*.iml
+.vscode/

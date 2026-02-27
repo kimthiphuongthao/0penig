@@ -1,0 +1,84 @@
+{
+    "name": "wordpress-sso",
+    "baseURI": "http://wordpress",
+    "condition": "${not(matches(request.uri.path, '^/openig'))}",
+    "heap": [
+        {
+            "name": "KeycloakIssuer",
+            "type": "Issuer",
+            "config": {
+                "issuer": "http://localhost:8080/realms/sso-realm",
+                "authorizeEndpoint": "http://localhost:8080/realms/sso-realm/protocol/openid-connect/auth",
+                "tokenEndpoint":    "http://keycloak:8080/realms/sso-realm/protocol/openid-connect/token",
+                "userInfoEndpoint": "http://keycloak:8080/realms/sso-realm/protocol/openid-connect/userinfo",
+                "registrationEndpoint": "http://keycloak:8080/realms/sso-realm/clients-registrations/openid-connect"
+            }
+        },
+        {
+            "name": "OpenIGClientReg",
+            "type": "ClientRegistration",
+            "config": {
+                "clientId":     "openig-client",
+                "clientSecret": "openig-client-secret",
+                "issuer":  "KeycloakIssuer",
+                "scopes":  [ "openid", "profile", "email" ]
+            }
+        },
+        {
+            "name": "OidcFilter",
+            "type": "OAuth2ClientFilter",
+            "config": {
+                "clientEndpoint": "/openid",
+                "requireHttps":   false,
+                "registrations":  [ "OpenIGClientReg" ],
+                "scopes":         [ "openid", "profile", "email" ],
+                "target":         "${attributes.openid}",
+                "failureHandler": {
+                    "type": "StaticResponseHandler",
+                    "config": {
+                        "status":  500,
+                        "reason":  "Internal Server Error",
+                        "headers": { "Content-Type": [ "text/html" ] },
+                        "entity":  "<html><body><h2>SSO authentication failed. Please contact support.</h2></body></html>"
+                    }
+                }
+            }
+        },
+        {
+            "name": "WpCredentialLookup",
+            "type": "FileAttributesFilter",
+            "config": {
+                "file":   "/opt/openig/credentials/credentials.csv",
+                "key":    "keycloak_username",
+                "value":  "${attributes.openid['user_info']['preferred_username']}",
+                "target": "${attributes.wp_credentials}"
+            }
+        },
+        {
+            "name": "WpSessionInjector",
+            "type": "ScriptableFilter",
+            "config": {
+                "type": "application/x-groovy",
+                "file": "CredentialInjector.groovy"
+            }
+        },
+        {
+            "name": "WordPressProxy",
+            "type": "ClientHandler",
+            "config": {
+                "soTimeout": "10 seconds"
+            }
+        }
+    ],
+    "handler": {
+        "type": "Chain",
+        "config": {
+            "filters": [
+                "OidcFilter",
+                "WpCredentialLookup",
+                "WpSessionInjector"
+            ],
+            "handler": "WordPressProxy"
+        }
+    }
+}
