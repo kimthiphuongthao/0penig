@@ -1,6 +1,6 @@
 # Hướng dẫn Kiểm thử Manual (E2E) SSO Lab
 
-Tài liệu này hướng dẫn chi tiết từng bước kiểm thử luồng Single Sign-On (SSO) trên trình duyệt (Browser), đảm bảo kiến trúc `Nginx → OpenIG → WordPress ← Keycloak` hoạt động đúng.
+Tài liệu này hướng dẫn chi tiết từng bước kiểm thử luồng Single Sign-On (SSO) trên trình duyệt (Browser), đảm bảo kiến trúc `Nginx → OpenIG → WordPress ← Keycloak, OpenIG → Vault` hoạt động đúng.
 
 ---
 
@@ -69,6 +69,7 @@ Sau khi Pass **Bước 5** (bạn đang ở Dashboard WordPress):
 2. **Test Failover:** Bạn có thể qua terminal, stop 1 node OpenIG hiện tại đang chạy (VD: `docker compose stop openig-1`). Sau đó quay lại Browser, nhấn F5 / Refresh lại trang WordPress:
    - Request sẽ được đẩy sang node OpenIG còn lại nhờ cấu hình `proxy_next_upstream` (thường mất <6s).
    - **Kỳ vọng:** Trình duyệt sẽ nhận mã **HTTP 302** và chuyển hướng bạn về trang đăng nhập Keycloak (do session server-side JSESSIONID bị mất theo node cũ), thay vì hiển thị lỗi 504 Gateway Timeout. Bạn chỉ cần đăng nhập lại là có thể tiếp tục làm việc.
+   - Sau khi đăng nhập lại trên node mới, OpenIG sẽ tự động kết nối Vault để lấy lại thông tin đăng nhập WordPress — bạn vẫn được đăng nhập vào Dashboard bình thường mà không cần can thiệp thêm.
 
 ---
 
