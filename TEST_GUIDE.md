@@ -113,10 +113,13 @@ grep -o "<title>[^<]*</title>" /tmp/wp-dashboard.html
 
 ---
 
-## Test 3: HA Sticky Session Test
+## Test 3: HA Sticky Session Test (JSESSIONID-based)
+
+> **Note**: Nginx uses **JSESSIONID** (post-auth session) for sticky routing, not the `IG_SSO` cookie.
 
 ```bash
 # After Test 2, verify all subsequent requests go to same backend
+# Nginx is configured to stick based on the JSESSIONID cookie
 for i in 1 2 3 4 5; do
   STATUS=$(curl -s -c $COOKIES -b $COOKIES -o /dev/null -w "%{http_code}" http://localhost/wp-admin/)
   echo "Request $i: HTTP $STATUS"
@@ -148,9 +151,15 @@ docker compose stop "$ACTIVE_NODE"
 # Refresh App2 again to confirm the header switched to the other node
 curl -s -c $COOKIES -b $COOKIES http://localhost/app2/ | grep -i "X-OpenIG-Node"
 
-# Request should now hit the other node (expect re-auth because sticky session broke)
+# Request should now hit the other node
+# EXPECTED BEHAVIOR: HTTP 302 (Redirect to Keycloak)
+# Why: JSESSIONID is local per node (no replication). 
+# When the active node fails, the new node doesn't recognize the old JSESSIONID, 
+# forcing a transparent OIDC re-auth.
 STATUS=$(curl -s -c $COOKIES -b $COOKIES -o /dev/null -w "%{http_code}" http://localhost/wp-admin/)
-echo "After failover: HTTP $STATUS (HTTP 302 (re-auth required, sticky session broken) — NOT 504)"
+echo "After failover: HTTP $STATUS (EXPECTED 302 for re-auth)"
+
+**Pass criteria**: HTTP 302 is received. This is **EXPECTED BEHAVIOR** per OpenIG specification when using non-replicated server-side sessions.
 
 # Restore
 docker compose start "$ACTIVE_NODE"
@@ -269,6 +278,16 @@ curl -s http://localhost:8080/realms/sso-realm/.well-known/openid-configuration 
 docker compose logs wordpress --tail=20
 ```
 
+### JWT session too large error
+- **Error**: `JWT session is too large (>4KB)` in OpenIG logs or browser errors.
+- **Reason**: Encrypted OIDC tokens (access + id_token) are ~4.8KB, exceeding the 4KB limit for a single cookie.
+- **Check**: Verify `config.json` is using `JwtSession` only for OIDC state, and `OAuth2ClientFilter` is configured to use the default `Tomcat` session (`JSESSIONID`).
+
+### Failed to save session (JWT too large)
+If you see errors in OpenIG logs about "Header too large" or "Failed to save session":
+- **Cause**: Encrypted OIDC tokens (access + id_token) exceed the 4KB limit of a single `IG_SSO` cookie.
+- **Solution**: This project uses **JSESSIONID** (server-side storage) for post-auth tokens. Ensure `JwtSession` is only used for OIDC state, and `OAuth2ClientFilter` is configured to use the default server-side session.
+
 ### Check all services
 ```bash
 docker compose ps
@@ -276,12 +295,20 @@ docker compose ps
 
 ---
 
-## Session Architecture Note
+## Session Architecture Note (Dual-Layer)
 
-**JwtSession (IG_SSO cookie)**: Used for pre-auth state only. Full OIDC tokens (access_token + id_token) exceed the 4KB JWT cookie limit when encrypted with RSA-OAEP+AES (JWE overhead ~2.4x). This is a known OpenIG 6.0.2 limitation.
+This project implements a **Dual-Layer Session Architecture** to overcome standard cookie size limitations.
 
-**JSESSIONID**: Used for post-auth OAuth2 token storage (server-side, container session). Shared across all routes on the same OpenIG node.
+**1. JwtSession (IG_SSO cookie)**: 
+- Used **strictly for pre-authentication state** (OIDC login flow state like nonce/state). 
+- Keeps the OIDC flow stateless and lightweight.
 
-**HA Strategy**: nginx `hash $cookie_JSESSIONID consistent` ensures session affinity. Each user always routes to the same OpenIG node for session lifetime. Configuration of `proxy_next_upstream` enables automatic retry on the secondary node if the primary fails.
+**2. JSESSIONID (Server-side session)**: 
+- Used for **post-authentication storage** of full OAuth2 tokens.
+- **Reason**: Full tokens (access_token + id_token + refresh_token) in this lab total ~4.8KB, which exceeds the standard **4KB browser cookie limit** (and OpenIG's default `JwtSession` limit). Storing them in the Tomcat container session (`JSESSIONID`) allows for virtually unlimited token size.
 
-**SLO**: Logout from either app via `/openid/logout` clears the shared `JSESSIONID`, deauthenticating every protected app simultaneously. The `00-wp-logout-intercept` route ensures WP's native logout button triggers `/openid/logout` instead of a local WP-only logout. The `defaultLogoutGoto` in `OidcFilter` points to Keycloak's `end_session` endpoint, and the Keycloak client is configured with the `post_logout_redirect_uri` via the Admin API to complete the round trip.
+**HA Strategy & Failover**: 
+- **Sticky Sessions**: Nginx uses `hash $cookie_JSESSIONID consistent` to ensure a user always hits the same OpenIG node where their server-side tokens are stored.
+- **Failover Behavior**: Failover results in an **HTTP 302 redirect to Keycloak**. Since `JSESSIONID` is local to each node (non-replicated in this lab), when the active node fails, the peer node will not find the session and will trigger a transparent re-authentication flow. This is the **intended behavior** according to OpenIG documentation for this architectural pattern.
+
+**SLO**: Logout flow is intercepted by `00-wp-logout-intercept` which redirects to `/openid/logout`. This clears the local `JSESSIONID` and then triggers a global logout at Keycloak via the `end_session` endpoint.
