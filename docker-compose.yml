@@ -54,12 +54,16 @@ services:
     volumes:
       - ./openig_home:/opt/openig
       - ./docker/openig/server.xml:/usr/local/tomcat/conf/server.xml:ro
+      - ./vault/file:/vault/file:ro
     environment:
       OPENIG_BASE: /opt/openig
       JWT_SHARED_SECRET: "U1NPLUxhYi1Kd3RTZWNyZXQtMzJieXRlcy1LRVlcIVwh"
       KEYCLOAK_INTERNAL_URL: "http://keycloak:8080"
       KEYCLOAK_BROWSER_URL: "http://localhost:8080"
       OPENIG_NODE_NAME: "openig-1"
+      VAULT_ADDR: "http://vault:8200"
+      VAULT_ROLE_ID_FILE: "/vault/file/openig-role-id"
+      VAULT_SECRET_ID_FILE: "/vault/file/openig-secret-id"
     networks:
       - backend
     depends_on:
@@ -78,12 +82,16 @@ services:
     volumes:
       - ./openig_home:/opt/openig
       - ./docker/openig/server.xml:/usr/local/tomcat/conf/server.xml:ro
+      - ./vault/file:/vault/file:ro
     environment:
       OPENIG_BASE: /opt/openig
       JWT_SHARED_SECRET: "U1NPLUxhYi1Kd3RTZWNyZXQtMzJieXRlcy1LRVlcIVwh"
       KEYCLOAK_INTERNAL_URL: "http://keycloak:8080"
       KEYCLOAK_BROWSER_URL: "http://localhost:8080"
       OPENIG_NODE_NAME: "openig-2"
+      VAULT_ADDR: "http://vault:8200"
+      VAULT_ROLE_ID_FILE: "/vault/file/openig-role-id"
+      VAULT_SECRET_ID_FILE: "/vault/file/openig-secret-id"
     networks:
       - backend
     depends_on:
@@ -162,6 +170,20 @@ services:
   whoami:
     image: traefik/whoami:latest
     container_name: sso-whoami
+    networks:
+      - backend
+    restart: unless-stopped
+
+  vault:
+    image: hashicorp/vault:1.15
+    container_name: sso-vault
+    cap_add: [IPC_LOCK]
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: vault-root-token
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+    command: server -dev
+    volumes:
+      - ./vault/file:/vault/file
     networks:
       - backend
     restart: unless-stopped

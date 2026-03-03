@@ -7,6 +7,7 @@ openig_home/data/
 # Docker volumes (nếu mount local)
 mysql_data/
 wordpress_data/
+vault/file/
 
 # macOS
 .DS_Store

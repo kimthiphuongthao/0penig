@@ -61,13 +61,11 @@
             }
         },
         {
-            "name": "WpCredentialLookup",
-            "type": "FileAttributesFilter",
+            "name": "VaultCredentialFilter",
+            "type": "ScriptableFilter",
             "config": {
-                "file": "/opt/openig/credentials/credentials.csv",
-                "key": "keycloak_username",
-                "value": "${attributes.openid['user_info']['preferred_username']}",
-                "target": "${attributes.wp_credentials}"
+                "type": "application/x-groovy",
+                "file": "VaultCredentialFilter.groovy"
             }
         },
         {
@@ -91,7 +89,7 @@
         "config": {
             "filters": [
                 "OidcFilter",
-                "WpCredentialLookup",
+                "VaultCredentialFilter",
                 "WpSessionInjector"
             ],
             "handler": "WordPressProxy"
