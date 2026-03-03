@@ -8,12 +8,24 @@
             }
         },
         {
+            "name": "JwtKeyStore",
+            "type": "KeyStore",
+            "config": {
+                "url": "file:///opt/openig/keystore.p12",
+                "password": "openig123",
+                "type": "PKCS12"
+            }
+        },
+        {
             "name": "JwtSession",
             "type": "JwtSession",
             "config": {
                 "cookieName": "IG_SSO",
                 "sessionTimeout": "8 hours",
-                "sharedSecret": "${env['JWT_SHARED_SECRET']}"
+                "sharedSecret": "U1NPLUxhYi1Kd3RTZWNyZXQtMzJieXRlcy1LRVlcIVwh",
+                "keystore": "JwtKeyStore",
+                "alias": "openig-jwt",
+                "password": "openig123"
             }
         }
     ],
