@@ -8,7 +8,9 @@ Browser/curl
 nginx :80  (sticky sessions: hash $cookie_JSESSIONID)
     |
     +---> openig-1:8080 \
-    +---> openig-2:8080  > OAuth2ClientFilter + CredentialInjector
+    +---> openig-2:8080  > OAuth2ClientFilter + VaultCredentialFilter
+              |      |
+              |      +---> sso-vault:8200 (KV v2 Credential Store)
               |
               +---> wordpress:80  (legacy app, WP Basic Auth)
               +---> whoami:80     (App2 test service)
@@ -35,6 +37,34 @@ Route priority (OpenIG sorts routes by name, lexicographic):
 |----------|------------|---------|
 | alice    | alice123   | Editor  |
 | bob      | bob123     | Author  |
+
+---
+
+## Prerequisites (Vault Setup)
+
+Vault must be initialized and populated with credentials before testing.
+
+1. **Start infrastructure**: `docker compose up -d`
+2. **Copy bootstrap script**: `docker cp vault/init/vault-bootstrap.sh sso-vault:/tmp/`
+3. **Execute bootstrap**: `docker exec sso-vault bash /tmp/vault-bootstrap.sh`
+
+---
+
+## Test 0: Vault Bootstrap Verification
+
+Verify Vault is healthy and AppRole is working.
+
+1. **Vault Health**:
+   ```bash
+   docker exec sso-vault curl -s http://localhost:8200/v1/sys/health | jq
+   ```
+   **Pass criteria**: `{"initialized":true,"sealed":false,"standby":false,...}`
+
+2. **Credentials Readable**:
+   ```bash
+   docker exec sso-vault vault kv get secret/wp-creds/alice
+   ```
+   **Pass criteria**: JSON with `username` and `password` for alice.
 
 ---
 
@@ -212,6 +242,16 @@ grep -i "location: .*realms/sso-realm" /tmp/wp-post.headers
 ---
 
 ## Troubleshooting
+
+### Vault not returning credentials
+Check OpenIG logs for Vault filter errors:
+```bash
+docker compose logs openig-1 | grep VaultCredential
+```
+Verify Vault connectivity from OpenIG:
+```bash
+docker compose exec openig-1 curl -i http://sso-vault:8200/v1/sys/health
+```
 
 ### E2E fails at callback
 Check OpenIG logs:

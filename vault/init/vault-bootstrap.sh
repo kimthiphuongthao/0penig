@@ -16,6 +16,6 @@ vault read -field=role_id auth/approle/role/openig/role-id > /vault/file/openig-
 vault write -f -field=secret_id auth/approle/role/openig/secret-id > /vault/file/openig-secret-id
 chmod 600 /vault/file/openig-role-id /vault/file/openig-secret-id
 # NOTE: lab only — in production, source passwords from a secure secrets manager
-vault kv put secret/wp-creds/alice username=alice password='T7#xK9@mP2$nQ8!vL'
-vault kv put secret/wp-creds/bob username=bob password='Rw$4Yz!sN6@jH3^cX'
+vault kv put secret/wp-creds/alice username=alice_wp password='Alice2024wp'
+vault kv put secret/wp-creds/bob username=bob_wp password='Bob2024wp'
 echo 'Vault bootstrap complete'

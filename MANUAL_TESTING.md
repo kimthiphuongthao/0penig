@@ -10,7 +10,15 @@ Tài liệu này hướng dẫn chi tiết từng bước kiểm thử luồng S
   - **Trình duyệt (Nginx):** Trỏ đến `http://localhost`, chia tải sang OpenIG.
   - **Bảo vệ (OpenIG):** Phân tích token, nếu chưa login thì chặn và đẩy sang Keycloak.
   - **Identity (Keycloak):** Cung cấp màn hình đăng nhập, xác thực người dùng.
+  - **Kho lưu trữ (Vault):** Lưu trữ thông tin đăng nhập (Username/Password) của WordPress một cách bảo mật.
   - **Kế thừa (WordPress):** Chỉ nhận user hợp lệ và cookies đã được OpenIG "bơm" (inject) tự động.
+
+---
+
+## 🔑 Chuẩn bị Vault (Bắt buộc)
+Trước khi kiểm thử, bạn cần khởi tạo dữ liệu trong Vault:
+1. Copy script vào container: `docker cp vault/init/vault-bootstrap.sh sso-vault:/tmp/`
+2. Chạy bootstrap: `docker exec sso-vault bash /tmp/vault-bootstrap.sh`
 
 ---
 
@@ -39,7 +47,7 @@ Tài liệu này hướng dẫn chi tiết từng bước kiểm thử luồng S
    - Keycloak xác thực thành công, cấp OIDC authorization code.
    - Trình duyệt chuyển hướng (redirect) về lại OpenIG tại URL callback (VD: `http://localhost/openid/callback?...`).
    - OpenIG nhận mã code, gọi server-to-server đổi lấy Token. Đọc Token thấy user là `alice`.
-   - Script `CredentialInjector` của OpenIG tìm file credential, tự động lấy "tài khoản WP ảo" của alice, gọi API đăng nhập WordPress ngầm, lấy ra Cookie `wordpress_logged_in`.
+   - Script `VaultCredentialFilter` của OpenIG kết nối tới Vault, tự động lấy "tài khoản WP ảo" của alice (Username/Password), gọi API đăng nhập WordPress ngầm, lấy ra Cookie `wordpress_logged_in`.
    - OpenIG nhét cookie này vào HTTP Request và điều hướng bạn trở lại `http://localhost/wp-admin/`.
 
 ### Bước 5: Xác minh kết quả cuối cùng
