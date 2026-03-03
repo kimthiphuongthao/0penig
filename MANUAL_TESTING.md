@@ -67,8 +67,8 @@ Sau khi Pass **Bước 5** (bạn đang ở Dashboard WordPress):
 1. **Test Stickyness:** Hãy thử click vòng quanh các menu trong WordPress (VD: Posts, Pages). Mọi thứ phản hồi nhanh chóng (HTTP 200). Bạn vẫn luôn kết nối với cùng 1 node OpenIG nhờ thiết lập `hash $cookie_JSESSIONID` trên Nginx.
    - Mở thêm tab `http://localhost/app2/` để xem header `X-OpenIG-Node` hiển thị node nào (openig-1 hoặc openig-2) đang phục vụ.
 2. **Test Failover:** Bạn có thể qua terminal, stop 1 node OpenIG hiện tại đang chạy (VD: `docker compose stop openig-1`). Sau đó quay lại Browser, nhấn F5 / Refresh lại trang WordPress:
-   - Request sẽ được đẩy sang node OpenIG còn lại.
-   - Vì OpenIG dùng chung `JWT_SHARED_SECRET` và token Keycloak có hiệu lực, bạn vẫn sẽ duy trì session và nhìn thấy Dashboard WordPress mà không bị "văng" ra bắt đăng nhập lại.
+   - Request sẽ được đẩy sang node OpenIG còn lại nhờ cấu hình `proxy_next_upstream` (thường mất <6s).
+   - **Kỳ vọng:** Trình duyệt sẽ nhận mã **HTTP 302** và chuyển hướng bạn về trang đăng nhập Keycloak (do session server-side JSESSIONID bị mất theo node cũ), thay vì hiển thị lỗi 504 Gateway Timeout. Bạn chỉ cần đăng nhập lại là có thể tiếp tục làm việc.
 
 ---
 

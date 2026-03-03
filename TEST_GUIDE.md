@@ -150,7 +150,7 @@ curl -s -c $COOKIES -b $COOKIES http://localhost/app2/ | grep -i "X-OpenIG-Node"
 
 # Request should now hit the other node (expect re-auth because sticky session broke)
 STATUS=$(curl -s -c $COOKIES -b $COOKIES -o /dev/null -w "%{http_code}" http://localhost/wp-admin/)
-echo "After failover: HTTP $STATUS (expect 302 -> re-auth if sticky session broken)"
+echo "After failover: HTTP $STATUS (HTTP 302 (re-auth required, sticky session broken) — NOT 504)"
 
 # Restore
 docker compose start "$ACTIVE_NODE"
@@ -282,6 +282,6 @@ docker compose ps
 
 **JSESSIONID**: Used for post-auth OAuth2 token storage (server-side, container session). Shared across all routes on the same OpenIG node.
 
-**HA Strategy**: nginx `hash $cookie_JSESSIONID consistent` ensures session affinity. Each user always routes to the same OpenIG node for session lifetime.
+**HA Strategy**: nginx `hash $cookie_JSESSIONID consistent` ensures session affinity. Each user always routes to the same OpenIG node for session lifetime. Configuration of `proxy_next_upstream` enables automatic retry on the secondary node if the primary fails.
 
 **SLO**: Logout from either app via `/openid/logout` clears the shared `JSESSIONID`, deauthenticating every protected app simultaneously. The `00-wp-logout-intercept` route ensures WP's native logout button triggers `/openid/logout` instead of a local WP-only logout. The `defaultLogoutGoto` in `OidcFilter` points to Keycloak's `end_session` endpoint, and the Keycloak client is configured with the `post_logout_redirect_uri` via the Admin API to complete the round trip.
