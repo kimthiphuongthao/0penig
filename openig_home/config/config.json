@@ -13,7 +13,7 @@
             "config": {
                 "cookieName": "IG_SSO",
                 "sessionTimeout": "8 hours",
-                "sharedSecret": "U1NPLUxhYi1Kd3RTZWNyZXQtMzJieXRlcy1LRVkhISE="
+                "sharedSecret": "${env['JWT_SHARED_SECRET']}"
             }
         }
     ],
