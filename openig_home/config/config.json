@@ -25,6 +25,7 @@
                 "sharedSecret": "U1NPLUxhYi1Kd3RTZWNyZXQtMzJieXRlcy1LRVlcIVwh",
                 "keystore": "JwtKeyStore",
                 "alias": "openig-jwt",
+                "cookieDomain": ".sso.local",
                 "password": "openig123"
             }
         }

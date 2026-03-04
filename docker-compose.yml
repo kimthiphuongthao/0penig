@@ -58,17 +58,16 @@ services:
     environment:
       OPENIG_BASE: /opt/openig
       JWT_SHARED_SECRET: "U1NPLUxhYi1Kd3RTZWNyZXQtMzJieXRlcy1LRVlcIVwh"
-      KEYCLOAK_INTERNAL_URL: "http://keycloak:8080"
-      KEYCLOAK_BROWSER_URL: "http://localhost:8080"
+      KEYCLOAK_INTERNAL_URL: "http://host.docker.internal:8080"
+      KEYCLOAK_BROWSER_URL: "http://auth.sso.local:8080"
+      REDIS_HOST: "redis-a"
+      OPENIG_PUBLIC_URL: "http://openiga.sso.local:80"
       OPENIG_NODE_NAME: "openig-1"
       VAULT_ADDR: "http://vault:8200"
       VAULT_ROLE_ID_FILE: "/vault/file/openig-role-id"
       VAULT_SECRET_ID_FILE: "/vault/file/openig-secret-id"
     networks:
       - backend
-    depends_on:
-      keycloak:
-        condition: service_healthy
     restart: unless-stopped
 
   # ----------------------------------------------------------
@@ -86,57 +85,16 @@ services:
     environment:
       OPENIG_BASE: /opt/openig
       JWT_SHARED_SECRET: "U1NPLUxhYi1Kd3RTZWNyZXQtMzJieXRlcy1LRVlcIVwh"
-      KEYCLOAK_INTERNAL_URL: "http://keycloak:8080"
-      KEYCLOAK_BROWSER_URL: "http://localhost:8080"
+      KEYCLOAK_INTERNAL_URL: "http://host.docker.internal:8080"
+      KEYCLOAK_BROWSER_URL: "http://auth.sso.local:8080"
+      REDIS_HOST: "redis-a"
+      OPENIG_PUBLIC_URL: "http://openiga.sso.local:80"
       OPENIG_NODE_NAME: "openig-2"
       VAULT_ADDR: "http://vault:8200"
       VAULT_ROLE_ID_FILE: "/vault/file/openig-role-id"
       VAULT_SECRET_ID_FILE: "/vault/file/openig-secret-id"
     networks:
       - backend
-    depends_on:
-      keycloak:
-        condition: service_healthy
-    restart: unless-stopped
-
-  # ----------------------------------------------------------
-  # Keycloak — SSO Provider
-  # Exposed on 8080 so browser can reach /realms/.../auth endpoint
-  # OpenIG uses Docker DNS (keycloak:8080) for token/userinfo calls
-  # ----------------------------------------------------------
-  keycloak:
-    image: quay.io/keycloak/keycloak:24.0
-    container_name: sso-keycloak
-    ports:
-      - "8080:8080"
-    environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: admin
-      KC_DB: mysql
-      KC_DB_URL: jdbc:mysql://mysql:3306/keycloak?useSSL=false&allowPublicKeyRetrieval=true
-      KC_DB_USERNAME: keycloak
-      KC_DB_PASSWORD: keycloak_pass
-      KC_HOSTNAME: "localhost"
-      KC_HOSTNAME_STRICT: "false"
-      KC_HTTP_ENABLED: "true"
-      KC_HEALTH_ENABLED: "true"
-      # Import realm on startup if not already imported
-      KC_IMPORT: /opt/keycloak/data/import/realm-export.json
-    command: start-dev --import-realm
-    volumes:
-      - ./keycloak:/opt/keycloak/data/import:ro
-    networks:
-      - frontend
-      - backend
-    depends_on:
-      mysql:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo -e 'GET /health/ready HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && timeout 3 cat <&3 | grep -q '200 OK'"]
-      interval: 15s
-      timeout: 10s
-      retries: 15
-      start_period: 90s
     restart: unless-stopped
 
   # ----------------------------------------------------------
@@ -155,8 +113,11 @@ services:
       WORDPRESS_DB_PASSWORD: wordpress_pass
       # Pre-set admin credentials to match credentials store
       WORDPRESS_TABLE_PREFIX: wp_
+    command: >
+      bash -c "a2enmod alias && apache2-foreground"
     volumes:
       - wordpress_data:/var/www/html
+      - ./docker/wordpress/app1.conf:/etc/apache2/conf-enabled/app1.conf:ro
     networks:
       - backend
     depends_on:
@@ -170,6 +131,13 @@ services:
   whoami:
     image: traefik/whoami:latest
     container_name: sso-whoami
+    networks:
+      - backend
+    restart: unless-stopped
+
+  redis-a:
+    image: redis:7-alpine
+    container_name: sso-redis-a
     networks:
       - backend
     restart: unless-stopped
@@ -189,7 +157,7 @@ services:
     restart: unless-stopped
 
   # ----------------------------------------------------------
-  # MySQL — shared DB for Keycloak + WordPress
+  # MySQL — DB for WordPress
   # ----------------------------------------------------------
   mysql:
     image: mysql:8.0

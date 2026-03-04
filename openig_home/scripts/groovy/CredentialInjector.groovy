@@ -127,4 +127,17 @@ if (wpSessionCookies != null && !wpSessionCookies.isEmpty()) {
     logger.debug("[CredentialInjector] Injected WP cookies for '" + wpUsername + "'")
 }
 
-return next.handle(context, request)
+// --- Step 6: Send request, detect WP session expiry ---
+return next.handle(context, request).then({ response ->
+    def location = response.headers.getFirst('Location')
+    def status = response.status.code
+    if ((status == 301 || status == 302) && location != null && location.contains('wp-login.php') && !location.contains('action=logout')) {
+        logger.warn("[CredentialInjector] WP redirected to wp-login.php — cached session expired, clearing cache")
+        session.remove('wp_session_cookies')
+        // Redirect browser back to same URL so next request gets fresh WP login
+        def retryResp = new Response(response.status)
+        retryResp.headers['Location'] = request.uri.toString()
+        return retryResp
+    }
+    return response
+})
