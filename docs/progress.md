@@ -16,8 +16,8 @@
 - [x] Chuẩn hóa cấu trúc triển khai đa đơn vị: mỗi bên quản lý ứng dụng legacy vận hành độc lập (Gateway + Credential Store + Session Store riêng), chỉ dùng chung Identity Provider trung tâm
 - [x] Bổ sung và xác nhận cơ chế SLO: tích hợp Session Store phân tán, backchannel logout từ IdP lan đến toàn bộ ứng dụng trong realm kể cả cross-unit
 - [x] Cấu hình và kiểm chứng AppRole authentication: Gateway lấy token ngắn hạn, policy least-privilege theo từng vai trò
-- [x] Xác định Health Check baseline (fall/rise threshold, probe interval, fail timeout) + ghi chú mapping F5
-- [x] Chuẩn hóa Access Log format đồng bộ giữa các Gateway node (real client IP, duration, node ID)
+- [x] Xác định Health Check baseline (fall/rise threshold, probe interval, fail timeout) + ghi chú mapping F5 → [healthcheck-baseline.md](./healthcheck-baseline.md)
+- [x] Chuẩn hóa Access Log format đồng bộ giữa các Gateway node (real client IP, duration, node ID) → [log-format-standard.md](./log-format-standard.md)
 - [x] Xác nhận tính khả thi triển khai theo mô hình subdomain: SSO/SLO hoạt động đầy đủ, app legacy không cần thay đổi cấu hình nội bộ
 
 ---
