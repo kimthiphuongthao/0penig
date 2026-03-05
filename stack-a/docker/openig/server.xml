@@ -144,9 +144,14 @@
         <!-- Access log processes all example.
              Documentation at: /docs/config/valve.html
              Note: The pattern used is equivalent to using pattern="common" -->
+        <!-- Standardized access log:
+             %{X-Forwarded-For}i = real client IP (behind nginx/LB)
+             %h = proxy IP | %t = timestamp | %r = request | %s = status
+             %b = bytes | %D = duration ms | node = OpenIG node ID for HA tracing
+        -->
         <Valve className="org.apache.catalina.valves.AccessLogValve" directory="logs"
                prefix="localhost_access_log" suffix=".txt"
-               pattern="%h %l %u %t &quot;%r&quot; %s %b" />
+               pattern="%{X-Forwarded-For}i %h %t &quot;%r&quot; %s %b %Dms node=${OPENIG_NODE_NAME}" />
 
     <Valve className="org.apache.catalina.valves.RemoteIpValve"
            httpServerPort="80"
