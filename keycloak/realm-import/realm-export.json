@@ -43,7 +43,7 @@
         "microprofile-jwt"
       ],
       "attributes": {
-        "post.logout.redirect.uris": "http://localhost/##http://localhost/wp-admin/##http://localhost/app2/"
+        "post.logout.redirect.uris": "http://openiga.sso.local/app1/##http://openiga.sso.local/app2/##http://localhost/app1/##http://localhost/app2/"
       }
     },
     {
@@ -78,7 +78,7 @@
         "microprofile-jwt"
       ],
       "attributes": {
-        "post.logout.redirect.uris": "http://localhost/##http://localhost/wp-admin/##http://localhost/app2/"
+        "post.logout.redirect.uris": "http://openigb.sso.local:9080/app3/##http://openigb.sso.local:9080/app4/##http://localhost:9080/app3/##http://localhost:9080/app4/"
       }
     }
   ],
