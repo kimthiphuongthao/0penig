@@ -23,8 +23,8 @@ mkdir -p /vault/file
 vault read -field=role_id auth/approle/role/openig/role-id > /vault/file/openig-role-id
 vault write -f -field=secret_id auth/approle/role/openig/secret-id > /vault/file/openig-secret-id
 
-vault kv put secret/dotnet-creds/alice username="alice" password="Alice2024"
-vault kv put secret/dotnet-creds/bob username="bob" password="Bob2024"
+vault kv put secret/dotnet-creds/alice username="legacy_alice" password="Tr0ub4dor&3"
+vault kv put secret/dotnet-creds/bob username="legacy_bob" password="correct-horse-battery"
 
 vault kv put "secret/redmine-creds/alice@lab.local" login="alice" password="alice123"
 vault kv put "secret/redmine-creds/bob@lab.local" login="bob" password="bob12345"
