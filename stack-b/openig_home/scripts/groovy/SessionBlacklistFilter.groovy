@@ -38,7 +38,14 @@ def readRespLine = { InputStream input ->
 try {
     String sid = session['oidc_sid'] as String
     if (!sid?.trim()) {
-        String idToken = session['oauth2:/openid/app3']?.get('atr')?.get('id_token') as String
+        String publicUrl = System.getenv('OPENIG_PUBLIC_URL') ?: 'http://openigb.sso.local:9080'
+        String app3SessionKey = 'oauth2:' + publicUrl + '/openid/app3'
+        String app4SessionKey = 'oauth2:' + publicUrl + '/openid/app4'
+
+        String idToken = session[app3SessionKey]?.get('atr')?.get('id_token') as String
+        if (!idToken?.trim()) {
+            idToken = session[app4SessionKey]?.get('atr')?.get('id_token') as String
+        }
         if (!idToken?.trim()) {
             return next.handle(context, request)
         }
