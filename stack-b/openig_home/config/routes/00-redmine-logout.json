@@ -1,6 +1,6 @@
 {
   "name": "00-redmine-logout-intercept",
-  "condition": "${matches(request.headers['Host'][0], 'openigb.sso.local.*') and matches(request.uri.path, '^/app4/logout') and request.method == 'POST'}",
+  "condition": "${matches(request.headers['Host'][0], 'redmine-b.sso.local.*') and matches(request.uri.path, '^/logout$') and request.method == 'POST'}",
   "handler": {
     "type": "ScriptableHandler",
     "config": {

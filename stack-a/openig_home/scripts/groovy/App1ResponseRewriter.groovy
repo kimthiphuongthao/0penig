@@ -1,5 +1,19 @@
 import org.forgerock.http.protocol.Response
 
+def host = (request.headers.getFirst('Host') ?: '').toLowerCase()
+def hostWithoutDefaultPort = host.replaceFirst(/:80$/, '')
+if (hostWithoutDefaultPort == 'wp-a.sso.local') {
+    return next.handle(context, request).then({ response ->
+        def location = response.headers.getFirst('Location')
+        if (location != null && location.contains('http://wordpress/')) {
+            def newLocation = location.replace('http://wordpress/', 'http://wp-a.sso.local/')
+            logger.debug('[App1ResponseRewriter] Location: ' + location + ' → ' + newLocation)
+            response.headers.put('Location', [newLocation])
+        }
+        return response
+    })
+}
+
 return next.handle(context, request).then({ response ->
     // --- Location header rewrite ---
     def location = response.headers.getFirst('Location')

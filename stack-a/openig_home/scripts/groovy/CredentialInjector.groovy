@@ -68,7 +68,7 @@ if (wpSessionCookies == null || wpSessionCookies.isEmpty()) {
         def formBody = "log=" + encodedUser +
                        "&pwd=" + encodedPass +
                        "&wp-submit=Log+In" +
-                       "&redirect_to=%2Fwp-admin%2F" +
+                       "&redirect_to=%2F" +
                        "&testcookie=1"
 
         def writer = new OutputStreamWriter(conn.outputStream, 'UTF-8')
@@ -125,6 +125,31 @@ if (wpSessionCookies != null && !wpSessionCookies.isEmpty()) {
         : wpSessionCookies
     request.headers.put('Cookie', [combined])
     logger.debug("[CredentialInjector] Injected WP cookies for '" + wpUsername + "'")
+} else {
+    def existingCookies = request.headers.getFirst('Cookie')
+    if (existingCookies != null && !existingCookies.isEmpty()) {
+        def filteredCookies = existingCookies
+            .split(';')
+            .collect { it.trim() }
+            .findAll { cookiePart ->
+                if (cookiePart == null || cookiePart.isEmpty()) {
+                    return false
+                }
+                def eqIndex = cookiePart.indexOf('=')
+                def cookieName = (eqIndex >= 0) ? cookiePart.substring(0, eqIndex).trim() : cookiePart
+                return !(cookieName.startsWith('wordpress_') ||
+                         cookieName.startsWith('wordpress_logged_in_') ||
+                         cookieName.startsWith('wp-settings-') ||
+                         cookieName.startsWith('wp_woocommerce_'))
+            }
+
+        if (!filteredCookies.isEmpty()) {
+            request.headers.put('Cookie', [filteredCookies.join('; ')])
+        } else {
+            request.headers.remove('Cookie')
+        }
+        logger.debug("[CredentialInjector] No fresh WP cookies; stripped WP cookies from request for '" + wpUsername + "'")
+    }
 }
 
 // --- Step 6: Send request, detect WP session expiry ---

@@ -27,7 +27,7 @@ try {
     if (redmineSessionCookies == null || redmineSessionCookies.isEmpty()) {
         logger.info(logPrefix + 'No cached Redmine session for ' + login + ' - logging in')
 
-        HttpURLConnection getConnection = (HttpURLConnection) new URL('http://redmine:3000/app4/login').openConnection()
+        HttpURLConnection getConnection = (HttpURLConnection) new URL('http://redmine:3000/login').openConnection()
         getConnection.requestMethod = 'GET'
         getConnection.instanceFollowRedirects = false
         getConnection.connectTimeout = 5000
@@ -107,7 +107,7 @@ try {
             return response
         }
 
-        HttpURLConnection postConnection = (HttpURLConnection) new URL('http://redmine:3000/app4/login').openConnection()
+        HttpURLConnection postConnection = (HttpURLConnection) new URL('http://redmine:3000/login').openConnection()
         postConnection.requestMethod = 'POST'
         postConnection.doOutput = true
         postConnection.instanceFollowRedirects = false

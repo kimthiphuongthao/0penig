@@ -139,10 +139,7 @@ services:
       start_period: 30s
 
   redmine:
-    build:
-      context: ./docker/redmine
-      dockerfile: Dockerfile
-    image: redmine:5.1-app4
+    image: redmine:5.1
     container_name: sso-b-redmine
     ports:
       - "3000:3000"
@@ -152,8 +149,6 @@ services:
       REDMINE_DB_USERNAME: redmine
       REDMINE_DB_PASSWORD: redmine_pass
       REDMINE_SECRET_KEY_BASE: redmine_secret_key_lab_2026
-      REDMINE_RELATIVE_URL_ROOT: /app4
-      RAILS_RELATIVE_URL_ROOT: /app4
     depends_on:
       mysql-redmine:
         condition: service_healthy

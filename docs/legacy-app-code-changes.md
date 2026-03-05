@@ -61,6 +61,8 @@ Lưu ý: app dùng CSRF token (`__RequestVerificationToken`) nên OpenIG phải 
 
 ### App4 — Redmine
 
+**Redmine với subpath (`openigb.sso.local/app4`):**
+
 **Sửa infrastructure (nhiều nhất — Docker image official không hỗ trợ subpath):**
 ```ruby
 # config.ru — Rack::URLMap wrapper
@@ -84,30 +86,36 @@ User.create!(login: "bob", firstname: "Bob", lastname: "Lab",
 
 Không sửa: business logic, plugin, Ruby code.
 
+**Redmine với subdomain (`app4.sso.local`):**
+
+- Dùng image `redmine:5.1` standard (không cần build custom image).
+- Không cần `RAILS_RELATIVE_URL_ROOT`, không cần `Rack::URLMap`.
+- Không sửa gì trong app.
+
 ---
 
 ### Tổng kết
 
-| App | Sửa app code | Sửa subpath config | Sửa Dockerfile | Sửa data |
-|-----|-------------|-------------------|----------------|----------|
-| WordPress | Không | DB update (siteurl/home) | a2enmod alias + entrypoint fix | Tạo user WP |
-| whoami | Không | Không cần | Không | Không |
-| .NET | 1 dòng UsePathBase | Không | Không | Không |
-| Redmine | Không | Rack::URLMap wrapper | Custom image | Tạo user Rails |
+| App | Subpath — Sửa app | Subpath — Sửa infra | Subdomain — Sửa app | Subdomain — Sửa infra |
+|-----|---|---|---|---|
+| WordPress | DB update `siteurl/home` | Apache `Alias` + Dockerfile entrypoint | Không | Không (cài fresh → tự detect domain) |
+| whoami | Không | Không | Không | Không |
+| .NET | 1 dòng `UsePathBase` | Không | Không | Không |
+| Redmine | Không | Custom Dockerfile (`Rack::URLMap`) | Không | Không (image standard `redmine:5.1`) |
 
-**Pattern chung:** App không hỗ trợ subpath natively → xử lý ở tầng infrastructure (Dockerfile/config), không phải business logic. Câu hỏi đầu tiên khi onboard app mới: *"App này có hỗ trợ chạy tại subpath không, và bằng cách nào?"*
+**Pattern chung:** App không hỗ trợ subpath natively → xử lý ở tầng infrastructure (Dockerfile/config), không phải business logic. Câu hỏi đầu tiên khi onboard app mới: *"App này có hỗ trợ chạy tại subpath không, và bằng cách nào?"* Với subdomain deployment, toàn bộ cột Sửa subpath config và Sửa Dockerfile đều không cần thiết — app chạy tại `/` như môi trường native.
 
 ---
 
 ## Câu hỏi 2: Nếu app không hỗ trợ subpath thì xử lý thế nào?
 
-Có 3 hướng, theo thứ tự ưu tiên:
+Có 3 hướng, theo thứ tự ưu tiên (ưu tiên cách ít can thiệp app nhất):
 
 ### Hướng 1: Dùng subdomain thay vì subpath (ưu tiên nhất)
 
 Thay vì `openigb.sso.local/app4`, dùng `app4.sso.local`.
 
-App chạy tại `/` như bình thường, không cần biết subpath. OpenIG proxy toàn bộ domain về app đó.
+App chạy tại `/` như bình thường (zero-touch), không cần biết prefix subpath. OpenIG proxy toàn bộ domain về app đó.
 
 ```nginx
 server {
@@ -118,8 +126,10 @@ server {
 }
 ```
 
-Ưu điểm: không cần sửa app, không cần Dockerfile riêng.
+Ưu điểm: không cần sửa app, không cần Dockerfile/config/code chỉ để xử lý subpath.
 Nhược điểm: tốn thêm DNS entry, cần thêm Keycloak client redirect URI cho subdomain.
+
+Chỉ khi không thể dùng subdomain mới đi xuống các hướng subpath bên dưới. Với subpath, app phải biết prefix (ví dụ `/app4`) nên có thể cần sửa Dockerfile/config/code.
 
 ### Hướng 2: Nginx path stripping
 
@@ -146,12 +156,13 @@ Một số framework đọc header này để tự biết prefix: Spring Boot, D
 ### Cây quyết định
 
 ```
-App có hỗ trợ subpath không?
-    ↓ Có → config 1 dòng (UsePathBase, RAILS_RELATIVE_URL_ROOT...)
-    ↓ Không → dùng subdomain (sạch nhất)
-               ↓ Không thể dùng subdomain → nginx path stripping
-                  (chỉ OK nếu app không generate internal absolute URL)
-               ↓ App generate internal URL → dùng F5 (xem Câu hỏi 3)
+Có dùng subdomain cho app này được không?
+    ↓ Có → dùng subdomain (ưu tiên nhất, app chạy tại /, zero-touch)
+    ↓ Không → buộc dùng subpath
+               ↓ App có hỗ trợ prefix không?
+                   ↓ Có → config theo framework (UsePathBase, RAILS_RELATIVE_URL_ROOT...)
+                   ↓ Không → nginx path stripping / X-Forwarded-Prefix (chỉ hợp một số app)
+                              ↓ Vẫn broken links → dùng F5 (xem Câu hỏi 3)
 ```
 
 ---

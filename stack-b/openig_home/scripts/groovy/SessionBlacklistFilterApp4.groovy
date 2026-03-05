@@ -39,8 +39,26 @@ try {
     String sid = session['oidc_sid_app4'] as String
     if (!sid?.trim()) {
         String openigPublicUrl = System.getenv('OPENIG_PUBLIC_URL') ?: 'http://openigb.sso.local:9080'
-        String oauth2SessionKey = "oauth2:${openigPublicUrl}/openid/app4"
-        String idToken = session[oauth2SessionKey]?.get('atr')?.get('id_token') as String
+        String hostHeader = request.headers.getFirst('Host') as String
+        String hostWithoutPort = hostHeader?.split(':')?.getAt(0)
+        String hostWithPort = hostHeader?.contains(':') ? hostHeader : (hostWithoutPort ? "${hostWithoutPort}:9080" : null)
+
+        List<String> oauth2SessionKeys = []
+        if (hostWithPort) {
+            oauth2SessionKeys.add("oauth2:http://${hostWithPort}/openid/app4")
+        }
+        if (hostWithoutPort) {
+            oauth2SessionKeys.add("oauth2:http://${hostWithoutPort}/openid/app4")
+        }
+        oauth2SessionKeys.add("oauth2:${openigPublicUrl}/openid/app4")
+
+        String idToken = null
+        for (String oauth2SessionKey : oauth2SessionKeys.unique()) {
+            idToken = session[oauth2SessionKey]?.get('atr')?.get('id_token') as String
+            if (idToken?.trim()) {
+                break
+            }
+        }
         if (!idToken?.trim()) {
             return next.handle(context, request)
         }
@@ -71,8 +89,11 @@ try {
     if (blacklisted) {
         session.clear()
         Response response = new Response(Status.FOUND)
-        String openigPublicUrlForRedirect = System.getenv('OPENIG_PUBLIC_URL') ?: 'http://openigb.sso.local:9080'
-        response.headers['Location'] = openigPublicUrlForRedirect + (request.uri.path ?: '/')
+        String redirectHost = request.headers.getFirst('Host') as String
+        if (!redirectHost?.trim()) {
+            redirectHost = 'openigb.sso.local:9080'
+        }
+        response.headers.put('Location', [("http://${redirectHost}" + (request.uri.path ?: '/')) as String])
         return newResultPromise(response)
     }
 

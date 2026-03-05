@@ -1,7 +1,7 @@
 {
   "name": "redmine-sso",
   "baseURI": "http://redmine:3000",
-  "condition": "${matches(request.headers['Host'][0], 'openigb.sso.local.*') and (matches(request.uri.path, '^/app4.*') or matches(request.uri.path, '^/openid/app4.*')) and not(matches(request.uri.path, '^/openig.*'))}",
+  "condition": "${matches(request.headers['Host'][0], 'redmine-b.sso.local.*') and not(matches(request.uri.path, '^/openig.*'))}",
   "heap": [
     {
       "name": "KeycloakIssuer",
