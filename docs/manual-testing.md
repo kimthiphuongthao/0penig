@@ -1,17 +1,21 @@
 # Hướng dẫn Kiểm thử Manual (E2E) SSO Lab
 
-Tài liệu này hướng dẫn chi tiết từng bước kiểm thử luồng Single Sign-On (SSO) trên trình duyệt (Browser), đảm bảo kiến trúc `Nginx → OpenIG → WordPress ← Keycloak, OpenIG → Vault` hoạt động đúng.
+Tài liệu này hướng dẫn chi tiết từng bước kiểm thử luồng Single Sign-On (SSO) trên trình duyệt (Browser), đảm bảo kiến trúc `Nginx → OpenIG → WordPress ← Keycloak, OpenIG → Vault` hoạt động đúng trên môi trường đa Stack (Multi-stack).
 
 ---
 
 ## 🧭 Tổng quan bài toán
-- **Mục tiêu:** Truy cập ứng dụng WordPress cũ bằng tài khoản định danh chung quản lý bởi Keycloak, thông qua Gateway OpenIG.
+- **Mục tiêu:** Truy cập các ứng dụng di sản (Legacy) bằng tài khoản định danh chung quản lý bởi Keycloak, thông qua Gateway OpenIG.
 - **Vai trò:**
-  - **Trình duyệt (Nginx):** Trỏ đến `http://localhost`, chia tải sang OpenIG.
+  - **Trình duyệt (Nginx):** Trỏ đến `http://openiga.sso.local` (Stack A) hoặc `http://openigb.sso.local:9080` (Stack B).
   - **Bảo vệ (OpenIG):** Phân tích token, nếu chưa login thì chặn và đẩy sang Keycloak.
-  - **Identity (Keycloak):** Cung cấp màn hình đăng nhập, xác thực người dùng.
-  - **Kho lưu trữ (Vault):** Lưu trữ thông tin đăng nhập (Username/Password) của WordPress một cách bảo mật.
-  - **Kế thừa (WordPress):** Chỉ nhận user hợp lệ và cookies đã được OpenIG "bơm" (inject) tự động.
+  - **Identity (Keycloak):** Cung cấp màn hình đăng nhập, xác thực người dùng tại `http://auth.sso.local:8080`.
+  - **Kho lưu trữ (Vault):** Lưu trữ thông tin đăng nhập (Username/Password) của ứng dụng một cách bảo mật.
+  - **Kế thừa (WordPress/Dotnet):** Chỉ nhận user hợp lệ và cookies/headers đã được OpenIG "bơm" (inject) tự động.
+
+### Thông tin kỹ thuật hiện tại
+- **Stack A (openiga.sso.local):** WordPress (App1) + whoami (App2). Dùng Redis-A.
+- **Stack B (openigb.sso.local:9080):** Dotnet-app (App3). Dùng Redis-B.
 
 ---
 
@@ -28,35 +32,32 @@ Trước khi kiểm thử, bạn cần khởi tạo dữ liệu trong Vault:
 1. Mở trình duyệt Web (Chrome, Firefox, Safari).
 2. Lời khuyên: Hãy mở **Cửa sổ Ẩn danh (Incognito / Private Window)** để đảm bảo không dính cookie cũ. Mở Network Tab (F12) để xem quá trình Redirect nếu muốn.
 
-### Bước 2: Khởi tạo yêu cầu truy cập Resource
-1. Gõ vào thanh địa chỉ: `http://localhost/wp-admin/`
-2. **Kỳ vọng:**
-   - Trình duyệt sẽ gửi request tới Nginx `http://localhost`.
-   - Nginx chuyển cho OpenIG. OpenIG phát hiện bạn chưa đăng nhập (chưa có session từ Keycloak).
-   - Trình duyệt tự động chuyển hướng cực nhanh (HTTP 302) sang màn hình của Keycloak.
+### Bước 2: Khởi tạo yêu cầu truy cập Resource (Stack A)
+1. Gõ vào thanh địa chỉ: `http://openiga.sso.local/app1/wp-admin/`
+2. **Kỳ vọng:** Trình duyệt tự động chuyển hướng sang màn hình của Keycloak.
 
 ### Bước 3: Đăng nhập tại Keycloak
-1. Lúc này, thanh địa chỉ của bạn sẽ hiển thị URL dạng `http://localhost:8080/realms/sso-realm/...` (Đây là trang đăng nhập của Keycloak).
-2. Tại form đăng nhập, nhập thông tin tài khoản Test số 1:
+1. Tại form đăng nhập, nhập thông tin tài khoản Test số 1:
    - **Username:** `alice`
    - **Password:** `alice123`
-3. Bấm **Sign In**.
+2. Bấm **Sign In**.
 
 ### Bước 4: Chuyển hướng về Gateway (Callback)
-1. **Kỳ vọng ngầm (Bạn không cần làm gì):**
-   - Keycloak xác thực thành công, cấp OIDC authorization code.
-   - Trình duyệt chuyển hướng (redirect) về lại OpenIG tại URL callback (VD: `http://localhost/openid/callback?...`).
-   - OpenIG nhận mã code, gọi server-to-server đổi lấy Token. Đọc Token thấy user là `alice`.
-   - Script `VaultCredentialFilter` của OpenIG kết nối tới Vault, tự động lấy "tài khoản WP ảo" của alice (Username/Password), gọi API đăng nhập WordPress ngầm, lấy ra Cookie `wordpress_logged_in`.
-   - OpenIG nhét cookie này vào HTTP Request và điều hướng bạn trở lại `http://localhost/wp-admin/`.
+1. **Kỳ vọng ngầm:** OpenIG nhận code, lấy credentials từ Vault, login ngầm vào WordPress và trả về session.
 
 ### Bước 5: Xác minh kết quả cuối cùng
 1. Màn hình cuối cùng sẽ dừng lại ở giao diện Admin của WordPress.
-2. URL trở về lại là: `http://localhost/wp-admin/`
-3. **Tiêu chuẩn đạt (Pass Criteria):**
-   - Bạn nhìn thấy màn hình Bảng điều khiển (Dashboard) của WordPress.
-   - Góc trên bên phải (hoặc trong Profile) hiển thị tên là `alice` (vai trò Editor của WP).
-   - Bạn **KHÔNG PHẢI** gõ bất kỳ mật khẩu WordPress nào cả (OpenIG đã làm hộ bạn).
+2. URL trở về lại là: `http://openiga.sso.local/app1/wp-admin/`
+3. **Tiêu chuẩn đạt (Pass Criteria):** Bạn nhìn thấy màn hình Dashboard của WordPress hiển thị tên là `alice`.
+
+---
+
+## 🧪 Kịch bản: Kiểm tra SSO sang Stack B (App3)
+
+1. Trong cùng trình duyệt đã đăng nhập Alice ở trên, mở tab mới.
+2. Truy cập: `http://openigb.sso.local:9080/app3/`
+3. **Kỳ vọng:** Bạn được truy cập vào App3 **ngay lập tức** mà không cần qua màn hình login Keycloak.
+   → Chứng minh SSO cross-stack hoạt động.
 
 ---
 
@@ -64,81 +65,63 @@ Trước khi kiểm thử, bạn cần khởi tạo dữ liệu trong Vault:
 
 Sau khi Pass **Bước 5** (bạn đang ở Dashboard WordPress):
 
-1. **Test Stickyness:** Hãy thử click vòng quanh các menu trong WordPress (VD: Posts, Pages). Mọi thứ phản hồi nhanh chóng (HTTP 200). Bạn vẫn luôn kết nối với cùng 1 node OpenIG nhờ thiết lập `hash $cookie_JSESSIONID` trên Nginx.
-   - Mở thêm tab `http://localhost/app2/` để xem header `X-OpenIG-Node` hiển thị node nào (openig-1 hoặc openig-2) đang phục vụ.
-2. **Test Failover:** Bạn có thể qua terminal, stop 1 node OpenIG hiện tại đang chạy (VD: `docker compose stop openig-1`). Sau đó quay lại Browser, nhấn F5 / Refresh lại trang WordPress:
-   - Request sẽ được đẩy sang node OpenIG còn lại nhờ cấu hình `proxy_next_upstream` (thường mất <6s).
-   - **Kỳ vọng (EXPECTED):** Trình duyệt sẽ nhận mã **HTTP 302** và chuyển hướng bạn về trang đăng nhập Keycloak. 
-   - **Tại sao?**: Đây là hành vi **ĐÚNG** theo thiết kế (Expected Behavior) của OpenIG. Do phiên làm việc (session) chứa OAuth2 tokens được lưu cục bộ (local) trên từng node (`JSESSIONID`) để vượt qua giới hạn 4KB của cookie. Khi node cũ chết, node mới không có dữ liệu session này nên yêu cầu re-auth để thiết lập session mới.
-   - **Lưu ý:** Sau khi bạn re-auth trên node mới, OpenIG sẽ tự động kết nối lại tới Vault để lấy lại credentials cho WordPress mà không cần can thiệp thủ công.
+1. **Test Stickyness:** Click vòng quanh các menu. Bạn luôn kết nối với cùng 1 node OpenIG nhờ thiết lập `hash $cookie_JSESSIONID` trên Nginx.
+2. **Test Failover:** Stop node hiện tại (`docker compose stop openig-1`). Refresh trang WordPress.
+   - **Kỳ vọng (EXPECTED):** Trình duyệt redirect về Keycloak (HTTP 302). Do phiên làm việc local (`JSESSIONID`) không được đồng bộ, node mới yêu cầu re-auth.
 
 ---
 
 ## 🧪 Kịch bản: Test User thứ hai (Bob)
 
-1. Đóng hẳn cửa sổ ẩn danh hiện tại (để clear toàn bộ Cookie, mô phỏng người dùng mới).
-2. Lặp lại từ **Bước 1** đến **Bước 5** nhưng ở Form Keycloak nhập:
-   - **Username:** `bob`
-   - **Password:** `bob123`
-3. **Kỳ vọng:** Bạn sẽ truy cập vào WordPress thành công, nhưng với tư cách là `bob` (vai trò Author — sẽ thấy ít menu admin hơn alice).
+1. Đóng hẳn cửa sổ ẩn danh hiện tại.
+2. Mở cửa sổ mới, đăng nhập `bob / bob123` vào WordPress.
+3. **Kỳ vọng:** Truy cập WordPress thành công với tư cách là `bob` (vai trò Author).
 
 ---
 
-## 🧪 Kịch bản: Single Logout (SLO) — Đăng xuất đồng thời 2 ứng dụng
+## 🧪 Kịch bản: Single Logout (SLO) — Đăng xuất đồng thời trong 1 Stack
 
-Kịch bản này chứng minh rằng khi đăng xuất khỏi **một ứng dụng**, tất cả các ứng dụng còn lại trong hệ thống **đều bị đăng xuất theo** — đây là tính năng Single Logout (SLO).
+### Bước 1: Truy cập App2 (whoami)
+1. Đăng nhập `alice` vào `http://openiga.sso.local/app2/`.
+2. Mở tab mới vào WordPress `http://openiga.sso.local/app1/wp-admin/` (SSO sẽ tự login).
 
-### Bước 1: Truy cập App2 (ứng dụng thứ hai)
-1. Mở cửa sổ ẩn danh mới.
-2. Vào địa chỉ: `http://localhost/app2/`
-3. **Kỳ vọng:** Trình duyệt redirect sang Keycloak login. Đăng nhập với `alice/alice123`.
-4. Sau khi đăng nhập, trang hiển thị thông tin request headers, trong đó có dòng:
-   - `X-Authenticated-User: alice`
-   - `X-OpenIG-Node: openig-1` *(hoặc `openig-2` tùy node đang phục vụ)*
-   → Xác nhận App2 đã nhận diện được user qua SSO và node đang xử lý request.
+### Bước 2: Đăng xuất khỏi WordPress
+1. Click **Log Out** trong WordPress.
+2. **Kỳ vọng:** Keycloak nhận yêu cầu logout và hủy phiên SSO.
 
-### Bước 2: Truy cập WordPress trong cùng phiên (SSO)
-1. Trong **cùng cửa sổ trình duyệt đó**, mở tab mới, vào: `http://localhost/wp-admin/`
-2. **Kỳ vọng:** WordPress Dashboard hiển thị **ngay lập tức, không cần đăng nhập lại**.
-   → Chứng minh SSO: cùng một phiên Keycloak, cả 2 app đều được xác thực.
-
-### Bước 3: Đăng xuất khỏi WordPress
-1. Trong tab WordPress, click vào tên `alice` góc trên phải → chọn **Log Out**.
-2. **Kỳ vọng ngầm (tự động):**
-   - OpenIG chặn request logout (`/wp-login.php?action=logout`).
-   - Redirect sang `/openid/logout` → OpenIG xóa session JSESSIONID.
-   - Tiếp tục redirect sang Keycloak end_session endpoint → Keycloak hủy phiên SSO.
-
-### Bước 4: Kiểm tra SLO trên App2
-1. Quay lại tab đang mở `http://localhost/app2/`, nhấn **F5** (Refresh).
-2. **Tiêu chuẩn đạt (Pass Criteria):**
-   - Trình duyệt **redirect về trang đăng nhập Keycloak** — không hiển thị nội dung App2.
-   - URL trên thanh địa chỉ chuyển sang dạng `http://localhost:8080/realms/sso-realm/...`
-   → **SLO thành công**: dù chưa logout trực tiếp trên App2, App2 đã bị đăng xuất theo.
-
-### Bước 5: Kiểm tra lại WordPress
-1. Vào lại `http://localhost/wp-admin/`.
-2. **Tiêu chuẩn đạt:** Redirect về Keycloak login — không còn truy cập được Dashboard.
-
-> **Tóm tắt SLO:** Một lần đăng xuất trên WordPress → cả WordPress lẫn App2 đều yêu cầu đăng nhập lại. Keycloak đóng vai trò trung tâm xóa phiên SSO cho toàn hệ thống.
+### Bước 3: Kiểm tra App2
+1. Quay lại tab App2, nhấn **F5**.
+2. **Tiêu chuẩn đạt:** Trình duyệt redirect về trang đăng nhập Keycloak.
 
 ---
 
-## 🛠️ Ghi chú Kỹ thuật (Kiến trúc Session 2 lớp - Dual-Layer)
+## 🧪 Kịch bản: Cross-stack SLO (Redis Blacklist)
 
-Để hệ thống chạy ổn định và vượt qua giới hạn 4KB của Cookie, chúng ta sử dụng kiến trúc session 2 lớp:
+Kịch bản này kiểm chứng tính năng Back-channel Logout đẩy sang Redis.
 
-1.  **Lớp 1 - JwtSession (Cookie `IG_SSO`):** 
-    - Dùng để lưu trữ trạng thái (state, nonce) tạm thời trong quá trình thực hiện luồng OIDC (pre-auth).
-    - Giúp OIDC flow nhẹ nhàng và không phụ thuộc vào server-side state.
+### Bước 1: Đăng nhập đa Stack
+1. Đăng nhập App1 (Stack A) và App3 (Stack B).
 
-2.  **Lớp 2 - Server-side Session (`JSESSIONID`):** 
-    - Dùng để lưu trữ các OAuth2 Token (Access + ID + Refresh token) sau khi đăng nhập thành công. 
-    - **Lý do:** Kích thước Token trong Lab này khoảng ~4.8KB, vượt quá giới hạn **4KB** của trình duyệt cho một cookie. Việc lưu trữ tại Tomcat (OpenIG) thông qua `JSESSIONID` giúp xử lý được các token kích thước lớn mà không gây lỗi.
+### Bước 2: Logout từ App3
+1. Truy cập `http://openigb.sso.local:9080/app3/logout`.
+2. Keycloak thực hiện back-channel logout tới Stack A.
 
-**Lưu ý về High Availability (HA):** 
-- Nginx được cấu hình "Sticky Session" dựa trên `JSESSIONID` để đảm bảo người dùng luôn được quay lại đúng node OpenIG đã lưu session của họ. 
-- Vì session trong Lab này được lưu local (không đồng bộ giữa các node), nên việc nhận mã **HTTP 302 (Redirect to Keycloak)** khi một node bị down là **HÀNH VI DỰ KIẾN (Expected Behavior)**. 
-- Sau khi Re-auth, hệ thống sẽ tự động gọi lại Vault để lấy thông tin đăng nhập WordPress, đảm bảo tính liền mạch.
+### Bước 3: Kiểm tra App1
+1. Refresh tab WordPress (`http://openiga.sso.local/app1/wp-admin/`).
+2. **Tiêu chuẩn đạt:** WordPress bị đăng xuất, redirect về Keycloak.
+   → **Giải thích:** `BackchannelLogoutHandler` nhận yêu cầu, ghi `sid` vào Redis. `SessionBlacklistFilter` phát hiện và hủy session local.
+
+---
+
+## 🛠️ Ghi chú Kỹ thuật (Kiến trúc Session & SLO)
+
+1.  **JwtSession (Cookie `IG_SSO`):** Lưu trạng thái pre-auth (nonce/state).
+2.  **Server-side Session (`JSESSIONID`):** Lưu OAuth2 Tokens (~4.8KB, vượt giới hạn cookie 4KB).
+3.  **Redis Blacklist (Enterprise SLO):**
+    - `BackchannelLogoutHandler`: Nhận logout_token, ghi `blacklist:{sid}` vào Redis (TTL 3600s).
+    - `SessionBlacklistFilter`: Chặn request, check Redis, nếu có key thì clear session.
+    - **Lưu ý:** Filter redirect phải dùng Header `Host` để đảm bảo đúng domain/port công khai.
+4.  **Separator ##:** Trong Keycloak, `post_logout_redirect_uris` phải dùng `##` để phân tách nhiều URL.
+5.  **Cấu hình Public URL:** WordPress phải được set `siteurl` = `http://openiga.sso.local/app1`. Không dùng rewrite URL tại gateway.
 
 Chúc bạn test thành công!
