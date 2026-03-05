@@ -1,0 +1,106 @@
+{
+  "name": "redmine-sso",
+  "baseURI": "http://redmine:3000",
+  "condition": "${matches(request.headers['Host'][0], 'openigb.sso.local.*') and (matches(request.uri.path, '^/app4.*') or matches(request.uri.path, '^/openid/app4.*')) and not(matches(request.uri.path, '^/openig.*'))}",
+  "heap": [
+    {
+      "name": "KeycloakIssuer",
+      "type": "Issuer",
+      "config": {
+        "issuer": "${env['KEYCLOAK_BROWSER_URL']}/realms/sso-realm",
+        "authorizeEndpoint": "${env['KEYCLOAK_BROWSER_URL']}/realms/sso-realm/protocol/openid-connect/auth",
+        "tokenEndpoint": "${env['KEYCLOAK_INTERNAL_URL']}/realms/sso-realm/protocol/openid-connect/token",
+        "userInfoEndpoint": "${env['KEYCLOAK_INTERNAL_URL']}/realms/sso-realm/protocol/openid-connect/userinfo",
+        "jwksUri": "${env['KEYCLOAK_INTERNAL_URL']}/realms/sso-realm/protocol/openid-connect/certs"
+      }
+    },
+    {
+      "name": "RedmineClientReg",
+      "type": "ClientRegistration",
+      "config": {
+        "clientId": "openig-client-b",
+        "clientSecret": "openig-client-b-secret",
+        "issuer": "KeycloakIssuer",
+        "scopes": ["openid", "profile", "email"],
+        "tokenEndpointAuthMethod": "client_secret_post"
+      }
+    },
+    {
+      "name": "SSOFailureHandler",
+      "type": "StaticResponseHandler",
+      "config": {
+        "status": 502,
+        "headers": {
+          "Content-Type": ["text/html"]
+        },
+        "entity": "<html><body><h2>SSO authentication failed. Please contact support.</h2></body></html>"
+      }
+    },
+    {
+      "name": "ClientHandler",
+      "type": "ClientHandler"
+    },
+    {
+      "name": "RedmineProxy",
+      "type": "ClientHandler",
+      "config": {
+        "soTimeout": "10 seconds"
+      }
+    },
+    {
+      "name": "SessionBlacklistFilterApp4",
+      "type": "ScriptableFilter",
+      "config": {
+        "type": "application/x-groovy",
+        "file": "SessionBlacklistFilterApp4.groovy"
+      }
+    },
+    {
+      "name": "VaultCredentialFilterRedmine",
+      "type": "ScriptableFilter",
+      "config": {
+        "type": "application/x-groovy",
+        "file": "VaultCredentialFilterRedmine.groovy"
+      }
+    },
+    {
+      "name": "RedmineCredentialInjectorFilter",
+      "type": "ScriptableFilter",
+      "config": {
+        "type": "application/x-groovy",
+        "file": "RedmineCredentialInjector.groovy"
+      }
+    },
+    {
+      "name": "PathStripperApp4",
+      "type": "ScriptableFilter",
+      "config": {
+        "type": "application/x-groovy",
+        "source": "def p = request.uri.path ?: '/'; if (p.startsWith('/app4')) { request.uri.path = p.substring(5) ?: '/' }; return next.handle(context, request)"
+      }
+    }
+  ],
+  "handler": {
+    "type": "Chain",
+    "config": {
+      "filters": [
+        {
+          "type": "OAuth2ClientFilter",
+          "config": {
+            "clientEndpoint": "/openid/app4",
+            "requireHttps": false,
+            "registrations": ["RedmineClientReg"],
+            "scopes": ["openid", "profile", "email"],
+            "target": "${attributes.openid}",
+            "failureHandler": "SSOFailureHandler",
+            "providerHandler": "ClientHandler"
+          }
+        },
+        "SessionBlacklistFilterApp4",
+        "VaultCredentialFilterRedmine",
+        "RedmineCredentialInjectorFilter"
+      ],
+      "handler": "RedmineProxy"
+    }
+  }
+}

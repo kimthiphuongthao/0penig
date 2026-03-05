@@ -1,0 +1,13 @@
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{ Layout = null; }
+<!DOCTYPE html>
+<html><head><title>Login</title></head><body>
+<h2>Login</h2>
+@if (ViewBag.Error != null) { <p style="color:red">@ViewBag.Error</p> }
+<form method="post" action="/Account/Login">
+  @Html.AntiForgeryToken()
+  <label>Username: <input name="username" type="text" /></label><br/>
+  <label>Password: <input name="password" type="password" /></label><br/>
+  <button type="submit">Login</button>
+</form>
+</body></html>

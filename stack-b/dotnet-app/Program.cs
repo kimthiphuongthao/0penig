@@ -1,0 +1,14 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddControllersWithViews();
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(o => { o.IdleTimeout = TimeSpan.FromHours(8); o.Cookie.HttpOnly = true; o.Cookie.IsEssential = true; });
+var app = builder.Build();
+app.UsePathBase("/app3");
+app.UseStaticFiles();
+app.UseRouting();
+app.UseSession();
+app.MapGet("/health", () => Results.Ok("healthy"));
+app.MapControllerRoute(name: "default", pattern: "{controller=Home}/{action=Index}/{id?}");
+app.Run("http://0.0.0.0:5000");
