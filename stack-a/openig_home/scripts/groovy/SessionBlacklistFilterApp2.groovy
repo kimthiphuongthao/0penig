@@ -56,8 +56,19 @@ def resolveSid = {
         return cachedSid
     }
 
-    def publicUrl = System.getenv('OPENIG_PUBLIC_URL') ?: 'http://openiga.sso.local:80'
-    def idToken = session['oauth2:' + publicUrl + '/openid/app2']?.get('atr')?.get('id_token') as String
+    def host = request.headers.getFirst('Host') ?: 'openiga.sso.local:80'
+    def hostWithPort = host.contains(':') ? host : host + ':80'
+    def hostWithoutPort = host.replaceAll(':80$', '')
+    def candidateKeys = [
+        'oauth2:http://' + hostWithPort + '/openid/app2',
+        'oauth2:http://' + hostWithoutPort + '/openid/app2',
+        'oauth2:' + (System.getenv('OPENIG_PUBLIC_URL') ?: 'http://openiga.sso.local:80') + '/openid/app2'
+    ]
+    def idToken = null
+    for (def key : candidateKeys) {
+        idToken = session[key]?.get('atr')?.get('id_token') as String
+        if (idToken != null && !idToken.trim().isEmpty()) break
+    }
     if (idToken == null || idToken.trim().isEmpty()) {
         return null
     }
