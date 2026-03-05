@@ -22,7 +22,8 @@
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
       "redirectUris": [
-        "http://localhost/openid/callback",
+        "http://openiga.sso.local/openid/*",
+        "http://openiga.sso.local:80/openid/*",
         "http://localhost/openid/*"
       ],
       "webOrigins": [
@@ -57,7 +58,7 @@
       "directAccessGrantsEnabled": false,
       "serviceAccountsEnabled": false,
       "redirectUris": [
-        "http://localhost:9080/openid/callback",
+        "http://openigb.sso.local:9080/openid/*",
         "http://localhost:9080/openid/*"
       ],
       "webOrigins": [
