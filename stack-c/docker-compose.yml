@@ -90,10 +90,9 @@ services:
       - backend-c
     cap_add:
       - IPC_LOCK
-    command: server -dev
+    command: server
     volumes:
+      - ./vault/config:/vault/config:ro
+      - ./vault/data:/vault/data
       - ./vault/file:/vault/file
       - ./vault/init:/vault/init
-    environment:
-      VAULT_DEV_ROOT_TOKEN_ID: "root"
-      VAULT_DEV_LISTEN_ADDRESS: "0.0.0.0:8200"
