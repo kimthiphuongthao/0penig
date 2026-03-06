@@ -36,23 +36,28 @@ def readRespLine = { InputStream input ->
 }
 
 try {
-    String sid = session['oidc_sid'] as String
+    String sid = session['oidc_sid_app3'] as String
     if (!sid?.trim()) {
-        String publicUrl = System.getenv('OPENIG_PUBLIC_URL') ?: 'http://openiga.sso.local:80'
+        String openigPublicUrl = System.getenv('OPENIG_PUBLIC_URL') ?: 'http://openigb.sso.local:9080'
         String hostHeader = request.headers.getFirst('Host') as String
         String hostWithoutPort = hostHeader?.split(':')?.getAt(0)
-        String hostWithPort = hostHeader?.contains(':') ? hostHeader : (hostWithoutPort ? hostWithoutPort + ':80' : null)
+        String hostWithPort = hostHeader?.contains(':') ? hostHeader : (hostWithoutPort ? "${hostWithoutPort}:9080" : null)
 
-        def sessionKeys = [
-            hostWithPort    ? 'oauth2:http://' + hostWithPort + '/openid/app1'    : null,
-            hostWithoutPort ? 'oauth2:http://' + hostWithoutPort + '/openid/app1' : null,
-            'oauth2:' + publicUrl + '/openid/app1'
-        ].findAll { it != null }.unique()
+        List<String> oauth2SessionKeys = []
+        if (hostWithPort) {
+            oauth2SessionKeys.add("oauth2:http://${hostWithPort}/openid/app3")
+        }
+        if (hostWithoutPort) {
+            oauth2SessionKeys.add("oauth2:http://${hostWithoutPort}/openid/app3")
+        }
+        oauth2SessionKeys.add("oauth2:${openigPublicUrl}/openid/app3")
 
         String idToken = null
-        for (def key : sessionKeys) {
-            idToken = session[key]?.get('atr')?.get('id_token') as String
-            if (idToken?.trim()) break
+        for (String oauth2SessionKey : oauth2SessionKeys.unique()) {
+            idToken = session[oauth2SessionKey]?.get('atr')?.get('id_token') as String
+            if (idToken?.trim()) {
+                break
+            }
         }
         if (!idToken?.trim()) {
             return next.handle(context, request)
@@ -63,10 +68,10 @@ try {
             return next.handle(context, request)
         }
 
-        session['oidc_sid'] = sid
+        session['oidc_sid_app3'] = sid
     }
 
-    String redisHost = System.getenv('REDIS_HOST') ?: 'redis-a'
+    String redisHost = System.getenv('REDIS_HOST') ?: 'redis-b'
     int redisPort = 6379
     String key = "blacklist:${sid}"
     int keySize = key.getBytes('UTF-8').length
@@ -83,17 +88,17 @@ try {
 
     if (blacklisted) {
         session.clear()
-        String hostHeader = request.headers.getFirst('Host') as String
-        String originalPath = request.uri.path ?: '/'
-        String originalQuery = request.uri.query ? '?' + request.uri.query : ''
-        String redirectUrl = 'http://' + (hostHeader ?: 'wp-a.sso.local') + originalPath + originalQuery
         Response response = new Response(Status.FOUND)
-        response.headers.put('Location', [redirectUrl as String])
+        String redirectHost = request.headers.getFirst('Host') as String
+        if (!redirectHost?.trim()) {
+            redirectHost = 'jellyfin-b.sso.local'
+        }
+        response.headers.put('Location', [('http://' + redirectHost + '/') as String])
         return newResultPromise(response)
     }
 
     return next.handle(context, request)
 } catch (Exception e) {
-    logger.warn('[SessionBlacklistFilter] Redis check failed, continuing request', e)
+    logger.warn('[SessionBlacklistFilterApp3] Redis check failed, continuing request', e)
     return next.handle(context, request)
 }

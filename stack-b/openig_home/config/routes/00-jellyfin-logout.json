@@ -1,0 +1,11 @@
+{
+  "name": "00-jellyfin-logout-intercept",
+  "condition": "${matches(request.headers['Host'][0], 'jellyfin-b.sso.local.*') and (matches(request.uri.path, '^/logout$') or matches(request.uri.toString(), '.*/logout.*'))}",
+  "handler": {
+    "type": "ScriptableHandler",
+    "config": {
+      "type": "application/x-groovy",
+      "file": "SloHandlerJellyfin.groovy"
+    }
+  }
+}

@@ -48,7 +48,7 @@ try {
         throw new IllegalArgumentException('sid/sub missing in logout_token')
     }
 
-    String redisHost = System.getenv('REDIS_HOST') ?: 'redis-a'
+    String redisHost = System.getenv('REDIS_HOST') ?: 'redis-c'
     int redisPort = 6379
     String key = "blacklist:${sid}"
     int keySize = key.getBytes('UTF-8').length

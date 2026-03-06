@@ -1,7 +1,7 @@
 # OpenIG runtime files
-openig_home/logs/
-openig_home/tmp/
-openig_home/data/
+**/openig_home/logs/
+**/openig_home/tmp/
+**/openig_home/data/
 /tmp/
 
 # Docker volumes (nếu mount local)
@@ -17,4 +17,9 @@ vault/file/
 *.iml
 .vscode/
 *.log
-openig_home/keystore.p12
+**/openig_home/keystore.p12
+
+# Stack-C runtime vault credentials
+**/openig_home/vault/
+**/vault/init/role_id
+**/vault/init/secret_id

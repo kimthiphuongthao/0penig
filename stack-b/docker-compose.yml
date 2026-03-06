@@ -1,6 +1,6 @@
 # ============================================================
-# Stack B: OpenIG HA + .NET App + Vault-B
-# Browser → nginx-b (port 9080) → openig-b1/b2 → dotnet-app
+# Stack B: OpenIG HA + Jellyfin + Vault-B
+# Browser → nginx-b (port 9080) → openig-b1/b2
 # Shares Keycloak at http://host.docker.internal:8080
 # ============================================================
 
@@ -13,6 +13,8 @@ networks:
 volumes:
   redmine_mysql_data:
   redmine_data:
+  jellyfin_config:
+  jellyfin_cache:
 
 services:
 
@@ -47,13 +49,12 @@ services:
       JWT_SHARED_SECRET: "U1NPLUItSnd0U2VjcmV0LTMyYnl0ZXMtS0VZX1whQCMk"
       KEYCLOAK_BROWSER_URL: "http://auth.sso.local:8080"
       KEYCLOAK_INTERNAL_URL: "http://host.docker.internal:8080"
-      DOTNET_APP_BASE_URL: "http://dotnet-app:5000/app3"
       OIDC_CLIENT_ID: "openig-client-b"
-      APP_PUBLIC_BASE_URL: "http://openigb.sso.local:9080/app3"
       OPENIG_NODE_NAME: "openig-b1"
       VAULT_ADDR: "http://vault-b:8200"
       VAULT_ROLE_ID_FILE: "/vault/file/openig-role-id"
       VAULT_SECRET_ID_FILE: "/vault/file/openig-secret-id"
+      JELLYFIN_SERVER_ID: "8a4467ecf1d4422583f472d90cb8c78f"
     networks:
       - backend-b
     restart: unless-stopped
@@ -80,13 +81,12 @@ services:
       JWT_SHARED_SECRET: "U1NPLUItSnd0U2VjcmV0LTMyYnl0ZXMtS0VZX1whQCMk"
       KEYCLOAK_BROWSER_URL: "http://auth.sso.local:8080"
       KEYCLOAK_INTERNAL_URL: "http://host.docker.internal:8080"
-      DOTNET_APP_BASE_URL: "http://dotnet-app:5000/app3"
       OIDC_CLIENT_ID: "openig-client-b"
-      APP_PUBLIC_BASE_URL: "http://openigb.sso.local:9080/app3"
       OPENIG_NODE_NAME: "openig-b2"
       VAULT_ADDR: "http://vault-b:8200"
       VAULT_ROLE_ID_FILE: "/vault/file/openig-role-id"
       VAULT_SECRET_ID_FILE: "/vault/file/openig-secret-id"
+      JELLYFIN_SERVER_ID: "8a4467ecf1d4422583f472d90cb8c78f"
     networks:
       - backend-b
     restart: unless-stopped
@@ -97,20 +97,23 @@ services:
       retries: 5
       start_period: 60s
 
-  dotnet-app:
-    build:
-      context: ./dotnet-app
-      dockerfile: Dockerfile
-    container_name: sso-b-dotnet
+  jellyfin:
+    image: jellyfin/jellyfin
+    container_name: sso-b-jellyfin
+    volumes:
+      - jellyfin_config:/config
+      - jellyfin_cache:/cache
+    environment:
+      - TZ=Asia/Ho_Chi_Minh
     networks:
       - backend-b
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "bash -c '</dev/tcp/localhost/5000' 2>/dev/null || exit 1"]
-      interval: 15s
-      timeout: 5s
+      test: ["CMD", "curl", "-f", "http://localhost:8096/health"]
+      interval: 30s
+      timeout: 10s
       retries: 5
-      start_period: 30s
+      start_period: 60s
 
   redis-b:
     image: redis:7-alpine

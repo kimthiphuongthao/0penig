@@ -1,0 +1,119 @@
+{
+  "name": "jellyfin-sso",
+  "baseURI": "http://jellyfin:8096",
+  "condition": "${matches(request.headers['Host'][0], 'jellyfin-b.sso.local.*') and not(matches(request.uri.path, '^/openig.*'))}",
+  "heap": [
+    {
+      "name": "KeycloakIssuer",
+      "type": "Issuer",
+      "config": {
+        "issuer": "${env['KEYCLOAK_BROWSER_URL']}/realms/sso-realm",
+        "authorizeEndpoint": "${env['KEYCLOAK_BROWSER_URL']}/realms/sso-realm/protocol/openid-connect/auth",
+        "tokenEndpoint": "${env['KEYCLOAK_INTERNAL_URL']}/realms/sso-realm/protocol/openid-connect/token",
+        "userInfoEndpoint": "${env['KEYCLOAK_INTERNAL_URL']}/realms/sso-realm/protocol/openid-connect/userinfo",
+        "jwksUri": "${env['KEYCLOAK_INTERNAL_URL']}/realms/sso-realm/protocol/openid-connect/certs"
+      }
+    },
+    {
+      "name": "JellyfinClientReg",
+      "type": "ClientRegistration",
+      "config": {
+        "clientId": "openig-client-b",
+        "clientSecret": "openig-client-b-secret",
+        "issuer": "KeycloakIssuer",
+        "scopes": [
+          "openid",
+          "profile",
+          "email"
+        ],
+        "tokenEndpointAuthMethod": "client_secret_post"
+      }
+    },
+    {
+      "name": "SSOFailureHandler",
+      "type": "StaticResponseHandler",
+      "config": {
+        "status": 502,
+        "headers": {
+          "Content-Type": [
+            "text/html"
+          ]
+        },
+        "entity": "<html><body><h2>SSO authentication failed. Please contact support.</h2></body></html>"
+      }
+    },
+    {
+      "name": "ClientHandler",
+      "type": "ClientHandler"
+    },
+    {
+      "name": "JellyfinProxy",
+      "type": "ClientHandler",
+      "config": {
+        "soTimeout": "10 seconds"
+      }
+    },
+    {
+      "name": "SessionBlacklistFilterApp3",
+      "type": "ScriptableFilter",
+      "config": {
+        "type": "application/x-groovy",
+        "file": "SessionBlacklistFilterApp3.groovy"
+      }
+    },
+    {
+      "name": "VaultCredentialFilterJellyfin",
+      "type": "ScriptableFilter",
+      "config": {
+        "type": "application/x-groovy",
+        "file": "VaultCredentialFilterJellyfin.groovy"
+      }
+    },
+    {
+      "name": "JellyfinTokenInjectorFilter",
+      "type": "ScriptableFilter",
+      "config": {
+        "type": "application/x-groovy",
+        "file": "JellyfinTokenInjector.groovy"
+      }
+    },
+    {
+      "name": "JellyfinResponseRewriterFilter",
+      "type": "ScriptableFilter",
+      "config": {
+        "type": "application/x-groovy",
+        "file": "JellyfinResponseRewriter.groovy"
+      }
+    }
+  ],
+  "handler": {
+    "type": "Chain",
+    "config": {
+      "filters": [
+        {
+          "type": "OAuth2ClientFilter",
+          "config": {
+            "clientEndpoint": "/openid/app3",
+            "requireHttps": false,
+            "registrations": [
+              "JellyfinClientReg"
+            ],
+            "scopes": [
+              "openid",
+              "profile",
+              "email"
+            ],
+            "target": "${attributes.openid}",
+            "failureHandler": "SSOFailureHandler",
+            "providerHandler": "ClientHandler"
+          }
+        },
+        "SessionBlacklistFilterApp3",
+        "VaultCredentialFilterJellyfin",
+        "JellyfinTokenInjectorFilter",
+        "JellyfinResponseRewriterFilter"
+      ],
+      "handler": "JellyfinProxy"
+    }
+  }
+}

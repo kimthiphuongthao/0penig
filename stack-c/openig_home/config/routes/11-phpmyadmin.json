@@ -1,0 +1,117 @@
+{
+  "name": "phpmyadmin-sso",
+  "baseURI": "http://phpmyadmin:80",
+  "condition": "${matches(request.headers['Host'][0], 'phpmyadmin-c.sso.local.*') and not(matches(request.uri.path, '^/openid/app6/backchannel_logout$'))}",
+  "heap": [
+    {
+      "name": "KeycloakIssuer",
+      "type": "Issuer",
+      "config": {
+        "issuer": "http://auth.sso.local:8080/realms/sso-realm",
+        "authorizeEndpoint": "http://auth.sso.local:8080/realms/sso-realm/protocol/openid-connect/auth",
+        "tokenEndpoint": "http://host.docker.internal:8080/realms/sso-realm/protocol/openid-connect/token",
+        "userInfoEndpoint": "http://host.docker.internal:8080/realms/sso-realm/protocol/openid-connect/userinfo",
+        "registrationEndpoint": "http://host.docker.internal:8080/realms/sso-realm/clients-registrations/openid-connect",
+        "endSessionEndpoint": "http://auth.sso.local:8080/realms/sso-realm/protocol/openid-connect/logout"
+      }
+    },
+    {
+      "name": "PhpMyAdminClientReg",
+      "type": "ClientRegistration",
+      "config": {
+        "clientId": "openig-client-c-app6",
+        "clientSecret": "secret-c",
+        "issuer": "KeycloakIssuer",
+        "scopes": [
+          "openid",
+          "profile",
+          "email"
+        ]
+      }
+    },
+    {
+      "name": "OidcFilterApp6",
+      "type": "OAuth2ClientFilter",
+      "config": {
+        "clientEndpoint": "/openid/app6",
+        "registrations": [
+          "PhpMyAdminClientReg"
+        ],
+        "scopes": [
+          "openid",
+          "profile",
+          "email"
+        ],
+        "requireHttps": false,
+        "target": "${attributes.openid}",
+        "defaultLogoutGoto": "http://auth.sso.local:8080/realms/sso-realm/protocol/openid-connect/logout?client_id=openig-client-c-app6&post_logout_redirect_uri=http%3A%2F%2Fphpmyadmin-c.sso.local%2F",
+        "failureHandler": {
+          "type": "StaticResponseHandler",
+          "config": {
+            "status": 500,
+            "reason": "Internal Server Error",
+            "headers": {
+              "Content-Type": [
+                "text/html"
+              ]
+            },
+            "entity": "<html><body><h2>SSO authentication failed. Please contact support.</h2></body></html>"
+          }
+        }
+      }
+    },
+    {
+      "name": "SessionBlacklistFilterApp6",
+      "type": "ScriptableFilter",
+      "config": {
+        "type": "application/x-groovy",
+        "file": "SessionBlacklistFilter.groovy",
+        "args": {
+          "clientEndpoint": "/openid/app6",
+          "sessionCacheKey": "oidc_sid_app6"
+        }
+      }
+    },
+    {
+      "name": "VaultCredentialFilter",
+      "type": "ScriptableFilter",
+      "config": {
+        "type": "application/x-groovy",
+        "file": "VaultCredentialFilter.groovy"
+      }
+    },
+    {
+      "name": "PhpMyAdminBasicAuth",
+      "type": "HttpBasicAuthFilter",
+      "config": {
+        "username": "${session['phpmyadmin_username']}",
+        "password": "${session['phpmyadmin_password']}",
+        "failureHandler": {
+          "type": "StaticResponseHandler",
+          "config": {
+            "status": 401
+          }
+        }
+      }
+    },
+    {
+      "name": "PhpMyAdminProxy",
+      "type": "ClientHandler",
+      "config": {
+        "soTimeout": "10 seconds"
+      }
+    }
+  ],
+  "handler": {
+    "type": "Chain",
+    "config": {
+      "filters": [
+        "OidcFilterApp6",
+        "SessionBlacklistFilterApp6",
+        "VaultCredentialFilter",
+        "PhpMyAdminBasicAuth"
+      ],
+      "handler": "PhpMyAdminProxy"
+    }
+  }
+}
