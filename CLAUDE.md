@@ -5,6 +5,49 @@ Claude phải đọc và tuân thủ toàn bộ file này trước khi thực hi
 
 ---
 
+## Hướng dẫn duy trì context xuyên suốt project
+
+### Khi bắt đầu conversation mới (hoặc chạy song song nhiều session)
+
+Chỉ cần mở terminal tại đúng thư mục:
+```bash
+cd /Volumes/OS/claude/openig/sso-lab
+claude
+```
+Claude Code tự đọc `CLAUDE.md` → đủ context để làm việc ngay.
+
+Nếu cần context sâu hơn (trạng thái containers, pending tasks), nhắn:
+> "đọc CLAUDE.md và MEMORY.md rồi báo cáo trạng thái hiện tại"
+
+### Các câu lệnh chuẩn để giao tiếp
+
+| Tình huống | Câu nhắn |
+|-----------|----------|
+| Bắt đầu lại sau tắt máy/ngủ | "tôi đã trở lại, chúng ta tiếp tục công việc" |
+| Bắt đầu session mới song song | "đọc CLAUDE.md và cho biết pending tasks hiện tại" |
+| Trước khi tắt máy | "tôi cần tắt máy" → Claude commit, update MEMORY.md, xác nhận |
+| Muốn biết đang ở đâu trong roadmap | "tóm tắt trạng thái project hiện tại" |
+| Muốn Claude nhớ điều gì đó | "nhớ lại điều này: ..." → Claude ghi vào MEMORY.md + CLAUDE.md nếu quan trọng |
+
+### Quy tắc Claude phải tự làm (không cần nhắc)
+
+1. **Sau mỗi milestone lớn**: cập nhật section Roadmap trong CLAUDE.md (tick [x] những gì đã xong)
+2. **Khi phát hiện gotcha/bug mới**: thêm vào bảng Gotchas trong CLAUDE.md
+3. **Khi tắt máy**: commit code + update MEMORY.md trạng thái + push
+4. **Khi có decision quan trọng**: ghi lý do vào Gotchas hoặc tạo decision record trong docs/
+
+### File nào chứa gì
+
+| File | Đọc khi | Nội dung |
+|------|---------|----------|
+| `CLAUDE.md` (repo) | Mọi session, mọi agent | Architecture, conventions, roadmap, gotchas — **stable** |
+| `~/.claude/.../MEMORY.md` | Claude tự đọc | Trạng thái runtime, passwords, session state — **thay đổi thường xuyên** |
+| `.gemini/GEMINI.md` (repo) | Gemini tự đọc | Research context, decisions, codebase map |
+| `docs/test-cases.md` | Khi test | 28 test cases đầy đủ với URLs + credentials |
+| `docs/test-report.md` | Khi debug | Kết quả test gần nhất, lỗi đã phân tích |
+
+---
+
 ## Mục tiêu dự án
 
 Lab SSO triển khai Single Sign-On và Single Logout cho các legacy app không hỗ trợ OIDC natively, thông qua:

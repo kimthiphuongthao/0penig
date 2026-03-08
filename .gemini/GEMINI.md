@@ -1,0 +1,61 @@
+# GEMINI.md — SSO Lab Research Context
+
+Gemini là research-only agent trong workflow này. Đọc file này trước khi thực hiện bất kỳ task nào.
+
+## Vai trò của Gemini
+
+- ✅ Research, web search, đọc source code thư viện
+- ✅ Phân tích log, trace lỗi, feasibility validation
+- ✅ Viết và cập nhật file `.md` (docs, reports, checklists)
+- ❌ KHÔNG viết code, config, scripts dù bất kỳ lý do gì
+- ❌ KHÔNG sửa file .groovy, .json, .sh, .yml, .conf, .xml, .hcl
+
+Mọi implementation giao cho **Codex**. Gemini chỉ báo cáo findings cho Claude.
+
+## Project overview
+
+SSO lab: tích hợp legacy apps vào SSO qua OpenIG 6 + Keycloak 24 + Vault + Redis.
+
+- **stack-a** (port 80): WordPress, WhoAmI — form login injection
+- **stack-b** (port 9080): Redmine, Jellyfin — form login + token injection
+- **stack-c** (port 18080): Grafana, phpMyAdmin — header injection + HTTP Basic Auth
+- **Keycloak** (port 8080): shared IDP, realm `sso-lab`
+
+Đọc `CLAUDE.md` ở root repo để biết đầy đủ architecture, container names, URLs, credentials.
+
+## Codebase structure
+
+```
+sso-lab/
+├── CLAUDE.md                    ← project instructions (đọc trước)
+├── keycloak/                    ← Keycloak compose + realm export
+├── stack-a/
+│   ├── docker-compose.yml
+│   ├── nginx/nginx.conf
+│   ├── openig_home/
+│   │   ├── config/config.json   ← JwtSession, cookie IG_SSO
+│   │   ├── config/routes/       ← OpenIG route definitions
+│   │   └── scripts/groovy/      ← Groovy filter scripts
+│   └── vault/
+│       ├── config/vault.hcl
+│       └── init/vault-bootstrap.sh
+├── stack-b/                     ← tương tự stack-a
+├── stack-c/                     ← tương tự stack-a
+└── docs/
+    ├── test-cases.md            ← 28 test cases SSO/SLO
+    ├── test-report.md           ← kết quả test gần nhất
+    └── vault-hardening-gaps.md  ← 9 security gaps cần fix
+```
+
+## Decisions đã được đưa ra (không reinvent)
+
+- **HA**: nginx `ip_hash` + JwtSession (stateless cookie) — đã test, không dùng Redis session store
+- **Vault**: file storage mode, `command: server` only trong docker-compose
+- **SLO**: backchannel logout → Redis blacklist, mỗi stack có Redis riêng
+- **Cookie**: Stack B thiếu `cookieDomain` — đã phân tích, LOW priority, không ảnh hưởng correctness
+- **phpMyAdmin**: dùng `config.user.inc.php` mount, không dùng `PMA_AUTH_TYPE` env var
+
+## Known bugs chưa fix
+
+- Jellyfin WebSocket: route dùng `http://` thay vì `ws://` → `01-jellyfin.json` stack-b
+- Stack B `config.json`: thiếu `cookieDomain: ".sso.local"` trong JwtSession (LOW priority)
