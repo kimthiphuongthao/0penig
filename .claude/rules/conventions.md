@@ -1,5 +1,25 @@
 # Conventions
 
+## ⚠️ NGUYÊN TẮC TỐI THƯỢNG — KHÔNG BAO GIỜ VI PHẠM
+
+**TUYỆT ĐỐI KHÔNG sửa code/config của bất kỳ ứng dụng đích nào** — áp dụng cho 100% ứng dụng, không ngoại lệ.
+
+"Ứng dụng đích" = mọi thứ không phải OpenIG gateway: app server, database, reverse proxy của app, identity provider, container image, docker-compose của app, v.v.
+
+Mọi giải pháp SSO/SLO **CHỈ được thực hiện ở phía OpenIG gateway**:
+- `openig_home/config/routes/*.json`
+- `openig_home/scripts/groovy/*.groovy`
+- `openig_home/config/config.json`
+- `nginx/nginx.conf` (gateway nginx)
+- `vault/` (bootstrap, policy)
+
+Khi phát hiện issue cần sửa, **BẮT BUỘC báo cáo theo format**:
+- Sửa phần nào? (tên file, section cụ thể)
+- Có tuân thủ nguyên tắc không sửa app đích không? (Có / Không — nếu Không thì dừng lại)
+- Nội dung thay đổi đề xuất là gì?
+
+→ Chờ user confirm trước khi thực hiện.
+
 ## Nginx — F5 BIG-IP alignment
 - Upstream pool naming: `<app>_pool` (ví dụ: `grafana_pool`, `wordpress_pool`)
 - Luôn có `proxy_set_header Host $host` và `X-Real-IP $remote_addr`

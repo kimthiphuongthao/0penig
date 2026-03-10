@@ -4,9 +4,14 @@
 
 | Agent | Được làm | KHÔNG được làm |
 |-------|----------|----------------|
-| **Claude** | Điều phối, verify, quyết định bước tiếp theo, viết .md | Tự sửa code/config kỹ thuật |
-| **Codex** | MỌI file kỹ thuật: .groovy, .json, .sh, .yml, .conf, .xml, .hcl | Research, web search |
-| **Gemini** | Research, web search, đọc source thư viện, phân tích log, viết .md docs | Viết code/config |
+| **Claude** | Điều phối, verify nguyên tắc, quyết định bước tiếp theo, viết .md | Tự debug, tự đọc code tìm bug, tự sửa code/config kỹ thuật |
+| **Codex** | MỌI file kỹ thuật: .groovy, .json, .sh, .yml, .conf, .xml, .hcl; đọc log, tìm root cause, đề xuất fix | Research web, web search |
+| **Gemini** | Research, web search, đọc source thư viện, phân tích log ngoài project, viết .md docs | Viết code/config |
+
+**Khi user gửi log/error:**
+→ Claude KHÔNG tự debug → giao thẳng Codex phân tích log + tìm root cause + đề xuất fix
+→ Codex báo cáo findings theo format (file/section, tuân thủ nguyên tắc, nội dung thay đổi)
+→ Claude verify nguyên tắc → trình bày cho user confirm → Codex implement
 
 ## Codex — model selection
 
@@ -29,6 +34,15 @@ KHÔNG dùng `--full-auto` + `--sandbox` cùng lúc → conflict.
 
 ## Gemini — approval mode
 
+Mọi prompt gửi Gemini PHẢI bắt đầu bằng đoạn context sau:
+```
+Trước khi làm task, đọc các file sau để hiểu đủ ngữ cảnh:
+- CLAUDE.md
+- .gemini/GEMINI.md
+- .claude/rules/ (toàn bộ)
+Sau đó thực hiện task: [task cụ thể]
+```
+
 ```bash
 gemini -p "prompt" --approval-mode default -o text 2>/dev/null    # research
 gemini -p "prompt" --approval-mode auto_edit -o text 2>/dev/null  # viết .md
@@ -44,12 +58,24 @@ Claude detect stuck
 Claude tổng hợp → Codex resume với context mới
 ```
 
-## Context7 MCP — dùng trước khi giao Codex
+## Tra cứu docs trước khi giao Codex
 
-Tra cứu đúng API/config của library version đang dùng TRƯỚC khi viết prompt cho Codex:
-- OpenIG 6 filter/handler params
-- Vault API endpoints, policy syntax
-- Keycloak OIDC endpoints, backchannel logout spec
+Verify đúng API/config TRƯỚC khi viết prompt cho Codex:
+
+| Library | Tool | Library ID / URL |
+|---------|------|-----------------|
+| Keycloak | Context7 | `/keycloak/keycloak` |
+| Vault | Context7 | `/websites/developer_hashicorp_vault` |
+| OpenIG 6 | WebFetch | `https://github.com/OpenIdentityPlatform/OpenIG` (raw source) |
+
+**OpenIG WebFetch pattern:**
+```
+WebFetch https://raw.githubusercontent.com/OpenIdentityPlatform/OpenIG/master/<path>
+```
+Tìm file path theo thứ tự:
+1. Gemini web search tìm path
+2. Nếu không ra → Codex gpt-5.3-codex medium browse repo verify
+3. Cả 2 confirm → Claude WebFetch raw content
 
 ## Context management
 

@@ -35,11 +35,6 @@ def decodeJwtClaims = { String jwt ->
 }
 
 try {
-    // Return early if credentials already cached in session
-    if (session['phpmyadmin_username']?.toString()?.trim()) {
-        return next.handle(context, request)
-    }
-
     String vaultAddr = System.getenv('VAULT_ADDR') ?: 'http://vault:8200'
     String vaultRoleIdFile = System.getenv('VAULT_ROLE_ID_FILE')
     String vaultSecretIdFile = System.getenv('VAULT_SECRET_ID_FILE')
@@ -70,6 +65,15 @@ try {
         throw new IllegalStateException('Missing preferred_username/email/sub in id_token')
     }
     username = username.trim()
+
+    String cachedUsername = session['phpmyadmin_username']?.toString()?.trim()
+    if (cachedUsername) {
+        if (cachedUsername == username) {
+            return next.handle(context, request)
+        }
+        session.remove('phpmyadmin_username')
+        session.remove('phpmyadmin_password')
+    }
 
     long nowEpochSeconds = (System.currentTimeMillis() / 1000L) as long
     String vaultToken = session['vault_token'] as String
