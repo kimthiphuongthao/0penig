@@ -11,11 +11,11 @@
 ## Codex — model selection
 
 ```bash
-# Task rõ ràng, viết file theo chỉ dẫn
+# gpt-5.3-codex medium — CHỈ dùng khi: viết file mới theo spec đã rõ ràng 100%, không có bug, không cần đọc code cũ
 codex exec --skip-git-repo-check --full-auto \
   -m gpt-5.3-codex -c model_reasoning_effort="medium" -C <workdir> "prompt" 2>/dev/null
 
-# Mọi thứ phức tạp hơn: debug, refactor, nhiều file, root cause khó
+# gpt-5.4 high — dùng cho MỌI thứ còn lại: bug fix, debug, refactor, đọc code cũ, sửa config có logic
 codex exec --skip-git-repo-check --full-auto \
   -m gpt-5.4 -c model_reasoning_effort="high" -C <workdir> "prompt" 2>/dev/null
 
