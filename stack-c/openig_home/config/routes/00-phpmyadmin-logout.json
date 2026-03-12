@@ -1,0 +1,11 @@
+{
+  "name": "00-phpmyadmin-logout",
+  "condition": "${request.method == 'GET' and request.headers['Host'] != null and request.headers['Host'][0] != null and matches(request.headers['Host'][0], '(?i)^phpmyadmin-c[.]sso[.]local(:[0-9]+)?$') and matches(request.uri.path, '^/$') and request.uri.query != null and matches(request.uri.query, '(^|&)logout=1($|&)')}",
+  "handler": {
+    "type": "ScriptableHandler",
+    "config": {
+      "type": "application/x-groovy",
+      "file": "SloHandlerPhpMyAdmin.groovy"
+    }
+  }
+}

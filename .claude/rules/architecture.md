@@ -1,5 +1,17 @@
 # Architecture
 
+## ⚠️ NGUYÊN TẮC ĐỘC LẬP — BẮT BUỘC TUÂN THỦ MỌI LÚC
+
+Mỗi stack là một **bộ hoàn chỉnh độc lập**. Khi triển khai/debug/fix bất kỳ stack nào:
+
+- **KHÔNG** dùng chung credential, secret, key, config với stack khác
+- Mỗi stack có OpenIG riêng, Vault riêng, Redis riêng, nginx riêng
+- `sharedSecret` trong `config.json` phải **khác nhau** giữa các stacks
+- Backchannel logout URL phải tự đăng ký độc lập trong Keycloak — không phụ thuộc stack khác
+- Keycloak là **shared IdP duy nhất** được phép dùng chung — mọi thứ khác phải độc lập
+
+Vi phạm nguyên tắc này = lỗi thiết kế nghiêm trọng, **dừng lại và sửa ngay**.
+
 ## Stack overview
 
 | Stack | Port | Apps | Auth mechanism |

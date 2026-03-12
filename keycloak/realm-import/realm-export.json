@@ -84,6 +84,80 @@
         "backchannel.logout.url": "http://host.docker.internal:9080/openid/app3/backchannel_logout",
         "backchannel.logout.session.required": "true"
       }
+    },
+    {
+      "clientId": "openig-client-c-app5",
+      "name": "OpenIG Client C App5",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "secret-c",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://grafana-c.sso.local:18080/openid/app5/*"
+      ],
+      "webOrigins": [
+        "http://grafana-c.sso.local:18080"
+      ],
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "profile",
+        "roles",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "http://grafana-c.sso.local:18080/",
+        "backchannel.logout.url": "http://host.docker.internal:18080/openid/app5/backchannel_logout",
+        "backchannel.logout.session.required": "true",
+        "backchannel.logout.revoke.offline.tokens": "false"
+      }
+    },
+    {
+      "clientId": "openig-client-c-app6",
+      "name": "OpenIG Client C App6",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "secret-c",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://phpmyadmin-c.sso.local:18080/openid/app6/*"
+      ],
+      "webOrigins": [
+        "http://phpmyadmin-c.sso.local:18080"
+      ],
+      "defaultClientScopes": [
+        "web-origins",
+        "acr",
+        "profile",
+        "roles",
+        "email"
+      ],
+      "optionalClientScopes": [
+        "address",
+        "phone",
+        "offline_access",
+        "microprofile-jwt"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "http://phpmyadmin-c.sso.local:18080/",
+        "backchannel.logout.url": "http://host.docker.internal:18080/openid/app6/backchannel_logout",
+        "backchannel.logout.session.required": "true",
+        "backchannel.logout.revoke.offline.tokens": "false"
+      }
     }
   ],
   "users": [

@@ -27,6 +27,7 @@ services:
     environment:
       OPENIG_BASE: "/opt/openig"
       OPENIG_PUBLIC_URL: "http://openig-c.sso.local:10080"
+      KEYCLOAK_BROWSER_URL: "http://auth.sso.local:8080"
       REDIS_HOST: "redis-c"
       VAULT_ADDR: "http://vault-c:8200"
       VAULT_ROLE_ID_FILE: "/opt/openig/vault/role_id"
@@ -42,6 +43,7 @@ services:
     environment:
       OPENIG_BASE: "/opt/openig"
       OPENIG_PUBLIC_URL: "http://openig-c.sso.local:10080"
+      KEYCLOAK_BROWSER_URL: "http://auth.sso.local:8080"
       REDIS_HOST: "redis-c"
       VAULT_ADDR: "http://vault-c:8200"
       VAULT_ROLE_ID_FILE: "/opt/openig/vault/role_id"

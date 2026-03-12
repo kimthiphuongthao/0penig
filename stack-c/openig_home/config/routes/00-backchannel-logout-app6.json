@@ -1,6 +1,6 @@
 {
   "name": "00-backchannel-logout-app6",
-  "condition": "${matches(request.headers['Host'][0], 'phpmyadmin-c.sso.local(:[0-9]+)?') and matches(request.uri.path, '^/openid/app6/backchannel_logout$') and request.method == 'POST'}",
+  "condition": "${matches(request.uri.path, '^/openid/app6/backchannel_logout$') and request.method == 'POST'}",
   "handler": {
     "type": "ScriptableHandler",
     "config": {

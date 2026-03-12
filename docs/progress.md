@@ -34,6 +34,41 @@
 - [ ] Thu thập đặc tả ban đầu của các hệ thống trong phạm vi triển khai thực tế
 
 ### Kết quả
+- [x] Kiểm chứng và hoàn thiện 2 cơ chế xác thực mới: Trusted Header Injection (proxy auth) và HTTP Basic Auth Injection — Gateway inject credentials mà không sửa code ứng dụng đích
+- [x] Xác nhận cross-stack SLO: mỗi ứng dụng trong cùng realm dùng OIDC client độc lập, backchannel logout phủ đủ toàn bộ endpoints across stacks
+- [x] Kiểm thử token refresh: Gateway tự động gia hạn access token silently, không gián đoạn session người dùng
+- [x] Kiểm thử session timeout: JwtSession expire → re-authentication transparent qua IdP SSO session
+- [x] Kiểm thử node failover: sticky routing + passive health check đảm bảo continuity khi 1 Gateway node down
+- [x] Kiểm thử concurrent logout: admin-initiated per-session logout trigger backchannel đúng; xác nhận "force logout all" không propagate qua backchannel — documented as known IdP limitation
+- [x] Xây dựng checklist khảo sát kỹ thuật legacy app: template chuẩn hóa thu thập thông tin trước khi tích hợp SSO
+
+---
+
+## Tuần 16/03/2026 - 20/03/2026
+
+### Kế hoạch
+**Kỹ thuật — hoàn thiện trước khi đóng gói:**
+- [ ] Investigate 2 lỗi tồn đọng trong logs: `BackchannelLogoutHandler: logout_token is missing` và `Authorization call-back failed: no authorization in progress`
+- [ ] Bật Redis persistence (`appendonly yes`) — đảm bảo blacklist SLO không mất khi Redis restart
+- [ ] Bật Vault audit logging — bắt buộc trước khi đưa vào production/OVA
+- [ ] Workaround admin "Logout all sessions" không trigger backchannel — đánh giá giải pháp via Keycloak REST API
+- [ ] Kiểm thử failover trong khi OAuth2 flow đang chạy (interrupt giữa chừng)
+- [ ] Phase 3: Vault Production Hardening — theo gap list tại `docs/vault-hardening-gaps.md`
+
+**Đóng gói & triển khai:**
+- [ ] Đánh giá và chọn phương án đóng gói: OVA / Docker Compose bundle / Vagrant box
+- [ ] Thiết kế cấu trúc package: single-command deploy, cấu hình tối thiểu cho đơn vị nhận
+- [ ] Viết Quick Start Guide cho đơn vị nhận package
+
+**Tài liệu & báo cáo:**
+- [ ] Viết slide báo cáo phương án giải pháp SSO/SLO (kiến trúc, luồng xác thực, kết quả lab)
+- [ ] Viết tài liệu tổng quan giải pháp cho stakeholder
+- [ ] Cập nhật integration guide: section OpenIG built-in filter selection guide
+
+**Khảo sát:**
+- [ ] Thu thập đặc tả ban đầu của các hệ thống trong phạm vi triển khai thực tế
+
+### Kết quả
 _(cập nhật cuối tuần)_
 
 ---

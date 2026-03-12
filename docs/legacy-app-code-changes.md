@@ -180,3 +180,59 @@ Xem chi tiết tại: [f5-subpath-proxy.md](./f5-subpath-proxy.md)
 | Fix JS dynamic URL | Không | Một phần (iRules / APM) |
 | SSL bắt buộc | Không | Có (để dùng Stream/Rewrite) |
 | Gzip backend | OK | Phải tắt hoặc decompress |
+
+## Câu hỏi 4: Stack C — Grafana và phpMyAdmin có thực sự "zero-touch app" không?
+
+**Câu trả lời ngắn: Không.** Stack C yêu cầu cấu hình app-side để kích hoạt chế độ xác thực đặc biệt.
+
+### Grafana — Header-based Auth (X-WEBAUTH-USER)
+
+**Phải bật trong app (env vars):**
+- `GF_AUTH_PROXY_ENABLED=true` — bật proxy auth mode
+- `GF_AUTH_PROXY_HEADER_NAME=X-WEBAUTH-USER` — tên header được tin tưởng
+- `GF_AUTH_PROXY_HEADER_PROPERTY=username` — mapping header → thuộc tính user
+- `GF_AUTH_PROXY_AUTO_SIGN_UP=true` — tự tạo user nếu chưa tồn tại
+- `GF_AUTH_DISABLE_LOGIN_FORM=true` — tắt login form native
+
+Không bật → Grafana bỏ qua hoàn toàn header `X-WEBAUTH-USER`, hiện login form native.
+
+### phpMyAdmin — HTTP Basic Auth
+
+**Phải sửa trong app (mount config PHP):**
+
+```php
+// openig_home/phpmyadmin/config.user.inc.php — mount vào container
+$cfg["Servers"][$i]["auth_type"] = "http";
+```
+
+Không mount → phpMyAdmin dùng cookie auth mặc định → OpenIG inject `Authorization: Basic` nhưng phpMyAdmin không đọc.
+
+Lưu ý: `PMA_AUTH_TYPE=http` env var không hoạt động với Docker image phpmyadmin:latest — phải mount file PHP trực tiếp.
+
+### Tại sao Stack C khác Stack A/B?
+
+| | Stack A/B (Form/Token Inject) | Stack C (Header/Basic Auth Inject) |
+|--|--|--|
+| App biết về proxy? | Không — nhận credentials như người dùng thật | Có — app phải được cấu hình để tin tưởng proxy |
+| App-side config cần thiết? | Không | Có — bật proxy auth mode |
+| Nếu app không hỗ trợ chế độ này? | Không ảnh hưởng | Không thể dùng pattern này |
+| Tên gọi | Transparent SSO | Cooperative SSO |
+
+### Khi nào dùng Cooperative SSO (Stack C pattern)?
+
+Chỉ áp dụng được khi đủ cả 3 điều kiện:
+1. App **đã có sẵn** tính năng proxy auth / trusted header / Basic Auth mode
+2. Admin **được phép** cấu hình app (quyền sửa env vars hoặc mount config)
+3. App không thể bị form-inject (không có login form HTML, SPA với CSRF phức tạp)
+
+Nếu không đủ → quay về Transparent SSO (Stack A/B pattern) hoặc thương lượng với vendor để app expose API login.
+
+### Tổng kết Stack C
+
+| App | Sửa app | Nội dung |
+|-----|---------|---------|
+| Grafana | Có (env vars) | Bật `GF_AUTH_PROXY_ENABLED` + cấu hình header name |
+| phpMyAdmin | Có (mount config PHP) | Set `auth_type=http` |
+| MariaDB | Không | Chỉ tạo user/schema (one-time setup, không phải SSO config) |
+
+**Pattern chung:** Cooperative SSO ít xâm lấn nhất khi app có sẵn proxy auth mode — chỉ config, không sửa code. Nhưng khác với Transparent SSO, app phải **nhận thức** rằng mình đứng sau proxy và được cấu hình để tin tưởng proxy đó.

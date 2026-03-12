@@ -14,6 +14,10 @@
 | phpMyAdmin không nhận Basic Auth từ env | `PMA_AUTH_TYPE=http` env var không hoạt động với Docker image | Mount `config.user.inc.php` với `$cfg['Servers'][1]['auth_type'] = 'http'` |
 | Jellyfin passwords không trong bootstrap | Jellyfin lưu passwords trong SQLite volume, bootstrap script không set được | Set thủ công qua Jellyfin API sau lần đầu. Nếu volume bị xóa phải set lại: alice/AliceJelly2026, bob/BobJelly2026 |
 | TC-1201 false fail | Test check cookie trên unauthenticated request → chỉ thấy JSESSIONID | IG_SSO chỉ xuất hiện sau login. Không phải bug. |
+| Keycloak hiện "Do you want to log out?" | `defaultLogoutGoto` tĩnh thiếu `id_token_hint` — Keycloak 18+ bắt buộc khi có `post_logout_redirect_uri` | Dùng custom SloHandler Groovy đọc `id_token` từ session, append `id_token_hint` động |
+| Stack C backchannel logout không trigger | Route có Host condition match `grafana-c.sso.local` nhưng Keycloak POST tới `host.docker.internal` | Bỏ Host condition, chỉ match path `/openid/appX/backchannel_logout` |
+| SloHandler URL `/null/realms/...` | `KEYCLOAK_BROWSER_URL` env var không set trong docker-compose Stack C | Thêm `KEYCLOAK_BROWSER_URL: "http://auth.sso.local:8080"` vào openig-c1 và openig-c2 |
+| Grafana logout chỉ reload trang | Grafana `/logout` trả 302 (không phải 401) → không trigger failureHandler → không SLO | Thêm route `00-grafana-logout.json` intercept `GET /logout` → SloHandlerGrafana |
 
 ## Decision log
 
@@ -23,3 +27,5 @@
 | Vault file storage thay vì dev mode | Dev mode mất data khi restart. File storage persist, production-grade. |
 | Mỗi stack Redis riêng, không share | Isolation — SLO 1 stack không ảnh hưởng stack khác. Cross-stack SLO qua Keycloak backchannel. |
 | `cookieDomain` Stack B thiếu là chấp nhận được | SSO hoạt động qua Keycloak session, không phải cookie sharing. Thiếu cookieDomain chỉ thêm 1 redirect thừa. |
+| Custom SloHandler thay vì `defaultLogoutGoto` | OpenIG 6.0.2 không có `openIdEndSessionOnLogout` (feature không tồn tại — max version là 6.0.2, không có 6.5+). `defaultLogoutGoto` tĩnh không thể mang `id_token_hint`. | Dùng ScriptableHandler đọc `id_token` từ session key `oauth2:...` |
+| phpMyAdmin SLO hoạt động qua 401 | phpMyAdmin `auth_type=http` logout gửi 401 để clear browser Basic Auth → HttpBasicAuthFilter failureHandler trigger → redirect `/openid/app6/logout` → Keycloak end_session | Đây là by design, không cần dedicated logout intercept |

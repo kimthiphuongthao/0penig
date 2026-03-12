@@ -22,7 +22,7 @@
             "config": {
                 "cookieName": "IG_SSO",
                 "sessionTimeout": "8 hours",
-                "sharedSecret": "U1NPLUxhYi1Kd3RTZWNyZXQtMzJieXRlcy1LRVlcIVwh",
+                "sharedSecret": "U1NPLUMtSnd0U2VjcmV0LTMyYnl0ZXMtS0VZXyFAIyQ=",
                 "keystore": "JwtKeyStore",
                 "alias": "openig-jwt",
                 "cookieDomain": ".sso.local",

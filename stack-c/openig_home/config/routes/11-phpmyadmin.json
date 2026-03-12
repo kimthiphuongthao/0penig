@@ -88,12 +88,10 @@
         "password": "${session['phpmyadmin_password']}",
         "cacheHeader": false,
         "failureHandler": {
-          "type": "StaticResponseHandler",
+          "type": "ScriptableHandler",
           "config": {
-            "status": 302,
-            "headers": {
-              "Location": ["http://phpmyadmin-c.sso.local:18080/openid/app6/logout"]
-            }
+            "type": "application/x-groovy",
+            "file": "SloHandlerPhpMyAdmin.groovy"
           }
         }
       }

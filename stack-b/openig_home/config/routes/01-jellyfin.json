@@ -18,8 +18,8 @@
       "name": "JellyfinClientReg",
       "type": "ClientRegistration",
       "config": {
-        "clientId": "openig-client-b",
-        "clientSecret": "openig-client-b-secret",
+        "clientId": "openig-client-b-app4",
+        "clientSecret": "openig-client-b-app4-secret",
         "issuer": "KeycloakIssuer",
         "scopes": [
           "openid",
@@ -54,11 +54,11 @@
       }
     },
     {
-      "name": "SessionBlacklistFilterApp3",
+      "name": "SessionBlacklistFilterApp4",
       "type": "ScriptableFilter",
       "config": {
         "type": "application/x-groovy",
-        "file": "SessionBlacklistFilterApp3.groovy"
+        "file": "SessionBlacklistFilterApp4.groovy"
       }
     },
     {
@@ -93,7 +93,7 @@
         {
           "type": "OAuth2ClientFilter",
           "config": {
-            "clientEndpoint": "/openid/app3",
+            "clientEndpoint": "/openid/app4",
             "requireHttps": false,
             "registrations": [
               "JellyfinClientReg"
@@ -108,7 +108,7 @@
             "providerHandler": "ClientHandler"
           }
         },
-        "SessionBlacklistFilterApp3",
+        "SessionBlacklistFilterApp4",
         "VaultCredentialFilterJellyfin",
         "JellyfinTokenInjectorFilter",
         "JellyfinResponseRewriterFilter"

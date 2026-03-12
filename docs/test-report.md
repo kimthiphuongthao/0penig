@@ -350,3 +350,42 @@ docker exec sso-redis-a redis-cli get "blacklist:<SESSION_ID>"
 ---
 
 *Báo cáo tạo tự động bởi Antigravity AI Agent · 2026-03-07 · Không can thiệp file project*
+
+---
+
+## Bổ sung kiểm thử — 2026-03-12
+
+> **Ngày thực hiện:** 2026-03-12
+> **Môi trường:** Docker Compose local, macOS host, tất cả 3 stacks đang chạy
+
+### TC-ADV-01 — Token Refresh ✅ PASS
+
+- **Cấu hình:** Keycloak accessTokenLifespan = 120 giây
+- **Phương pháp:** Login vào wp-a.sso.local, đợi 3 phút, reload trang
+- **Kết quả:** App vẫn load bình thường — OAuth2ClientFilter tự dùng refresh token lấy access token mới mà không redirect user
+- **Ghi chú:** Keycloak SSO session (ssoSessionIdleTimeout=1800s) độc lập với access token — re-auth transparent
+
+### TC-ADV-02 — Session Timeout ✅ PASS
+
+- **Cấu hình:** JwtSession sessionTimeout = 2 phút (tạm thời)
+- **Phương pháp:** Login, đợi 3 phút, reload trang
+- **Kết quả:** JwtSession expire → OAuth2ClientFilter redirect Keycloak → Keycloak SSO còn sống → re-auth transparent → user không thấy login page
+- **Ghi chú:** Để thấy login page phải expire cả Keycloak SSO session (xóa thủ công từ admin hoặc chờ ssoSessionIdleTimeout)
+- **Config reverted:** sessionTimeout = 8 hours sau khi test
+
+### TC-ADV-03 — Node Failover ✅ PASS
+
+- **Phương pháp:** docker stop sso-openig-1, truy cập wp-a.sso.local và whoami-a.sso.local
+- **Kết quả:** X-Openig-Node: openig-2 — nginx ip_hash failover thành công, app hoạt động bình thường
+- **Config:** max_fails=3, fail_timeout=10s, proxy_next_upstream enabled
+- **Restored:** sso-openig-1 started lại sau test
+
+### TC-ADV-04 — Concurrent Logout (Admin) ⚠️ PARTIAL
+
+- **Phương pháp:** Login alice từ 2 browser, test admin logout từ Keycloak console
+- **Kết quả:**
+  - Admin sign out **từng session** → ✅ backchannel logout fired → browser bị kick
+  - Admin **"Logout all sessions"** → ❌ backchannel KHÔNG được gửi → browser không bị kick
+- **Root cause:** 2 code path khác nhau trong Keycloak — "Logout all sessions" chỉ invalidate server-side session, không notify OIDC clients
+- **Workaround:** Dùng sign out từng session, hoặc Keycloak admin REST API
+- **Classification:** Known Keycloak limitation, không phải bug trong OpenIG/SSO lab

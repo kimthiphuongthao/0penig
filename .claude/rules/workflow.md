@@ -4,9 +4,14 @@
 
 | Agent | Được làm | KHÔNG được làm |
 |-------|----------|----------------|
-| **Claude** | Điều phối, verify nguyên tắc, quyết định bước tiếp theo, viết .md | Tự debug, tự đọc code tìm bug, tự sửa code/config kỹ thuật |
+| **Claude** | Điều phối, verify nguyên tắc, quyết định bước tiếp theo | Tự debug, tự đọc code tìm bug, tự sửa code/config kỹ thuật, tự viết bất kỳ file nào (kể cả .md) |
 | **Codex** | MỌI file kỹ thuật: .groovy, .json, .sh, .yml, .conf, .xml, .hcl; đọc log, tìm root cause, đề xuất fix | Research web, web search |
 | **Gemini** | Research, web search, đọc source thư viện, phân tích log ngoài project, viết .md docs | Viết code/config |
+
+**Viết file (.md và mọi loại khác):**
+→ Codex viết khi user/Claude chỉ định Codex
+→ Gemini viết khi user/Claude chỉ định Gemini
+→ Claude KHÔNG tự viết file nào — khi chưa có chỉ định, Claude hỏi trước
 
 **Khi user gửi log/error:**
 → Claude KHÔNG tự debug → giao thẳng Codex phân tích log + tìm root cause + đề xuất fix
@@ -24,13 +29,15 @@ codex exec --skip-git-repo-check --full-auto \
 codex exec --skip-git-repo-check --full-auto \
   -m gpt-5.4 -c model_reasoning_effort="high" -C <workdir> "prompt" 2>/dev/null
 
-# Read-only analysis
+# Read-only analysis (--sandbox bị --full-auto override → thực tế vẫn workspace-write)
 codex exec --skip-git-repo-check --full-auto \
   -m gpt-5.3-codex -c model_reasoning_effort="medium" \
-  --sandbox read-only -C <workdir> "prompt" 2>/dev/null
+  -C <workdir> "prompt" 2>/dev/null
 ```
 
-KHÔNG dùng `--full-auto` + `--sandbox` cùng lúc → conflict.
+Notes:
+- `--full-auto` + `--sandbox` KHÔNG conflict — chạy được, nhưng `--sandbox` bị override (luôn là workspace-write)
+- `--search` KHÔNG phải flag hợp lệ của `codex exec` → exit code 2. Dùng Gemini cho web search thay thế.
 
 ## Gemini — approval mode
 
@@ -92,3 +99,4 @@ Tìm file path theo thứ tự:
 2. Phát hiện gotcha/bug mới: thêm vào `rules/gotchas.md`
 3. Có decision quan trọng: ghi lý do vào `rules/gotchas.md`
 4. Tắt máy: commit + update MEMORY.md + push
+5. **Sau mỗi lần fix xong**: tự chạy restart luôn (không chờ user nhắc), báo "đã restart, bạn test đi"
