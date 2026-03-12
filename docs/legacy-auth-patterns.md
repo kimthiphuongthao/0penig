@@ -1,10 +1,10 @@
-# Legacy Application Authentication & Logout Patterns
+# Legacy Application Authentication Mechanisms Reference
 
-Tài liệu này tổng hợp các cơ chế xác thực và đăng xuất phổ biến trong các ứng dụng legacy, phục vụ cho việc thiết kế các giải pháp SSO Wrapper hoặc Identity Gateway (như OpenIG).
+Tài liệu này tổng hợp các authentication mechanisms phổ biến trong các ứng dụng legacy, phục vụ cho việc thiết kế các giải pháp SSO Wrapper hoặc Identity Gateway (như OpenIG).
 
 ---
 
-## 1. Cơ chế Đăng nhập (Login Mechanisms)
+## 1. Authentication Mechanisms
 
 ### 1.1 Form-based Authentication
 Đây là phương thức phổ biến nhất. Người dùng gửi tên đăng nhập và mật khẩu qua một biểu mẫu HTML (HTTP POST).
@@ -91,7 +91,7 @@ Cơ chế thách thức-phản hồi đơn giản gửi thông tin trong header 
 
 ---
 
-## 2. Cơ chế Đăng xuất (Logout Mechanisms)
+## 2. Logout Mechanisms
 
 ### 2.1 Local Logout
 Ứng dụng cung cấp URL đăng xuất (ví dụ: `/logout`) để xóa session cục bộ và cookie.

@@ -21,6 +21,11 @@ Related systems: [[OpenIG]], [[Keycloak]], [[Vault]], [[Stack C]]
 - Collected vendor documentation for authentication methods, token/cookie/session behavior, and logout capabilities.
 - Compared discovery patterns for form login, HTTP Basic, API tokens, auth proxy/header trust, and delegated identity.
 - Mapped practical integration patterns: gateway brokering, header injection, and sidecar enforcement.
+- Built a reference baseline document focused on auditability:
+  - Pattern tables for Q1/Q2/Q3
+  - ASCII login/logout flow diagrams
+  - Severity-rated security checklist
+  - Gap analysis framework with audit questions and scoring
 - Built an app-level matrix for:
   - WordPress
   - Jenkins
@@ -52,7 +57,9 @@ Related systems: [[OpenIG]], [[Keycloak]], [[Vault]], [[Stack C]]
 
 # Current State
 
-- Research complete and ready to convert into OpenIG route design and per-app adapters.
+- Research baseline completed and published for field audit.
+- Reference artifact: `docs/legacy-auth-logout-reference.md`
+- Ready to convert into OpenIG route design and per-app adapters.
 - Evidence set is documentation-backed; some endpoint details remain version-specific and must be validated during integration tests.
 
 # Next Steps
@@ -70,3 +77,4 @@ Related systems: [[OpenIG]], [[Keycloak]], [[Vault]], [[Stack C]]
 # Files Changed
 
 - `docs/obsidian/how-to/2026-03-12-legacy-auth-logout-sso-integration-research.md`
+- `docs/legacy-auth-logout-reference.md`

@@ -29,6 +29,11 @@ Path: `/Volumes/OS/claude/openig/sso-lab`, branch: `feat/subdomain-test`
 ### Phase tiếp theo
 - [ ] Phase 3: Vault Production Hardening — xem `docs/vault-hardening-gaps.md`
 - [ ] Post-Stack C docs: OpenIG built-in filter selection guide
+- [ ] Redis persistence (appendonly yes) — đảm bảo SLO blacklist survive restart
+- [ ] Vault audit logging
+- [ ] Investigate logs: BackchannelLogoutHandler logout_token missing + OAuth2 call-back failed
+- [ ] Đóng gói: OVA / Docker Compose bundle — single-command deploy
+- [ ] Slide + tài liệu báo cáo phương án giải pháp
 
 ## Compact instructions
 When using /compact, focus on: pending tasks, recent decisions, bugs found, current stack status.
