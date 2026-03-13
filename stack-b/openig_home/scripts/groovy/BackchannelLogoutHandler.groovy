@@ -18,7 +18,7 @@ import java.util.Base64
 @Field static volatile def cachedJwks = null
 @Field static volatile long jwksCacheExpiry = 0
 final String KEYCLOAK_ISSUER = 'http://auth.sso.local:8080/realms/sso-realm'
-final String KEYCLOAK_JWKS_URI = 'http://auth.sso.local:8080/realms/sso-realm/protocol/openid-connect/certs'
+final String KEYCLOAK_JWKS_URI = 'http://host.docker.internal:8080/realms/sso-realm/protocol/openid-connect/certs'
 final String EXPECTED_AUDIENCE = 'openig-client-b'
 final long CLOCK_SKEW_SECONDS = 60
 final long JWKS_CACHE_TTL_SECONDS = 600

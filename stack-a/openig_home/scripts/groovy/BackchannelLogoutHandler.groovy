@@ -16,7 +16,7 @@ import java.util.Base64
 
 // --- JWT Validation Constants ---
 final String KEYCLOAK_ISSUER = 'http://auth.sso.local:8080/realms/sso-realm'
-final String KEYCLOAK_JWKS_URI = 'http://auth.sso.local:8080/realms/sso-realm/protocol/openid-connect/certs'
+final String KEYCLOAK_JWKS_URI = 'http://host.docker.internal:8080/realms/sso-realm/protocol/openid-connect/certs'
 final String EXPECTED_AUDIENCE = 'openig-client'
 final long CLOCK_SKEW_SECONDS = 60
 
