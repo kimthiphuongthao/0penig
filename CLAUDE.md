@@ -25,13 +25,14 @@ Path: `/Volumes/OS/claude/openig/sso-lab`, branch: `feat/subdomain-test`
 - [x] Cross-stack SLO: Jellyfin backchannel fix (openig-client-b-app4), tất cả 5 endpoints đã đăng ký
 - ~~Fix Jellyfin WebSocket~~ — không liên quan SSO/SLO, xoá khỏi scope
 - [x] Stack B cookieDomain: thêm ".sso.local" vào JwtSession config.json
+- [x] H8: Backchannel Logout JWT Validation — RS256 signature, claims validation, JWKS cache, audience fix
 
 ### Phase tiếp theo
 - [ ] Phase 3: Vault Production Hardening — xem `docs/vault-hardening-gaps.md`
 - [ ] Post-Stack C docs: OpenIG built-in filter selection guide
 - [ ] Redis persistence (appendonly yes) — đảm bảo SLO blacklist survive restart
 - [ ] Vault audit logging
-- [ ] Investigate logs: BackchannelLogoutHandler logout_token missing + OAuth2 call-back failed
+- [ ] Security hardening: secrets externalization, Redis fail-closed, TLS — see docs/reviews/2025-03-13-security-review-h8-jwt.md
 - [ ] Đóng gói: OVA / Docker Compose bundle — single-command deploy
 - [ ] Slide + tài liệu báo cáo phương án giải pháp
 
