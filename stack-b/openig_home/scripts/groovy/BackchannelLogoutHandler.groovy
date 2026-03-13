@@ -19,7 +19,7 @@ import java.util.Base64
 @Field static volatile long jwksCacheExpiry = 0
 final String KEYCLOAK_ISSUER = 'http://auth.sso.local:8080/realms/sso-realm'
 final String KEYCLOAK_JWKS_URI = 'http://host.docker.internal:8080/realms/sso-realm/protocol/openid-connect/certs'
-final String EXPECTED_AUDIENCE = 'openig-client-b'
+final List<String> EXPECTED_AUDIENCES = ['openig-client-b', 'openig-client-b-app4']
 final long CLOCK_SKEW_SECONDS = 60
 final long JWKS_CACHE_TTL_SECONDS = 600
 
@@ -142,7 +142,7 @@ def verifySignature = { String jwt, java.security.PublicKey publicKey ->
 }
 
 // --- Helper: Validate JWT claims ---
-def validateClaims = { def payload, String expectedAudience ->
+def validateClaims = { def payload, def expectedAudience ->
     long now = System.currentTimeMillis() / 1000
 
     // 1. Validate 'iss' (issuer)
@@ -156,9 +156,17 @@ def validateClaims = { def payload, String expectedAudience ->
     def aud = payload.aud
     boolean audValid = false
     if (aud instanceof String) {
-        audValid = (aud == expectedAudience)
+        if (expectedAudience instanceof String) {
+            audValid = (aud == expectedAudience)
+        } else if (expectedAudience instanceof List) {
+            audValid = expectedAudience.contains(aud)
+        }
     } else if (aud instanceof List) {
-        audValid = aud.contains(expectedAudience)
+        if (expectedAudience instanceof String) {
+            audValid = aud.contains(expectedAudience)
+        } else if (expectedAudience instanceof List) {
+            audValid = aud.any { expectedAudience.contains(it) }
+        }
     }
     if (!audValid) {
         logger.error('[BackchannelLogoutHandler] Invalid aud: expected={}, actual={}', expectedAudience, aud)
@@ -292,7 +300,7 @@ try {
     String payloadJson = new String(base64UrlDecode(tokenParts[1]), 'UTF-8')
     def payload = new JsonSlurper().parseText(payloadJson)
 
-    def validationResult = validateClaims(payload, EXPECTED_AUDIENCE)
+    def validationResult = validateClaims(payload, EXPECTED_AUDIENCES)
     if (!validationResult.valid) {
         logger.error('[BackchannelLogoutHandler] Claims validation failed: {}', validationResult.error)
         return newResultPromise(new Response(Status.BAD_REQUEST))
