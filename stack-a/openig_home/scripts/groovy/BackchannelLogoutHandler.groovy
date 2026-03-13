@@ -1,22 +1,28 @@
+import groovy.transform.Field
 import groovy.json.JsonSlurper
 import org.forgerock.http.protocol.Response
 import org.forgerock.http.protocol.Status
 import static org.forgerock.util.promise.Promises.newResultPromise
 
+import java.math.BigInteger
 import java.net.HttpURLConnection
 import java.net.Socket
 import java.net.URL
 import java.net.URLDecoder
 import java.security.KeyFactory
 import java.security.Signature
-import java.security.spec.X509EncodedKeySpec
+import java.security.spec.RSAPublicKeySpec
 import java.util.Base64
 
 // --- JWT Validation Constants ---
-final String KEYCLOAK_ISSUER = 'http://auth.sso.local:8080/realms/sso-lab'
-final String KEYCLOAK_JWKS_URI = 'http://auth.sso.local:8080/realms/sso-lab/protocol/openid-connect/certs'
+final String KEYCLOAK_ISSUER = 'http://auth.sso.local:8080/realms/sso-realm'
+final String KEYCLOAK_JWKS_URI = 'http://auth.sso.local:8080/realms/sso-realm/protocol/openid-connect/certs'
 final String EXPECTED_AUDIENCE = 'openig-client'
 final long CLOCK_SKEW_SECONDS = 60
+
+@Field static volatile def cachedJwks = null
+@Field static volatile long jwksCacheExpiry = 0
+@Field static final long JWKS_CACHE_TTL_SECONDS = 600
 
 // --- Helper: Read HTTP response body ---
 def readResponseBody = { HttpURLConnection connection ->
@@ -51,6 +57,12 @@ def base64UrlDecode = { String input ->
 
 // --- Helper: Fetch JWKS from Keycloak ---
 def fetchJwks = { String jwksUri ->
+    long now = System.currentTimeMillis() / 1000
+    if (cachedJwks != null && now < jwksCacheExpiry) {
+        logger.info('[BackchannelLogoutHandler] Using cached JWKS')
+        return cachedJwks
+    }
+
     logger.info('[BackchannelLogoutHandler] Fetching JWKS from Keycloak')
     try {
         URL url = new URL(jwksUri)
@@ -66,6 +78,8 @@ def fetchJwks = { String jwksUri ->
         }
 
         def jwks = new JsonSlurper().parseText(responseBody)
+        cachedJwks = jwks
+        jwksCacheExpiry = now + JWKS_CACHE_TTL_SECONDS
         logger.info('[BackchannelLogoutHandler] JWKS fetched successfully, keys: {}', jwks.keys?.size())
         return jwks
     } catch (Exception e) {
@@ -93,29 +107,9 @@ def getPublicKeyFromJwks = { def jwks, String kid ->
     try {
         byte[] nBytes = base64UrlDecode(keyEntry.n)
         byte[] eBytes = base64UrlDecode(keyEntry.e)
-
-        // Build PKCS#1 RSAPublicKey structure: SEQUENCE { INTEGER n, INTEGER e }
-        ByteArrayOutputStream baos = new ByteArrayOutputStream()
-        // Exponent
-        baos.write(0x02) // INTEGER tag
-        baos.write(eBytes.length)
-        baos.write(eBytes)
-        // Modulus
-        baos.write(0x02) // INTEGER tag
-        baos.write(0x81) // Long form length (1 byte length field)
-        baos.write(nBytes.length)
-        baos.write(nBytes)
-
-        // Wrap in SEQUENCE
-        byte[] rsaKeyBytes = baos.toByteArray()
-        ByteArrayOutputStream seqBaos = new ByteArrayOutputStream()
-        seqBaos.write(0x30) // SEQUENCE tag
-        seqBaos.write(0x81) // Long form length
-        seqBaos.write(rsaKeyBytes.length)
-        seqBaos.write(rsaKeyBytes)
-
-        byte[] seqBytes = seqBaos.toByteArray()
-        X509EncodedKeySpec keySpec = new X509EncodedKeySpec(seqBytes)
+        BigInteger modulus = new BigInteger(1, nBytes)
+        BigInteger exponent = new BigInteger(1, eBytes)
+        RSAPublicKeySpec keySpec = new RSAPublicKeySpec(modulus, exponent)
         KeyFactory keyFactory = KeyFactory.getInstance('RSA')
         def publicKey = keyFactory.generatePublic(keySpec)
         logger.info('[BackchannelLogoutHandler] Successfully reconstructed public key for kid={}', kid)
@@ -180,7 +174,7 @@ def validateClaims = { def payload, String expectedAudience ->
         return [valid: false, error: 'Missing events claim']
     }
     def logoutEvent = events['http://schemas.openid.net/event/backchannel-logout']
-    if (!logoutEvent || !(logoutEvent instanceof Map) || !logoutEvent.isEmpty()) {
+    if (logoutEvent == null || !(logoutEvent instanceof Map)) {
         logger.error('[BackchannelLogoutHandler] Invalid backchannel logout event in claims')
         return [valid: false, error: 'Invalid backchannel logout event']
     }
@@ -272,8 +266,19 @@ try {
     // 5. Get public key from JWKS
     def publicKey = getPublicKeyFromJwks(jwks, kid)
     if (!publicKey) {
-        logger.error('[BackchannelLogoutHandler] Failed to get public key for kid={}', kid)
-        return newResultPromise(new Response(Status.BAD_REQUEST))
+        logger.warn('[BackchannelLogoutHandler] kid={} not in cached JWKS, forcing refetch', kid)
+        cachedJwks = null
+        jwksCacheExpiry = 0
+        jwks = fetchJwks(KEYCLOAK_JWKS_URI)
+        if (!jwks) {
+            logger.error('[BackchannelLogoutHandler] Failed to refetch JWKS')
+            return newResultPromise(new Response(Status.INTERNAL_SERVER_ERROR))
+        }
+        publicKey = getPublicKeyFromJwks(jwks, kid)
+        if (!publicKey) {
+            logger.error('[BackchannelLogoutHandler] kid={} not found even after JWKS refetch', kid)
+            return newResultPromise(new Response(Status.BAD_REQUEST))
+        }
     }
 
     // 6. Verify JWT signature
