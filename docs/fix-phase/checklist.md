@@ -1,5 +1,12 @@
 # Fix Phase Checklist — OpenIG Gateway GAPs
 
+> ⚠️ **SUPERSEDED** — This file is a high-level tracking reference only.
+> Primary implementation plan (file paths, code changes, acceptance criteria, execution batches):
+> **`.omc/plans/fix-phase-openig-gaps.md`**
+> Maintain this file for progress tracking (Status column + Fix Log). Do not use as implementation guide.
+
+
+
 **Based on:** `docs/standard-gateway-pattern.md` v1.1
 **Source findings:** `docs/reviews/2026-03-14-cross-stack-review-summary.md` → Next Steps 1–7
 **Started:** 2026-03-14
