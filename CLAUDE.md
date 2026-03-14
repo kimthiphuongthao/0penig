@@ -24,16 +24,20 @@ Path: `/Volumes/OS/claude/openig/sso-lab`, branch: `feat/subdomain-test`
 - [x] Stack B cookieDomain: thêm ".sso.local" vào JwtSession config.json
 - [x] H8: Backchannel Logout JWT Validation — RS256 signature, claims validation, JWKS cache, audience fix
 - [x] Jellyfin WebSocket: không liên quan SSO/SLO, đã loại khỏi scope
+- [x] Docs sync: .claude/rules/ + CLAUDE.md alignment (2026-03-14)
+- [x] Code+security review: Stack A/B/C — evidence files tại `docs/reviews/2026-03-14-*.md`
+- [x] Cross-stack review summary: `docs/reviews/2026-03-14-cross-stack-review-summary.md`
+- [x] Standard Gateway Pattern v1.0: `docs/standard-gateway-pattern.md`
 
 ### Pending
 - [ ] Workaround: admin "Logout all sessions" chưa trigger backchannel logout
 
 ### Phase tiếp theo
+- [ ] **Fix phase**: implement fixes theo `docs/standard-gateway-pattern.md` — ưu tiên: revocation contract → secret externalization → TLS → adapter contract
 - [ ] Phase 3: Vault Production Hardening — xem `docs/vault-hardening-gaps.md`
 - [ ] Post-Stack C docs: OpenIG built-in filter selection guide
 - [ ] Redis persistence (appendonly yes) — đảm bảo SLO blacklist survive restart
 - [ ] Vault audit logging
-- [ ] Security hardening: secrets externalization, Redis fail-closed, TLS — see docs/reviews/2025-03-13-security-review-h8-jwt.md
 - [ ] Đóng gói: OVA / Docker Compose bundle — single-command deploy
 - [ ] Slide + tài liệu báo cáo phương án giải pháp
 
