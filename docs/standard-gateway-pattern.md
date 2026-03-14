@@ -9,9 +9,9 @@
 
 ## Overview
 
-This pattern defines the reference gateway contract for OpenIG-based SSO and SLO when OpenIG sits between the browser and heterogeneous downstream applications. It standardizes secret handling, session storage, revocation, logout sequencing, transport security, redirect integrity, and adapter wiring so the gateway remains correct even when applications use different login mechanisms. Derived from: Cross-Stack Summary Universal Findings; Stack A `§5 F1-F5`; Stack B `F1-F11`; Stack C `§4 F1-F9`.
+This pattern defines the reference gateway contract for OpenIG-based SSO and SLO when OpenIG sits between the browser and heterogeneous downstream applications. It standardizes revocation, secret handling, session storage, logout sequencing, transport security, redirect integrity, and adapter wiring so the gateway remains correct even when applications use different login mechanisms. Derived from: Cross-Stack Summary Universal Findings; Stack A `§5 F1-F5`; Stack B `F1-F11`; Stack C `§4 F1-F9`.
 
-The three reviewed stacks cover five login mechanisms that a reusable gateway pattern must support: standard OIDC login without downstream credential injection (Stack A), downstream credential injection and token injection into API-first applications (Stack B), and trusted-header plus HTTP Basic Auth injection (Stack C). The common failures across those stacks were not app-specific bugs; they were gateway-contract failures around secrets, revocation, transport, and origin handling. Derived from: Cross-Stack Summary "Login Mechanism Pattern Risk Matrix"; Stack A `§3`; Stack B "Summary" and `F5-F8`; Stack C `§5`.
+The three reviewed stacks cover five login mechanisms that a reusable gateway pattern must support: standard OIDC login without downstream credential injection (Stack A), downstream credential injection and token injection into API-first applications (Stack B), and trusted-header plus HTTP Basic Auth injection (Stack C). The common failures across those stacks were not app-specific bugs; they were gateway-contract failures around revocation, secrets, transport, and origin handling. Derived from: Cross-Stack Summary "Login Mechanism Pattern Risk Matrix"; Stack A `§3`; Stack B "Summary" and `F5-F8`; Stack C `§5`.
 
 This document describes the correct pattern, not the current state of the lab stacks. Where the reviewed stacks show the right mechanism shape, that shape is retained; where they show unsafe behavior, the pattern replaces it with a prescriptive control. Derived from: Cross-Stack Summary "Recommended Standard Pattern"; Stack A `§4` and `§6`; Stack B "Confirmed Strengths"; Stack C `§3` and `§6`.
 
@@ -68,7 +68,16 @@ Key components and roles:
 
 ## Required Controls (MUST)
 
-### 1. Secret Externalization
+### 1. Revocation Contract
+[Derived from: A F2/F3, B F2/F3, C F2/F3, B F11 [low confidence: 1/4 reviewers]]
+
+What it is: Redis blacklist TTL MUST be greater than or equal to `JwtSession.sessionTimeout`. On Redis lookup failure, the gateway MUST fail closed for authenticated sessions by returning `503` or forcing re-authentication; it MUST NOT proxy the request onward. On Redis write failure during backchannel logout, the handler MUST return `5xx`, not `4xx`. The same `sid` key MUST be used on both the write path and the read path.
+
+Why: The reviewed stacks show the same two failure modes repeatedly: revocation state expires before the browser session does, and revocation checks continue on Redis failure. Stack B also shows that `sid`/`sub` drift can break enforcement even when both paths exist. [Note: B F11 (sid vs sub mismatch) was confirmed by 1/4 reviewers and flagged for investigation.] Derived from: Stack A `§5 F2-F3`; Stack B `F2-F3`, `F11`; Stack C `§4 F2-F3`; Cross-Stack Summary Universal Findings.
+
+How to implement in OpenIG: `BackchannelLogoutHandler` must validate logout tokens before writing `blacklist:<sid>` to Redis with TTL aligned to session lifetime, and `SessionBlacklistFilter` must read that same `sid` key on every authenticated request. The logout token validator MUST check `alg=RS256`, resolve the signing key from JWKS by `kid`, and validate `iss`, `aud`, `events`, `iat`, and `exp` before writing revocation state. Derived from: Stack A `§4`; Stack B "Confirmed Strengths"; Stack C `§3`.
+
+### 2. Secret Externalization
 [Derived from: A F1, B F1, C F1]
 
 What it is: All `JwtSession.sharedSecret`, OIDC `clientSecret`, and keystore passwords MUST come from Vault or environment at runtime. They MUST NOT appear in `config.json`, route JSON, or Groovy source.
@@ -76,15 +85,6 @@ What it is: All `JwtSession.sharedSecret`, OIDC `clientSecret`, and keystore pas
 Why: All three stacks exposed gateway or OIDC secrets in repo-managed config, which turns a stack-local mistake into a reusable gateway flaw and expands the blast radius of cookie theft or config disclosure. Derived from: Stack A `§5 F1`; Stack B `F1`; Stack C `§4 F1`; Cross-Stack Summary Universal Findings.
 
 How to implement in OpenIG: Use a `VaultCredentialFilter`-style runtime secret source and inject the resulting values into route/filter configuration without serializing them into `JwtSession`. An implementation pattern inferred from the reviewed Vault-backed adapters is: fetch at startup, cache with TTL, and refresh before expiry rather than storing fetched secrets in browser-bound session state. Derived from: Stack A `§4`; Stack C `§3`; Stack C `§4 F5`.
-
-### 2. Revocation Contract
-[Derived from: A F2/F3, B F2/F3, C F2/F3, B F11]
-
-What it is: Redis blacklist TTL MUST be greater than or equal to `JwtSession.sessionTimeout`. On Redis lookup failure, the gateway MUST fail closed for authenticated sessions by returning `503` or forcing re-authentication; it MUST NOT proxy the request onward. On Redis write failure during backchannel logout, the handler MUST return `5xx`, not `4xx`. The same `sid` key MUST be used on both the write path and the read path.
-
-Why: The reviewed stacks show the same two failure modes repeatedly: revocation state expires before the browser session does, and revocation checks continue on Redis failure. Stack B also shows that `sid`/`sub` drift can break enforcement even when both paths exist. Derived from: Stack A `§5 F2-F3`; Stack B `F2-F3`, `F11`; Stack C `§4 F2-F3`; Cross-Stack Summary Universal Findings.
-
-How to implement in OpenIG: `BackchannelLogoutHandler` must validate logout tokens before writing `blacklist:<sid>` to Redis with TTL aligned to session lifetime, and `SessionBlacklistFilter` must read that same `sid` key on every authenticated request. The logout token validator MUST check `alg=RS256`, resolve the signing key from JWKS by `kid`, and validate `iss`, `aud`, `events`, `iat`, and `exp` before writing revocation state. Derived from: Stack A `§4`; Stack B "Confirmed Strengths"; Stack C `§3`.
 
 ### 3. Transport Security
 [Derived from: B F4, C F4, A §6]
@@ -96,22 +96,22 @@ Why: Stack B and Stack C explicitly allow plaintext HTTP for OIDC, logout, Vault
 How to implement in OpenIG: Use HTTPS `baseURI` and endpoint values in route config, set `requireHttps: true` on `OAuth2ClientFilter`, and issue only `Secure` cookies from `JwtSession`. If lab scaffolding remains HTTP-only, it is not a reference implementation. Derived from: Stack B `F4`; Stack C `§4 F4`.
 
 ### 4. Session Storage Boundaries
-[Derived from: B F6, B F8, C F5]
+[Derived from: B F6 [low confidence: 1/4 reviewers], B F8, C F5]
 
 What it is: `JwtSession` MUST NOT store Vault tokens, downstream app credentials, downstream app session cookies, or bearer tokens. Sensitive adapter state MUST use server-side storage with an opaque session reference. Bearer tokens MUST NOT be injected into browser `localStorage` or any other JavaScript-accessible storage. If browser-side token storage is unavoidable, it MUST use `httpOnly`, `Secure` cookies.
 
-Why: Stack B stores Vault tokens and downstream session material in the browser-bound gateway session and exposes Jellyfin access tokens in `localStorage`. Stack C stores Vault token and phpMyAdmin credentials inside the browser-bound `JwtSession`. Those findings show that adapter convenience can collapse the boundary between gateway identity state and privileged backend material. Derived from: Stack B `F6`, `F8`; Stack C `§4 F5`; Cross-Stack Summary Stack-Specific Findings.
+Why: Stack B stores Vault tokens and downstream session material in the browser-bound gateway session and exposes Jellyfin access tokens in `localStorage`. Stack C stores Vault token and phpMyAdmin credentials inside the browser-bound `JwtSession`. Those findings show that adapter convenience can collapse the boundary between gateway identity state and privileged backend material. [Note: B F6 (tokens in JwtSession) was confirmed by 1/4 reviewers.] Derived from: Stack B `F6`, `F8`; Stack C `§4 F5`; Cross-Stack Summary Stack-Specific Findings.
 
 How to implement in OpenIG: Keep only opaque identity/session references in `JwtSession`; keep privileged adapter material server-side and rehydrate it in the adapter filter chain as needed. For browser-facing token delivery, prefer `httpOnly`, `Secure` cookies over response rewriting into JavaScript-visible storage. Derived from: Stack B `F6`, `F8`; Stack C `§4 F5`.
 
 ### 5. Pinned Origins and Redirect Integrity
-[Derived from: A F5, B F7, C F9, B F5]
+[Derived from: A F5 [low confidence: 2/4 reviewers], B F7, C F9, B F5]
 
 What it is: All redirect base URLs, post-logout targets, and OAuth2 session namespace roots MUST be pinned as static config constants. The gateway MUST NOT derive redirect targets or session namespace roots from inbound request headers such as `Host` or `X-Forwarded-Host`. The `OAuth2ClientFilter` client namespace used in session storage MUST match exactly the client registration used by the route.
 
-Why: Stack A, Stack B, and Stack C all derive redirect or session-resolution behavior from inbound host data, and Stack B shows a separate integrity failure where the logout handler reads the wrong OIDC namespace and silently fails RP-initiated logout. Derived from: Stack A `§5 F5`; Stack B `F5`, `F7`; Stack C `§4 F9`; Cross-Stack Summary Universal Findings and Stack-Specific Findings.
+Why: Stack A, Stack B, and Stack C all derive redirect or session-resolution behavior from inbound host data, and Stack B shows a separate integrity failure where the logout handler reads the wrong OIDC namespace and silently fails RP-initiated logout. [Note: A F5 (Host-derived redirects) was confirmed by 2/4 reviewers.] Derived from: Stack A `§5 F5`; Stack B `F5`, `F7`; Stack C `§4 F9`; Cross-Stack Summary Universal Findings and Stack-Specific Findings.
 
-How to implement in OpenIG: Define canonical public origin constants per route and use them for redirect construction, post-logout redirect URIs, and OIDC session-key lookup. Verify that the namespace used by SLO handlers matches the route's registered `OAuth2ClientFilter` client ID, and configure nginx to strip or normalize inbound host-related headers before the request reaches OpenIG. Derived from: Stack B `F5`, `F7`; Stack C `§4 F9`; Stack A `§5 F5`.
+How to implement in OpenIG: Define canonical public origin constants per route and use them for redirect construction, post-logout redirect URIs, and OIDC session-key lookup. Verify that the namespace used by SLO handlers matches the route's registered `OAuth2ClientFilter` client ID, and configure nginx to strip or normalize inbound host-related headers before the request reaches OpenIG. **Stack B note:** The highest-urgency single fix for existing deployments is ensuring that the namespace used by `SloHandlerJellyfin` (and all other SLO handlers) exactly matches the `OAuth2ClientFilter` client ID. This drift is Stack B's priority #1 remediation item. Derived from: Stack B `F5`, `F7`; Stack C `§4 F9`; Stack A `§5 F5`.
 
 ### 6. Bounded Dependency Behavior
 [Derived from: B F9, C F7, B F10, C F8]
@@ -153,6 +153,22 @@ Why: Stack A's additional code-review finding shows that redirect-based retry lo
 If adapter credential injection fails because Vault is unreachable, credential lookup fails, or downstream synthetic login cannot complete, the gateway SHOULD fail closed and return `503` rather than proxy the request unauthenticated.
 
 Why: Stack A's additional review notes identify a synthetic login failure path that can degrade into unauthenticated proxying. The pattern consequence is that adapter failure must preserve authentication guarantees, not bypass them. Derived from: Stack A `§6` Subagent-only findings.
+
+## Confirmed Strengths (reference implementations)
+
+The following patterns were validated across the reviewed stacks and demonstrate correct implementation shapes that should be retained in new integrations.
+
+### Route ordering
+
+Logout and backchannel routes MUST be registered before app routes (e.g. `00-*.json` before `10-*.json`). Both Stack B and Stack C demonstrate this as a confirmed working pattern. This ordering ensures that logout and session-revocation endpoints are reached before the main application gateway logic, preventing stale session checks from interrupting the logout flow. Derived from: Stack B "Confirmed Strengths"; Stack C `§3`.
+
+### Credential injection self-healing
+
+For credential-injection adapters (Redmine, form-login apps), the adapter SHOULD retry credential injection on upstream 401 responses rather than failing the session. This pattern handles credential rotation and session expiry gracefully. When downstream app credentials expire but the gateway session remains valid, a transparent retry with refreshed credentials allows the user to continue without re-authentication. Derived from: Stack B "Confirmed Strengths".
+
+### Identity injection ordering
+
+For trusted-header adapters (Grafana-style), the gateway MUST inject the identity header (e.g. `X-WEBAUTH-USER`) only after OIDC session validation and revocation checks are complete. The identity header must never be injected on unauthenticated or revocation-indeterminate requests. This ensures that the downstream app never receives a spoofed or revoked identity. Derived from: Stack C `§5`.
 
 ## SLO Flow — Standard Sequence
 

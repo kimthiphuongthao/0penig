@@ -27,7 +27,7 @@ Path: `/Volumes/OS/claude/openig/sso-lab`, branch: `feat/subdomain-test`
 - [x] Docs sync: .claude/rules/ + CLAUDE.md alignment (2026-03-14)
 - [x] Code+security review: Stack A/B/C — evidence files tại `docs/reviews/2026-03-14-*.md`
 - [x] Cross-stack review summary: `docs/reviews/2026-03-14-cross-stack-review-summary.md`
-- [x] Standard Gateway Pattern v1.0: `docs/standard-gateway-pattern.md`
+- [x] Standard Gateway Pattern v1.1: `docs/standard-gateway-pattern.md` (priority fix, confidence metadata, Confirmed Strengths section)
 
 ### Pending
 - [ ] Workaround: admin "Logout all sessions" chưa trigger backchannel logout
