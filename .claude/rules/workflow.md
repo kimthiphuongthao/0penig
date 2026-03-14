@@ -142,5 +142,6 @@ Tìm file path theo thứ tự:
 1. Sau milestone lớn: rà soát roadmap và giao agent phù hợp cập nhật tài liệu khi cần
 2. Phát hiện gotcha/bug mới: tạo action để Codex/Gemini cập nhật `rules/gotchas.md`
 3. Có decision quan trọng: tạo action ghi rationale vào tài liệu phù hợp qua Codex/Gemini
-4. Tắt máy / kết thúc conversation: update `## Current Task` trong MEMORY.md → commit/push
+4. Sau mỗi action quan trọng (fix xong, investigation xong, decision confirmed, file committed): update `Last action` + `Next step` trong `## Current Task` MEMORY.md ngay — không chờ user nói "tắt máy"
+5. Tắt máy / kết thúc conversation: final update `## Current Task` → commit/push
 5. **Sau mỗi lần fix xong**: yêu cầu Codex chạy restart luôn (không chờ user nhắc), báo "đã restart, bạn test đi"
