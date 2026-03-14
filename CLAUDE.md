@@ -19,13 +19,14 @@ Path: `/Volumes/OS/claude/openig/sso-lab`, branch: `feat/subdomain-test`
 - [x] Vault migration: dev mode → file storage (all stacks)
 - [x] Test cases + test report (`docs/`)
 - [x] CLAUDE.md, .gemini/GEMINI.md, .claude/rules/ setup
-
-### Pending
 - [x] SLO Stack C: backchannel routes, id_token_hint, SloHandlerGrafana/PhpMyAdmin, KEYCLOAK_BROWSER_URL
 - [x] Cross-stack SLO: Jellyfin backchannel fix (openig-client-b-app4), tất cả 5 endpoints đã đăng ký
-- ~~Fix Jellyfin WebSocket~~ — không liên quan SSO/SLO, xoá khỏi scope
 - [x] Stack B cookieDomain: thêm ".sso.local" vào JwtSession config.json
 - [x] H8: Backchannel Logout JWT Validation — RS256 signature, claims validation, JWKS cache, audience fix
+- [x] Jellyfin WebSocket: không liên quan SSO/SLO, đã loại khỏi scope
+
+### Pending
+- [ ] Workaround: admin "Logout all sessions" chưa trigger backchannel logout
 
 ### Phase tiếp theo
 - [ ] Phase 3: Vault Production Hardening — xem `docs/vault-hardening-gaps.md`

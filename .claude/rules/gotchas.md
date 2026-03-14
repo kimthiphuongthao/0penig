@@ -1,8 +1,7 @@
 # Gotchas & Decision Log
 
 ## Known bugs (chưa fix)
-- **Jellyfin WebSocket**: route `01-jellyfin.json` dùng `http://` thay vì `ws://` → pending fix
-- **Stack B cookieDomain**: `config.json` thiếu `cookieDomain: ".sso.local"` → LOW priority
+- Không ghi nhận bug SSO/SLO mở nào trong phạm vi file này.
 
 ## Gotchas đã biết
 
@@ -26,6 +25,6 @@
 | HA dùng `ip_hash` + JwtSession, không dùng Redis session store | Đã test và confirmed hoạt động. Redis session store phức tạp hơn không cần thiết cho lab. |
 | Vault file storage thay vì dev mode | Dev mode mất data khi restart. File storage persist, production-grade. |
 | Mỗi stack Redis riêng, không share | Isolation — SLO 1 stack không ảnh hưởng stack khác. Cross-stack SLO qua Keycloak backchannel. |
-| `cookieDomain` Stack B thiếu là chấp nhận được | SSO hoạt động qua Keycloak session, không phải cookie sharing. Thiếu cookieDomain chỉ thêm 1 redirect thừa. |
+| Stack B đã thêm `cookieDomain: ".sso.local"` | Đồng bộ với trạng thái hiện tại của dự án, không còn theo dõi như bug. |
 | Custom SloHandler thay vì `defaultLogoutGoto` | OpenIG 6.0.2 không có `openIdEndSessionOnLogout` (feature không tồn tại — max version là 6.0.2, không có 6.5+). `defaultLogoutGoto` tĩnh không thể mang `id_token_hint`. | Dùng ScriptableHandler đọc `id_token` từ session key `oauth2:...` |
 | phpMyAdmin SLO hoạt động qua 401 | phpMyAdmin `auth_type=http` logout gửi 401 để clear browser Basic Auth → HttpBasicAuthFilter failureHandler trigger → redirect `/openid/app6/logout` → Keycloak end_session | Đây là by design, không cần dedicated logout intercept |

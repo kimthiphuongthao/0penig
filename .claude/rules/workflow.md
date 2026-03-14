@@ -39,6 +39,29 @@ Notes:
 - `--full-auto` + `--sandbox` KHÔNG conflict — chạy được, nhưng `--sandbox` bị override (luôn là workspace-write)
 - `--search` KHÔNG phải flag hợp lệ của `codex exec` → exit code 2. Dùng Gemini cho web search thay thế.
 
+## Codex — Trigger Skills
+
+Codex trigger skill chủ yếu theo mức độ khớp ngữ nghĩa giữa prompt và `name` + `description` trong frontmatter của `SKILL.md`, không chỉ theo exact keyword.
+
+| Cách viết prompt | Tác dụng |
+|------------------|----------|
+| Nêu đúng intent bằng cụm rõ ràng như `"security review"` hoặc `"code review"` | Tăng độ tin cậy khi match skill |
+| Chỉ rõ scope | Giúp Codex load đúng skill và giới hạn phạm vi làm việc |
+| Ghi checklist/criteria | Cho biết cần review theo tiêu chí nào |
+| Chỉ định output format | Giúp kết quả trả về đúng format Claude cần |
+
+**Prompt cho Claude gửi Codex nên có đủ:**
+- Intent rõ: ví dụ `"security review"` hoặc `"code review"` nếu muốn tăng reliability
+- Scope rõ: file, thư mục, route, module nào cần xử lý
+- Checklist/criteria: ví dụ OWASP, secrets, validation, regression risk, test gaps
+- Expected output: ví dụ findings theo severity, file/path, proposed fix
+
+**Lưu ý:**
+- Exact phrase giúp trigger ổn định hơn, nhưng semantic match mới là cơ chế chính
+- Các mục body như `When to Use` hữu ích sau khi skill đã được load, không phải tín hiệu trigger chính
+- Không cần flag `--skill`; chất lượng prompt quyết định việc skill có được chọn đúng hay không
+- Skills nằm tại `~/.codex/skills/<skill-name>/SKILL.md`
+
 ## Gemini — approval mode
 
 Mọi prompt gửi Gemini PHẢI bắt đầu bằng đoạn context sau:
@@ -88,15 +111,15 @@ Tìm file path theo thứ tự:
 
 | Câu nhắn | Claude làm gì |
 |----------|---------------|
-| "tôi đã trở lại, chúng ta tiếp tục công việc" | Đọc CLAUDE.md + MEMORY.md → khởi động lab → báo cáo |
-| "tôi cần tắt máy" | Commit code + update MEMORY.md + push |
-| "context còn 10%" | Update CLAUDE.md + MEMORY.md + .gemini/GEMINI.md → báo "có thể /compact" |
-| "tóm tắt trạng thái project" | Đọc roadmap + MEMORY.md → báo cáo |
-| "nhớ lại điều này: ..." | Ghi vào MEMORY.md (+ CLAUDE.md nếu quan trọng) |
+| "tôi đã trở lại, chúng ta tiếp tục công việc" | Đọc trạng thái hiện có → giao Codex/Gemini lấy context cần thiết → báo cáo |
+| "tôi cần tắt máy" | Chuẩn bị checklist bàn giao; nếu cần commit/push thì giao Codex thực hiện |
+| "context còn 10%" | Tóm tắt ngắn + đề xuất /compact; nếu cần cập nhật file thì giao agent phù hợp |
+| "tóm tắt trạng thái project" | Đọc roadmap + trạng thái hiện có → báo cáo |
+| "nhớ lại điều này: ..." | Lưu thành action item; nếu cần ghi file thì giao agent phù hợp |
 
 ### Quy tắc Claude tự làm (không cần nhắc)
-1. Sau milestone lớn: update Roadmap trong CLAUDE.md
-2. Phát hiện gotcha/bug mới: thêm vào `rules/gotchas.md`
-3. Có decision quan trọng: ghi lý do vào `rules/gotchas.md`
-4. Tắt máy: commit + update MEMORY.md + push
-5. **Sau mỗi lần fix xong**: tự chạy restart luôn (không chờ user nhắc), báo "đã restart, bạn test đi"
+1. Sau milestone lớn: rà soát roadmap và giao agent phù hợp cập nhật tài liệu khi cần
+2. Phát hiện gotcha/bug mới: tạo action để Codex/Gemini cập nhật `rules/gotchas.md`
+3. Có decision quan trọng: tạo action ghi rationale vào tài liệu phù hợp qua Codex/Gemini
+4. Tắt máy: chuẩn bị checklist commit/push và giao Codex thực hiện
+5. **Sau mỗi lần fix xong**: yêu cầu Codex chạy restart luôn (không chờ user nhắc), báo "đã restart, bạn test đi"
