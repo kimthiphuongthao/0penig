@@ -111,16 +111,32 @@ Tìm file path theo thứ tự:
 
 | Câu nhắn | Claude làm gì |
 |----------|---------------|
-| "tôi đã trở lại, chúng ta tiếp tục công việc" | Đọc MEMORY.md → đọc section `## Current Task` → load file plan/checklist được reference → báo cáo trạng thái chính xác + đề xuất bước tiếp theo |
-| "tôi cần tắt máy" / kết thúc conversation | Update `## Current Task` trong MEMORY.md (task đang làm, trạng thái đến đâu, file liên quan) → commit/push nếu cần → báo sẵn sàng |
+| "tôi đã trở lại, chúng ta tiếp tục công việc" | Đọc MEMORY.md `## Current Task` → nếu có `Files liên quan` thì load những file đó → báo cáo: Task, Type, Trạng thái, Last action, Next step — không hỏi thêm |
+| "tôi cần tắt máy" / kết thúc conversation | Update `## Current Task` theo template chuẩn → commit/push nếu có thay đổi chưa commit → báo sẵn sàng |
+| "task này xong rồi" / "đóng task này" | Move `## Current Task` vào `## Completed` (1 dòng tóm tắt) → set task tiếp theo từ `## Pending tasks` vào `## Current Task` → báo task mới |
 | "context còn 10%" | Tóm tắt ngắn + update `## Current Task` → đề xuất /compact |
 | "tóm tắt trạng thái project" | Đọc MEMORY.md + CLAUDE.md roadmap → báo cáo |
 | "nhớ lại điều này: ..." | Lưu vào MEMORY.md section phù hợp |
 
-**Nguyên tắc `## Current Task`:**
-- Luôn phản ánh task đang active nhất
-- Khi task hoàn thành: move vào `## Completed`, clear Current Task, set task mới
-- Khi bắt đầu conversation mới: Claude đọc Current Task trước tiên để restore context
+**Template chuẩn `## Current Task` — dùng cho MỌI task type:**
+```
+## Current Task
+
+**Task:** <tên task ngắn gọn>
+**Type:** implementation | documentation | investigation | planning | other
+**Trạng thái:** <in progress | blocked | waiting for X>
+**Last action:** <hành động cuối cùng đã làm — đủ để resume ngay>
+**Next step:** <bước tiếp theo cụ thể — không cần đọc thêm gì mới hiểu được>
+**Files liên quan:**        ← bỏ section này nếu không có file cần load
+- <role>: <path>
+```
+
+**Nguyên tắc:**
+- `Last action` phải đủ chi tiết để sau crash/restart biết đã làm đến đâu — không ghi chung chung
+- `Next step` phải actionable ngay — không assume context nào khác
+- `Files liên quan` chỉ ghi file CẦN ĐỌC để hiểu context (plan, checklist, spec) — không ghi file đã đọc xong
+- Không có plan file → không cần `Files liên quan` (documentation task, investigation task, v.v.)
+- Khi task hoàn thành: move 1 dòng vào `## Completed` → set task mới từ `## Pending tasks`
 
 ### Quy tắc Claude tự làm (không cần nhắc)
 1. Sau milestone lớn: rà soát roadmap và giao agent phù hợp cập nhật tài liệu khi cần
