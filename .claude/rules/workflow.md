@@ -111,15 +111,20 @@ Tìm file path theo thứ tự:
 
 | Câu nhắn | Claude làm gì |
 |----------|---------------|
-| "tôi đã trở lại, chúng ta tiếp tục công việc" | Đọc MEMORY.md → đọc file plan/checklist được reference trong pending task #1 → báo cáo trạng thái + đề xuất bước tiếp theo |
-| "tôi cần tắt máy" | Chuẩn bị checklist bàn giao; nếu cần commit/push thì giao Codex thực hiện |
-| "context còn 10%" | Tóm tắt ngắn + đề xuất /compact; nếu cần cập nhật file thì giao agent phù hợp |
-| "tóm tắt trạng thái project" | Đọc roadmap + trạng thái hiện có → báo cáo |
-| "nhớ lại điều này: ..." | Lưu thành action item; nếu cần ghi file thì giao agent phù hợp |
+| "tôi đã trở lại, chúng ta tiếp tục công việc" | Đọc MEMORY.md → đọc section `## Current Task` → load file plan/checklist được reference → báo cáo trạng thái chính xác + đề xuất bước tiếp theo |
+| "tôi cần tắt máy" / kết thúc conversation | Update `## Current Task` trong MEMORY.md (task đang làm, trạng thái đến đâu, file liên quan) → commit/push nếu cần → báo sẵn sàng |
+| "context còn 10%" | Tóm tắt ngắn + update `## Current Task` → đề xuất /compact |
+| "tóm tắt trạng thái project" | Đọc MEMORY.md + CLAUDE.md roadmap → báo cáo |
+| "nhớ lại điều này: ..." | Lưu vào MEMORY.md section phù hợp |
+
+**Nguyên tắc `## Current Task`:**
+- Luôn phản ánh task đang active nhất
+- Khi task hoàn thành: move vào `## Completed`, clear Current Task, set task mới
+- Khi bắt đầu conversation mới: Claude đọc Current Task trước tiên để restore context
 
 ### Quy tắc Claude tự làm (không cần nhắc)
 1. Sau milestone lớn: rà soát roadmap và giao agent phù hợp cập nhật tài liệu khi cần
 2. Phát hiện gotcha/bug mới: tạo action để Codex/Gemini cập nhật `rules/gotchas.md`
 3. Có decision quan trọng: tạo action ghi rationale vào tài liệu phù hợp qua Codex/Gemini
-4. Tắt máy: chuẩn bị checklist commit/push và giao Codex thực hiện
+4. Tắt máy / kết thúc conversation: update `## Current Task` trong MEMORY.md → commit/push
 5. **Sau mỗi lần fix xong**: yêu cầu Codex chạy restart luôn (không chờ user nhắc), báo "đã restart, bạn test đi"
