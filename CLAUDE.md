@@ -33,7 +33,7 @@ Path: `/Volumes/OS/claude/openig/sso-lab`, branch: `feat/subdomain-test`
 - [ ] Workaround: admin "Logout all sessions" chưa trigger backchannel logout
 
 ### Phase tiếp theo
-- [ ] **Fix phase**: implement fixes theo `docs/standard-gateway-pattern.md` — ưu tiên: revocation contract → secret externalization → TLS → adapter contract
+- [ ] **Fix phase**: implement fixes theo `docs/standard-gateway-pattern.md` — checklist: `docs/fix-phase/checklist.md` (22 tasks, 7 groups)
 - [ ] Phase 3: Vault Production Hardening — xem `docs/vault-hardening-gaps.md`
 - [ ] Post-Stack C docs: OpenIG built-in filter selection guide
 - [ ] Redis persistence (appendonly yes) — đảm bảo SLO blacklist survive restart
