@@ -111,7 +111,7 @@ Tìm file path theo thứ tự:
 
 | Câu nhắn | Claude làm gì |
 |----------|---------------|
-| "tôi đã trở lại, chúng ta tiếp tục công việc" | Đọc trạng thái hiện có → giao Codex/Gemini lấy context cần thiết → báo cáo |
+| "tôi đã trở lại, chúng ta tiếp tục công việc" | Đọc MEMORY.md → đọc file plan/checklist được reference trong pending task #1 → báo cáo trạng thái + đề xuất bước tiếp theo |
 | "tôi cần tắt máy" | Chuẩn bị checklist bàn giao; nếu cần commit/push thì giao Codex thực hiện |
 | "context còn 10%" | Tóm tắt ngắn + đề xuất /compact; nếu cần cập nhật file thì giao agent phù hợp |
 | "tóm tắt trạng thái project" | Đọc roadmap + trạng thái hiện có → báo cáo |
