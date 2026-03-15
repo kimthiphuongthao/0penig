@@ -21,6 +21,7 @@
 | Keycloak "Invalid redirect uri" khi logout | `post.logout.redirect.uris` chưa configured trong Keycloak client dedicated (chỉ có trong shared client) | Thêm `post.logout.redirect.uris` vào Keycloak client dedicated qua admin API hoặc realm-export.json |
 | Fail-closed redirect loop khi Redis down | Option B (clear session + redirect) gây infinite loop: Keycloak SSO session tự re-auth → tạo session mới → Redis vẫn down → clear → redirect → loop | Dùng Option A: trả 500 INTERNAL_SERVER_ERROR trực tiếp, KHÔNG clear session. Session preserved → hồi phục tự động khi Redis về |
 | `request.uri.toString()` trả URL nội bộ Docker | Trong OpenIG ScriptableFilter, `request.uri` đã bị rewrite thành backend URL (e.g. `http://wordpress/...`) → redirect gửi browser tới hostname Docker internal | Dùng `request.headers.getFirst('Host')` để xây redirect URL thay vì `request.uri.toString()` |
+| Backchannel logout lost khi Redis down | BackchannelLogoutHandler trả 500 (FIX-05) nhưng blacklist key không được ghi. Khi Redis recovery, session vẫn valid (chưa bị revoke) cho đến khi JwtSession hết hạn tự nhiên (8h) | Production: Redis HA (Sentinel/Cluster) + Redis persistence (appendonly yes) + Keycloak retry config. Lab: accepted limitation — session hết hạn tự nhiên sau 8h |
 
 ## Decision log
 
@@ -34,3 +35,4 @@
 | phpMyAdmin SLO hoạt động qua 401 | phpMyAdmin `auth_type=http` logout gửi 401 để clear browser Basic Auth → HttpBasicAuthFilter failureHandler trigger → redirect `/openid/app6/logout` → Keycloak end_session | Đây là by design, không cần dedicated logout intercept |
 | Jellyfin dùng dedicated Keycloak client | Jellyfin cần `openig-client-b-app4` riêng (không share `openig-client-b` với Redmine) vì namespace OIDC khác nhau | Đảm bảo SloHandler, OAuth2ClientFilter, backchannel logout, post_logout_redirect_uris đều dùng cùng client_id |
 | Fail-closed dùng 500 thay vì redirect | Option B (redirect) gây infinite loop do Keycloak SSO re-auth. Option A (500) đơn giản, session preserved, compatible với future K8s + Redis HA. |
+| FIX-05: 500 thay vì 400 cho infra errors | Keycloak spec: 400 = bad request (don't retry), 500 = server error (may retry). Trả 500 cho Redis/network errors cho phép Keycloak retry backchannel logout khi infra recovery. |

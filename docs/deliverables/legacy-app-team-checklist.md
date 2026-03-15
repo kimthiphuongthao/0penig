@@ -353,6 +353,8 @@ Gateway team cấu hình để tự động xử lý logout khi người dùng c
 
 Khi gateway down, người dùng không thể đăng nhập mới. Người dùng đang có session hợp lệ có thể bị ảnh hưởng tùy cấu hình. Đây là trade-off của mô hình centralized gateway — gateway chạy HA (High Availability) với ít nhất 2 node để giảm thiểu downtime.
 
+**Lưu ý về SLO khi hạ tầng gặp sự cố:** Nếu thành phần lưu trữ trạng thái logout (Redis) bị gián đoạn đúng lúc có lệnh logout, phiên đăng nhập ở một số app có thể chưa bị thu hồi ngay. Phiên đó sẽ hết hạn tự nhiên theo thời gian session timeout (mặc định 8 giờ). Trong môi trường production, hạ tầng Redis chạy HA (High Availability) để giảm thiểu khả năng này xảy ra.
+
 **6. Có thể truy cập app trực tiếp (không qua gateway) để debug không?**
 
 Được, trong môi trường dev/internal network. App vẫn chạy bình thường — gateway là proxy, không sửa app. Chỉ có điều khi truy cập trực tiếp, bạn sẽ thấy login form gốc của app thay vì SSO.

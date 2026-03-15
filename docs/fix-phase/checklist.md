@@ -22,7 +22,7 @@
 | 1a | BackchannelLogoutHandler.groovy — TTL 3600s → 28800s | A, B, C | [x] | ✅ Done 2026-03-15. Also fixed RESP prefix $4→$5. Verified TTL≈28800 all 3 stacks. Commit 792760f |
 | 1b | SessionBlacklistFilter + variants — catch block fail-open → fail-closed (503/redirect login) | A, B, C | [x] | ✅ Done 2026-03-15. Return 500 on Redis error (fail-closed). Session preserved for recovery. Tested A+B+C. Commit 278a29c |
 | 1c | Redis socket timeouts — connectTimeout=200ms, soTimeout=500ms (BackchannelLogoutHandler + SessionBlacklistFilter) | A, B, C | [x] | ✅ Done 2026-03-15. connect=200ms, read=500ms via InetSocketAddress. 9 files across 3 stacks. Commit 278a29c |
-| 1d | BackchannelLogoutHandler — catch Exception → 500 (không phải 400) cho infra faults | B, C | [ ] | B F10, C F8 |
+| 1d | BackchannelLogoutHandler — catch Exception → 500 (không phải 400) cho infra faults | A, B, C | [x] | ✅ Done 2026-03-15. All 3 stacks (A also had same pattern). Tested Redis down → 500. Commit 9b770cd |
 | 1e | Verify sid/sub consistency — BackchannelLogoutHandler write vs SessionBlacklistFilter* read | B | [ ] | B F11 — 1/4 reviewers, investigate first |
 
 ---
@@ -96,14 +96,14 @@
 
 | Group | Total | Done | In Progress | Pending |
 |-------|-------|------|-------------|---------|
-| 1 — Revocation | 5 | 3 | 0 | 2 |
+| 1 — Revocation | 5 | 4 | 0 | 1 |
 | 2 — Secrets | 4 | 0 | 0 | 4 |
 | 3 — Transport/Origin | 4 | 0 | 0 | 4 |
 | 4 — Session Storage | 3 | 0 | 0 | 3 |
 | 5 — Logout/Observability | 2 | 0 | 0 | 2 |
 | 6 — Adapter Contract | 3 | 0 | 0 | 3 |
 | 7 — Unsafe Method | 1 | 0 | 0 | 1 |
-| **Total** | **22** | **3** | **0** | **19** |
+| **Total** | **22** | **4** | **0** | **18** |
 
 ---
 
@@ -113,3 +113,4 @@
 |------|----|--------|--------|--------|
 | 2026-03-15 | 1a | FIX-02: Redis TTL 3600→28800 + RESP prefix fix | PASS — TTL≈28800 verified A+B+C | 792760f |
 | 2026-03-15 | 1b+1c | FIX-03+04: fail-closed 500 + socket timeout 200/500ms | PASS — tested Redis stop/start A+B+C | 278a29c |
+| 2026-03-15 | 1d | FIX-05: backchannel error code 400→500 for infra errors | PASS — tested Redis down→500, normal SLO→200 | 9b770cd |
