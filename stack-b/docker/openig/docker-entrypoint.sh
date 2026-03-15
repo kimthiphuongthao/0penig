@@ -14,6 +14,7 @@ cp -r "$SRC" "$DST"
 # Substitute placeholders in config.json
 sed -i \
   -e "s|__JWT_SHARED_SECRET__|${JWT_SHARED_SECRET}|g" \
+  -e "s|__KEYSTORE_PASSWORD__|${KEYSTORE_PASSWORD}|g" \
   "$DST/config/config.json"
 
 # Point OpenIG at the processed copy

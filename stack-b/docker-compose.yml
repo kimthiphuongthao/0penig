@@ -49,6 +49,7 @@ services:
       REDIS_HOST: redis-b
       OPENIG_PUBLIC_URL: 'http://openigb.sso.local:9080'
       JWT_SHARED_SECRET: "jla+d8IjpRqlcvKyxs8S5SFQHIGaObqXfVIt5Z/mn+I="
+      KEYSTORE_PASSWORD: "Kp9mZxQv3wNrL2eA7yUhBc6TdsFjX8oY"
       KEYCLOAK_BROWSER_URL: "http://auth.sso.local:8080"
       KEYCLOAK_INTERNAL_URL: "http://host.docker.internal:8080"
       OIDC_CLIENT_ID: "openig-client-b"
@@ -86,6 +87,7 @@ services:
       REDIS_HOST: redis-b
       OPENIG_PUBLIC_URL: 'http://openigb.sso.local:9080'
       JWT_SHARED_SECRET: "jla+d8IjpRqlcvKyxs8S5SFQHIGaObqXfVIt5Z/mn+I="
+      KEYSTORE_PASSWORD: "Kp9mZxQv3wNrL2eA7yUhBc6TdsFjX8oY"
       KEYCLOAK_BROWSER_URL: "http://auth.sso.local:8080"
       KEYCLOAK_INTERNAL_URL: "http://host.docker.internal:8080"
       OIDC_CLIENT_ID: "openig-client-b"
