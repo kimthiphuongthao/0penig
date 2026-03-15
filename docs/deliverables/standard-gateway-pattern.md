@@ -95,6 +95,8 @@ Why: Stack B and Stack C explicitly allow plaintext HTTP for OIDC, logout, Vault
 
 How to implement in OpenIG: Use HTTPS `baseURI` and endpoint values in route config, set `requireHttps: true` on `OAuth2ClientFilter`, and issue only `Secure` cookies from `JwtSession`. If lab scaffolding remains HTTP-only, it is not a reference implementation. Derived from: Stack B `F4`; Stack C `§4 F4`.
 
+> **Lab Exception (FIX-07 Phase 7a):** All traffic in this lab runs over plaintext HTTP. `requireHttps: false` is intentional — setting it to `true` without TLS infrastructure in place causes every OIDC flow to fail immediately. Full HTTPS requires: a self-signed CA distributed to all containers, nginx TLS termination configured per stack, Docker networking changes to route port 443, and the CA cert trusted by the JVM inside OpenIG. Phase 7b (actual TLS with self-signed CA and nginx termination) is deferred to the Vault Production Hardening phase. Until Phase 7b is complete, this lab is not a production reference for transport security.
+
 ### 4. Session Storage Boundaries
 [Derived from: B F6 [low confidence: 1/4 reviewers], B F8, C F5]
 
@@ -235,6 +237,8 @@ Derived from: Cross-Stack Summary "Recommended Standard Pattern" and "Next Steps
 - [ ] Redis read and write paths have explicit connect and read timeouts, and backchannel runtime failures return `5xx`.
 
 ### Transport
+
+> **Lab Exception (FIX-07 Phase 7a):** `requireHttps: false` across all stacks is intentional for this HTTP-only lab. Phase 7b (TLS with self-signed CA) deferred to Vault Production Hardening phase.
 
 - [ ] All OIDC endpoints, Vault calls, and downstream proxy targets use HTTPS in production.
 - [ ] Every `OAuth2ClientFilter` has `requireHttps: true`, and `JwtSession` cookies are `Secure`.

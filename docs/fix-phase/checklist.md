@@ -45,8 +45,8 @@
 | ID | Task | Stack | Status | Notes |
 |----|------|-------|--------|-------|
 | 3a | SloHandler*.groovy + SessionBlacklistFilter*.groovy — pin redirect base URLs, không dùng inbound Host | A, B, C | [ ] | A F5, B F7, C F9 |
-| 3b | requireHttps: false → true (config.json + route files) | B | [ ] | B F4 |
-| 3c | requireHttps: false → true (config.json + route files) | C | [ ] | C F4 |
+| 3b | requireHttps: false → true (config.json + route files) | B | [ ] | B F4. Phase 7a docs done (Lab Exception note). Phase 7b (actual change) deferred to Vault Hardening |
+| 3c | requireHttps: false → true (config.json + route files) | C | [ ] | C F4. Phase 7a docs done. Phase 7b deferred |
 | 3d | Validate Codex-only HTTP findings: VaultCredentialFilter, BackchannelLogoutHandler, SloHandler, CredentialInjector | A | [ ] | A §6 Codex-only — confirm scope trước khi fix |
 
 ---
