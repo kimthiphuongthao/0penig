@@ -44,5 +44,11 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [ ] Đóng gói: OVA / Docker Compose bundle — single-command deploy
 - [ ] Slide + tài liệu báo cáo phương án giải pháp
 
+## File tối thượng — Legacy App Team Checklist
+- Path: `docs/deliverables/legacy-app-team-checklist.md`
+- Quan trọng nhất trong toàn bộ deliverables — mọi tài liệu khác phục vụ đầu vào cho file này
+- Xây dựng liên tục xuyên suốt project, check sau mỗi task/thay đổi
+- KHÔNG update lung tung — chỉ update khi có evidence từ code/test thực tế
+
 ## Compact instructions
 When using /compact, focus on: pending tasks, recent decisions, bugs found, current stack status.
