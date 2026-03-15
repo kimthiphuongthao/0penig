@@ -22,6 +22,7 @@
 | Fail-closed redirect loop khi Redis down | Option B (clear session + redirect) gây infinite loop: Keycloak SSO session tự re-auth → tạo session mới → Redis vẫn down → clear → redirect → loop | Dùng Option A: trả 500 INTERNAL_SERVER_ERROR trực tiếp, KHÔNG clear session. Session preserved → hồi phục tự động khi Redis về |
 | `request.uri.toString()` trả URL nội bộ Docker | Trong OpenIG ScriptableFilter, `request.uri` đã bị rewrite thành backend URL (e.g. `http://wordpress/...`) → redirect gửi browser tới hostname Docker internal | Dùng `request.headers.getFirst('Host')` để xây redirect URL thay vì `request.uri.toString()` |
 | Backchannel logout lost khi Redis down | BackchannelLogoutHandler trả 500 (FIX-05) nhưng blacklist key không được ghi. Khi Redis recovery, session vẫn valid (chưa bị revoke) cho đến khi JwtSession hết hạn tự nhiên (8h) | Production: Redis HA (Sentinel/Cluster) + Redis persistence (appendonly yes) + Keycloak retry config. Lab: accepted limitation — session hết hạn tự nhiên sau 8h |
+| OpenIG 6 config.json không support `${env['']}` | Heap parser gọi `.required()` trước EL evaluation → `${env['VAR']}` trả null → error. Chỉ route files (JSON) mới support EL natively | Dùng `docker-entrypoint.sh` + `sed` thay `__PLACEHOLDER__` trong config.json trước khi OpenIG start. Route files dùng `${env['VAR']}` bình thường |
 
 ## Decision log
 
@@ -36,3 +37,4 @@
 | Jellyfin dùng dedicated Keycloak client | Jellyfin cần `openig-client-b-app4` riêng (không share `openig-client-b` với Redmine) vì namespace OIDC khác nhau | Đảm bảo SloHandler, OAuth2ClientFilter, backchannel logout, post_logout_redirect_uris đều dùng cùng client_id |
 | Fail-closed dùng 500 thay vì redirect | Option B (redirect) gây infinite loop do Keycloak SSO re-auth. Option A (500) đơn giản, session preserved, compatible với future K8s + Redis HA. |
 | FIX-05: 500 thay vì 400 cho infra errors | Keycloak spec: 400 = bad request (don't retry), 500 = server error (may retry). Trả 500 cho Redis/network errors cho phép Keycloak retry backchannel logout khi infra recovery. |
+| FIX-06: docker-entrypoint.sh + sed cho config.json secrets | OpenIG 6 heap parser không support EL trong config.json. Route files hỗ trợ `${env['VAR']}` native. Config.json dùng `__PLACEHOLDER__` + sed substitution tại container startup. sharedSecret + PKCS12 rotated, clientSecret externalized only (must match Keycloak). |
