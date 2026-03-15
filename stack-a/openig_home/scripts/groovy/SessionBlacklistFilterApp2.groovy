@@ -3,6 +3,7 @@ import org.forgerock.http.protocol.Response
 import org.forgerock.http.protocol.Status
 import static org.forgerock.util.promise.Promises.newResultPromise
 
+import java.net.InetSocketAddress
 import java.net.Socket
 import java.util.Base64
 
@@ -92,8 +93,9 @@ def isBlacklisted = { String sid ->
 
     Socket socket = null
     try {
-        socket = new Socket(redisHost, redisPort)
-        socket.soTimeout = 2000
+        socket = new Socket()
+        socket.connect(new InetSocketAddress(redisHost, redisPort), 200)  // 200ms connect timeout
+        socket.soTimeout = 500  // 500ms read timeout
         def output = socket.getOutputStream()
         def input = socket.getInputStream()
 
@@ -156,7 +158,8 @@ try {
         return newResultPromise(response)
     }
 } catch (Exception e) {
-    logger.warn('SessionBlacklistFilterApp2 Redis check failed; allowing request', e)
+    logger.error('[SessionBlacklistFilterApp2] Redis check failed, denying request (fail-closed)', e)
+    return newResultPromise(new Response(Status.INTERNAL_SERVER_ERROR))
 }
 
 return next.handle(context, request)

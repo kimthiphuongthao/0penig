@@ -3,6 +3,7 @@ import org.forgerock.http.protocol.Response
 import org.forgerock.http.protocol.Status
 import static org.forgerock.util.promise.Promises.newResultPromise
 
+import java.net.InetSocketAddress
 import java.net.Socket
 import java.util.Base64
 
@@ -78,7 +79,9 @@ try {
     String command = "*2\r\n\$3\r\nGET\r\n\$${keySize}\r\n${key}\r\n"
 
     boolean blacklisted = false
-    new Socket(redisHost, redisPort).withCloseable { socket ->
+    new Socket().withCloseable { socket ->
+        socket.connect(new InetSocketAddress(redisHost, redisPort), 200)  // 200ms connect timeout
+        socket.setSoTimeout(500)  // 500ms read timeout
         socket.outputStream.write(command.getBytes('UTF-8'))
         socket.outputStream.flush()
 
@@ -99,6 +102,6 @@ try {
 
     return next.handle(context, request)
 } catch (Exception e) {
-    logger.warn('[SessionBlacklistFilterApp4] Redis check failed, continuing request', e)
-    return next.handle(context, request)
+    logger.error('[SessionBlacklistFilterApp4] Redis check failed, denying request (fail-closed)', e)
+    return newResultPromise(new Response(Status.INTERNAL_SERVER_ERROR))
 }

@@ -6,6 +6,7 @@ import static org.forgerock.util.promise.Promises.newResultPromise
 
 import java.math.BigInteger
 import java.net.HttpURLConnection
+import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.URL
 import java.net.URLDecoder
@@ -317,7 +318,9 @@ try {
     // TTL must be >= JwtSession.sessionTimeout (28800s = 8h)
     String command = "*5\r\n\$3\r\nSET\r\n\$${keySize}\r\n${key}\r\n\$1\r\n1\r\n\$2\r\nEX\r\n\$5\r\n28800\r\n"
 
-    new Socket(redisHost, redisPort).withCloseable { socket ->
+    new Socket().withCloseable { socket ->
+        socket.connect(new InetSocketAddress(redisHost, redisPort), 200)  // 200ms connect timeout
+        socket.setSoTimeout(500)  // 500ms read timeout
         socket.outputStream.write(command.getBytes('UTF-8'))
         socket.outputStream.flush()
         String reply = readRespLine(socket.inputStream)
