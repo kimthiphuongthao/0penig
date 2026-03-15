@@ -19,7 +19,7 @@
 
 | ID | Task | Stack | Status | Notes |
 |----|------|-------|--------|-------|
-| 1a | BackchannelLogoutHandler.groovy — TTL 3600s → 28800s | A, B, C | [ ] | |
+| 1a | BackchannelLogoutHandler.groovy — TTL 3600s → 28800s | A, B, C | [x] | ✅ Done 2026-03-15. Also fixed RESP prefix $4→$5. Verified TTL≈28800 all 3 stacks. Commit 792760f |
 | 1b | SessionBlacklistFilter + variants — catch block fail-open → fail-closed (503/redirect login) | A, B, C | [ ] | Stack A: SessionBlacklistFilter + SessionBlacklistFilterApp2; Stack B: +App3 +App4 |
 | 1c | Redis socket timeouts — connectTimeout=200ms, soTimeout=500ms (BackchannelLogoutHandler + SessionBlacklistFilter) | A, B, C | [ ] | |
 | 1d | BackchannelLogoutHandler — catch Exception → 500 (không phải 400) cho infra faults | B, C | [ ] | B F10, C F8 |
@@ -96,14 +96,14 @@
 
 | Group | Total | Done | In Progress | Pending |
 |-------|-------|------|-------------|---------|
-| 1 — Revocation | 5 | 0 | 0 | 5 |
+| 1 — Revocation | 5 | 1 | 0 | 4 |
 | 2 — Secrets | 4 | 0 | 0 | 4 |
 | 3 — Transport/Origin | 4 | 0 | 0 | 4 |
 | 4 — Session Storage | 3 | 0 | 0 | 3 |
 | 5 — Logout/Observability | 2 | 0 | 0 | 2 |
 | 6 — Adapter Contract | 3 | 0 | 0 | 3 |
 | 7 — Unsafe Method | 1 | 0 | 0 | 1 |
-| **Total** | **22** | **0** | **0** | **22** |
+| **Total** | **22** | **1** | **0** | **21** |
 
 ---
 
@@ -111,4 +111,4 @@
 
 | Date | ID | Action | Result | Commit |
 |------|----|--------|--------|--------|
-| — | — | — | — | — |
+| 2026-03-15 | 1a | FIX-02: Redis TTL 3600→28800 + RESP prefix fix | PASS — TTL≈28800 verified A+B+C | 792760f |
