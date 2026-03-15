@@ -325,9 +325,11 @@ try {
     return newResultPromise(new Response(Status.OK))
 
 } catch (IllegalArgumentException e) {
+    // JWT validation/parsing error — client sent bad data
     logger.error('[BackchannelLogoutHandler] Validation error: {}', e.message)
     return newResultPromise(new Response(Status.BAD_REQUEST))
 } catch (Exception e) {
-    logger.error('[BackchannelLogoutHandler] Unexpected error', e)
-    return newResultPromise(new Response(Status.BAD_REQUEST))
+    // Runtime/infra error (Redis, network, unexpected) — return 500 so Keycloak retries
+    logger.error('[BackchannelLogoutHandler] Runtime error (Redis/infra): {}', e.message, e)
+    return newResultPromise(new Response(Status.INTERNAL_SERVER_ERROR))
 }
