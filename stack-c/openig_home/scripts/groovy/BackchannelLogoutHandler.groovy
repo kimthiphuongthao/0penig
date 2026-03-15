@@ -306,7 +306,8 @@ try {
     int redisPort = 6379
     String key = "blacklist:${sid}"
     int keySize = key.getBytes('UTF-8').length
-    String command = "*5\r\n\$3\r\nSET\r\n\$${keySize}\r\n${key}\r\n\$1\r\n1\r\n\$2\r\nEX\r\n\$4\r\n3600\r\n"
+    // TTL must be >= JwtSession.sessionTimeout (28800s = 8h)
+    String command = "*5\r\n\$3\r\nSET\r\n\$${keySize}\r\n${key}\r\n\$1\r\n1\r\n\$2\r\nEX\r\n\$5\r\n28800\r\n"
 
     new Socket(redisHost, redisPort).withCloseable { socket ->
         socket.outputStream.write(command.getBytes('UTF-8'))
