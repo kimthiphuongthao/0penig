@@ -32,6 +32,10 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] Legacy auth patterns definitive reference: `docs/deliverables/legacy-auth-patterns-definitive.md` (5 mechanisms, 5 logout types, security checklist)
 - [x] Workflow evaluation: A/B test Planner vs Codex (2 rounds, 2026-03-15) → Planner wins, workflow.md updated
 - [x] FIX-01: Jellyfin logout — namespace app3→app4, client_id OIDC_CLIENT_ID_APP4, post_logout_redirect_uri, Keycloak client openig-client-b-app4
+- [x] FIX-02: Redis TTL 3600→28800 + RESP prefix fix (3 stacks)
+- [x] FIX-03+04: Fail-closed 500 + socket timeout 200/500ms (3 stacks, 9 files)
+- [x] FIX-05: Backchannel error code 400→500 for infra errors (3 stacks)
+- [x] FIX-06: Externalize secrets to env vars — docker-entrypoint.sh + ${env['VAR']} (3 stacks, 16 files)
 - [x] Docs reorganize: `docs/` → `deliverables/`, `testing/`, `reference/`, `historical/` (8 deleted, 22 moved)
 - [x] Docs update: sso-workflow-security H8 IMPLEMENTED (Tier 3→2), integration guide +Stack C, audit scores, gateway pattern B F5 RESOLVED
 - [x] **Legacy App Team Checklist**: `docs/deliverables/legacy-app-team-checklist.md` — file tối thượng, 3-reviewer QA (Critic+Gemini+Codex)
