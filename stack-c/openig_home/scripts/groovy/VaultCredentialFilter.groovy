@@ -1,5 +1,6 @@
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
+import groovy.transform.Field
 import org.forgerock.http.protocol.Response
 import org.forgerock.http.protocol.Status
 
@@ -7,6 +8,9 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import java.util.Base64
+import java.util.concurrent.ConcurrentHashMap
+
+@Field static final ConcurrentHashMap<String, Object> vaultCache = new ConcurrentHashMap<>()
 
 def readResponseBody = { HttpURLConnection connection ->
     def stream = null
@@ -66,18 +70,22 @@ try {
     }
     username = username.trim()
 
-    String cachedUsername = session['phpmyadmin_username']?.toString()?.trim()
+    String cachedUsername = vaultCache.get('phpmyadmin_username')?.toString()?.trim()
     if (cachedUsername) {
         if (cachedUsername == username) {
+            // Credentials already in session from previous fetch — pass through
             return next.handle(context, request)
         }
+        // User switched — clear cache and session so we re-fetch below
+        vaultCache.remove('phpmyadmin_username')
+        vaultCache.remove('phpmyadmin_password')
         session.remove('phpmyadmin_username')
         session.remove('phpmyadmin_password')
     }
 
     long nowEpochSeconds = (System.currentTimeMillis() / 1000L) as long
-    String vaultToken = session['vault_token'] as String
-    long vaultTokenExpiry = (session['vault_token_expiry'] ?: 0L) as long
+    String vaultToken = vaultCache.get('vault_token') as String
+    long vaultTokenExpiry = (vaultCache.get('vault_token_expiry') ?: 0L) as long
 
     if (!vaultToken?.trim() || vaultTokenExpiry <= nowEpochSeconds) {
         if (!vaultRoleIdFile?.trim()) {
@@ -120,8 +128,8 @@ try {
         }
 
         long adjustedLease = Math.max(leaseDuration - 30L, 30L)
-        session['vault_token'] = newVaultToken
-        session['vault_token_expiry'] = nowEpochSeconds + adjustedLease
+        vaultCache.put('vault_token', newVaultToken)
+        vaultCache.put('vault_token_expiry', nowEpochSeconds + adjustedLease)
         vaultToken = newVaultToken
     }
 
@@ -138,8 +146,8 @@ try {
     credsConnection.disconnect()
 
     if (credsStatus == 403) {
-        session.remove('vault_token')
-        session.remove('vault_token_expiry')
+        vaultCache.remove('vault_token')
+        vaultCache.remove('vault_token_expiry')
         throw new IllegalStateException('Vault token rejected for phpMyAdmin lookup (HTTP 403)')
     }
     if (credsStatus < 200 || credsStatus >= 300) {
@@ -153,8 +161,11 @@ try {
         throw new IllegalStateException('Vault response is missing username or password')
     }
 
+    vaultCache.put('phpmyadmin_username', pmaUsername)
+    vaultCache.put('phpmyadmin_password', pmaPassword)
     session['phpmyadmin_username'] = pmaUsername
     session['phpmyadmin_password'] = pmaPassword
+    logger.info('[VaultCredentialFilter] Credentials fetched from Vault and stored in session for user: {}', username)
     return next.handle(context, request)
 } catch (Exception e) {
     logger.error('[VaultCredentialFilter] Failed to fetch phpMyAdmin credentials from Vault', e)
