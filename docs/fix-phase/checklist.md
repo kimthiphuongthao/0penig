@@ -58,7 +58,7 @@
 |----|------|-------|--------|-------|
 | 4a | Remove Vault token + downstream session material khỏi JwtSession → server-side store | B | [x] | ✅ Done 2026-03-16. Vault tokens → fresh fetch per request. Commit 76b648a |
 | 4b | Jellyfin access token — localStorage → httpOnly Secure cookie | B | [ ] | B F8 |
-| 4c | Remove vault_token + phpmyadmin_username/password khỏi JwtSession → server-side store | C | [x] | ✅ Done 2026-03-16. Vault tokens removed. phpMyAdmin creds stay in session (OpenIG 6 EL limitation). Commit 76b648a |
+| 4c | Remove vault_token + phpmyadmin_username/password khỏi JwtSession → server-side store | C | [~] | Vault tokens removed (76b648a). phpMyAdmin creds still in session — pending: direct Auth header injection to replace HttpBasicAuthFilter |
 
 ---
 
@@ -99,11 +99,11 @@
 | 1 — Revocation | 5 | 4 | 0 | 1 |
 | 2 — Secrets | 4 | 4 | 0 | 0 |
 | 3 — Transport/Origin | 4 | 1 | 0 | 3 |
-| 4 — Session Storage | 3 | 2 | 0 | 1 |
+| 4 — Session Storage | 3 | 1 | 1 | 1 |
 | 5 — Logout/Observability | 2 | 0 | 0 | 2 |
 | 6 — Adapter Contract | 3 | 0 | 0 | 3 |
 | 7 — Unsafe Method | 1 | 0 | 0 | 1 |
-| **Total** | **22** | **11** | **0** | **11** |
+| **Total** | **22** | **10** | **1** | **11** |
 
 ---
 
