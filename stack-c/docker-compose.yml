@@ -19,32 +19,44 @@ services:
 
   openig-c1:
     image: openidentityplatform/openig
+    entrypoint: ["/docker-entrypoint.sh"]
     networks:
       - frontend-c
       - backend-c
     volumes:
       - ./openig_home:/opt/openig
+      - ./docker/openig/docker-entrypoint.sh:/docker-entrypoint.sh:ro
     environment:
       OPENIG_BASE: "/opt/openig"
       OPENIG_PUBLIC_URL: "http://openig-c.sso.local:10080"
       KEYCLOAK_BROWSER_URL: "http://auth.sso.local:8080"
       REDIS_HOST: "redis-c"
+      JWT_SHARED_SECRET: "fThJvpugVMgfRGoRYBK2tnuFDAQ+7kdrN9u6romRcUM="
+      KEYSTORE_PASSWORD: "Bx4oNKDVzSav7TMHK6gsKcLyhqCgspqm"
+      OIDC_CLIENT_SECRET_APP5: "secret-c"
+      OIDC_CLIENT_SECRET_APP6: "secret-c"
       VAULT_ADDR: "http://vault-c:8200"
       VAULT_ROLE_ID_FILE: "/opt/openig/vault/role_id"
       VAULT_SECRET_ID_FILE: "/opt/openig/vault/secret_id"
 
   openig-c2:
     image: openidentityplatform/openig
+    entrypoint: ["/docker-entrypoint.sh"]
     networks:
       - frontend-c
       - backend-c
     volumes:
       - ./openig_home:/opt/openig
+      - ./docker/openig/docker-entrypoint.sh:/docker-entrypoint.sh:ro
     environment:
       OPENIG_BASE: "/opt/openig"
       OPENIG_PUBLIC_URL: "http://openig-c.sso.local:10080"
       KEYCLOAK_BROWSER_URL: "http://auth.sso.local:8080"
       REDIS_HOST: "redis-c"
+      JWT_SHARED_SECRET: "fThJvpugVMgfRGoRYBK2tnuFDAQ+7kdrN9u6romRcUM="
+      KEYSTORE_PASSWORD: "Bx4oNKDVzSav7TMHK6gsKcLyhqCgspqm"
+      OIDC_CLIENT_SECRET_APP5: "secret-c"
+      OIDC_CLIENT_SECRET_APP6: "secret-c"
       VAULT_ADDR: "http://vault-c:8200"
       VAULT_ROLE_ID_FILE: "/opt/openig/vault/role_id"
       VAULT_SECRET_ID_FILE: "/opt/openig/vault/secret_id"

@@ -14,7 +14,7 @@
         "cookieName": "IG_SSO_B",
         "cookieDomain": ".sso.local",
         "sessionTimeout": "8 hours",
-        "sharedSecret": "U1NPLUItSnd0U2VjcmV0LTMyYnl0ZXMtS0VZX1whQCMk"
+        "sharedSecret": "__JWT_SHARED_SECRET__"
       }
     }
   ],

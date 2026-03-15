@@ -51,13 +51,17 @@ services:
     container_name: sso-openig-1
     user: root   # lab only — needed for write access to mounted volume on macOS
     # NOT exposed to host — accessed only through Nginx
+    entrypoint: ["/docker-entrypoint.sh"]
     volumes:
       - ./openig_home:/opt/openig
       - ./docker/openig/server.xml:/usr/local/tomcat/conf/server.xml:ro
+      - ./docker/openig/docker-entrypoint.sh:/docker-entrypoint.sh:ro
       - ./vault/file:/vault/file:ro
     environment:
       OPENIG_BASE: /opt/openig
-      JWT_SHARED_SECRET: "U1NPLUxhYi1Kd3RTZWNyZXQtMzJieXRlcy1LRVlcIVwh"
+      JWT_SHARED_SECRET: "zK7izY2ZLyxsCm1AVJlcdXsZgwo7Y1LvyYTM6KcR+3Q="
+      KEYSTORE_PASSWORD: "oT38gAgX25lFDkv9J4u+kPXtOFpddCTl"
+      OIDC_CLIENT_SECRET: "openig-client-secret"
       KEYCLOAK_INTERNAL_URL: "http://host.docker.internal:8080"
       KEYCLOAK_BROWSER_URL: "http://auth.sso.local:8080"
       REDIS_HOST: "redis-a"
@@ -78,13 +82,17 @@ services:
     platform: linux/amd64
     container_name: sso-openig-2
     user: root   # lab only
+    entrypoint: ["/docker-entrypoint.sh"]
     volumes:
       - ./openig_home:/opt/openig
       - ./docker/openig/server.xml:/usr/local/tomcat/conf/server.xml:ro
+      - ./docker/openig/docker-entrypoint.sh:/docker-entrypoint.sh:ro
       - ./vault/file:/vault/file:ro
     environment:
       OPENIG_BASE: /opt/openig
-      JWT_SHARED_SECRET: "U1NPLUxhYi1Kd3RTZWNyZXQtMzJieXRlcy1LRVlcIVwh"
+      JWT_SHARED_SECRET: "zK7izY2ZLyxsCm1AVJlcdXsZgwo7Y1LvyYTM6KcR+3Q="
+      KEYSTORE_PASSWORD: "oT38gAgX25lFDkv9J4u+kPXtOFpddCTl"
+      OIDC_CLIENT_SECRET: "openig-client-secret"
       KEYCLOAK_INTERNAL_URL: "http://host.docker.internal:8080"
       KEYCLOAK_BROWSER_URL: "http://auth.sso.local:8080"
       REDIS_HOST: "redis-a"

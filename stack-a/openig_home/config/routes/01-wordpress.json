@@ -20,7 +20,7 @@
       "type": "ClientRegistration",
       "config": {
         "clientId": "openig-client",
-        "clientSecret": "openig-client-secret",
+        "clientSecret": "${env['OIDC_CLIENT_SECRET']}",
         "issuer": "KeycloakIssuer",
         "scopes": [
           "openid",

@@ -38,19 +38,23 @@ services:
     platform: linux/amd64
     container_name: sso-b-openig-1
     user: root
+    entrypoint: ["/docker-entrypoint.sh"]
     volumes:
       - ./openig_home:/opt/openig
       - ./vault/file:/vault/file:ro
       - ./docker/openig/server.xml:/usr/local/tomcat/conf/server.xml:ro
+      - ./docker/openig/docker-entrypoint.sh:/docker-entrypoint.sh:ro
     environment:
       OPENIG_BASE: /opt/openig
       REDIS_HOST: redis-b
       OPENIG_PUBLIC_URL: 'http://openigb.sso.local:9080'
-      JWT_SHARED_SECRET: "U1NPLUItSnd0U2VjcmV0LTMyYnl0ZXMtS0VZX1whQCMk"
+      JWT_SHARED_SECRET: "jla+d8IjpRqlcvKyxs8S5SFQHIGaObqXfVIt5Z/mn+I="
       KEYCLOAK_BROWSER_URL: "http://auth.sso.local:8080"
       KEYCLOAK_INTERNAL_URL: "http://host.docker.internal:8080"
       OIDC_CLIENT_ID: "openig-client-b"
       OIDC_CLIENT_ID_APP4: "openig-client-b-app4"
+      OIDC_CLIENT_SECRET: "openig-client-b-secret"
+      OIDC_CLIENT_SECRET_APP4: "openig-client-b-app4-secret"
       OPENIG_NODE_NAME: "openig-b1"
       VAULT_ADDR: "http://vault-b:8200"
       VAULT_ROLE_ID_FILE: "/vault/file/openig-role-id"
@@ -71,19 +75,23 @@ services:
     platform: linux/amd64
     container_name: sso-b-openig-2
     user: root
+    entrypoint: ["/docker-entrypoint.sh"]
     volumes:
       - ./openig_home:/opt/openig
       - ./vault/file:/vault/file:ro
       - ./docker/openig/server.xml:/usr/local/tomcat/conf/server.xml:ro
+      - ./docker/openig/docker-entrypoint.sh:/docker-entrypoint.sh:ro
     environment:
       OPENIG_BASE: /opt/openig
       REDIS_HOST: redis-b
       OPENIG_PUBLIC_URL: 'http://openigb.sso.local:9080'
-      JWT_SHARED_SECRET: "U1NPLUItSnd0U2VjcmV0LTMyYnl0ZXMtS0VZX1whQCMk"
+      JWT_SHARED_SECRET: "jla+d8IjpRqlcvKyxs8S5SFQHIGaObqXfVIt5Z/mn+I="
       KEYCLOAK_BROWSER_URL: "http://auth.sso.local:8080"
       KEYCLOAK_INTERNAL_URL: "http://host.docker.internal:8080"
       OIDC_CLIENT_ID: "openig-client-b"
       OIDC_CLIENT_ID_APP4: "openig-client-b-app4"
+      OIDC_CLIENT_SECRET: "openig-client-b-secret"
+      OIDC_CLIENT_SECRET_APP4: "openig-client-b-app4-secret"
       OPENIG_NODE_NAME: "openig-b2"
       VAULT_ADDR: "http://vault-b:8200"
       VAULT_ROLE_ID_FILE: "/vault/file/openig-role-id"
