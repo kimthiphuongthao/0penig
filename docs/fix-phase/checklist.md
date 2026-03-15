@@ -116,4 +116,7 @@
 | 2026-03-15 | 1d | FIX-05: backchannel error code 400→500 for infra errors | PASS — tested Redis down→500, normal SLO→200 | 9b770cd |
 | 2026-03-15 | 2a+2b+2c+2d | FIX-06: externalize secrets to env vars + rotate sharedSecret/PKCS12 | PASS — 16 files, 3 entrypoint scripts, all routes loaded, SSO/SLO verified | f677d9f |
 | 2026-03-15 | — | FIX-07 Phase 7a: Lab Exception notes in standard-gateway-pattern.md | PASS — docs only, no code change | 38a3f7e |
-| 2026-03-15 | 3a | FIX-08: pin redirect origins via CANONICAL_ORIGIN_APPx | PASS — 11 Groovy files, all routes loaded, no Host-header redirects remaining | pending |
+| 2026-03-15 | 3a | FIX-08: pin redirect origins via CANONICAL_ORIGIN_APPx | PASS — 11 Groovy files, all routes loaded, no Host-header redirects remaining | 7fc73ba |
+| 2026-03-15 | — | Stack B PKCS12 keystore config (pattern consistency) | PASS — JWT session warning gone, all 3 stacks identical pattern | daa0af0 |
+| 2026-03-15 | — | Stack B nginx ip_hash (replace broken JSESSIONID hash) | PASS — match Stack A/C pattern | 93efa92 |
+| 2026-03-15 | 4a+4c | FIX-09: remove sensitive material from JwtSession | REVERTED — Executor regressions (phpMyAdmin, Redmine route, cookie invalidation) | 817ab0b |

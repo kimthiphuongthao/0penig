@@ -38,6 +38,9 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] FIX-06: Externalize secrets to env vars — docker-entrypoint.sh + ${env['VAR']} (3 stacks, 16 files)
 - [x] FIX-07: HTTPS Enforcement Phase 7a — Lab Exception notes in standard-gateway-pattern.md (docs only, Phase 7b deferred)
 - [x] FIX-08: Pin redirect base URLs — CANONICAL_ORIGIN_APPx env vars + fallbacks (3 stacks, 11 Groovy files)
+- [x] Stack B PKCS12 keystore — JwtSession encryption pattern consistency (all 3 stacks now identical)
+- [x] Stack B nginx ip_hash — replace broken hash $cookie_JSESSIONID with ip_hash (match Stack A/C)
+- [ ] FIX-09: Remove sensitive material from JwtSession — REVERTED (Executor regressions), needs re-implementation
 - [x] Docs reorganize: `docs/` → `deliverables/`, `testing/`, `reference/`, `historical/` (8 deleted, 22 moved)
 - [x] Docs update: sso-workflow-security H8 IMPLEMENTED (Tier 3→2), integration guide +Stack C, audit scores, gateway pattern B F5 RESOLVED
 - [x] **Legacy App Team Checklist**: `docs/deliverables/legacy-app-team-checklist.md` — file tối thượng, 3-reviewer QA (Critic+Gemini+Codex)
