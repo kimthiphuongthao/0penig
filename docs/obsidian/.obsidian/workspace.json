@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "debugging/cross-stack-slo-jellyfin-fix.md",
+                "file": "debugging/2026-03-12-weekly-report-sync.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "cross-stack-slo-jellyfin-fix"
+              "title": "2026-03-12-weekly-report-sync"
             }
           }
         ]
@@ -182,16 +182,18 @@
   },
   "active": "0c3935b625bcf334",
   "lastOpenFiles": [
+    "debugging/cross-stack-slo-jellyfin-fix.md",
+    "debugging/2026-03-12-weekly-report-sync.md",
+    "debugging/2026-03-12-stack-b-jellyfin-websocket-route.md",
+    "debugging/2026-03-12-keycloak-admin-logout-all-sessions-stack-a.md",
+    "debugging/2026-03-12-doc-sync-memory-permission.md",
     "debugging/2026-03-12-progress-md-update.md",
     "how-to/2026-03-12-legacy-survey-checklist-template.md",
-    "debugging/2026-03-12-weekly-report-sync.md",
-    "debugging/2026-03-12-keycloak-admin-logout-all-sessions-stack-a.md",
     "debugging/2026-03-12-stack-a-jwtsession-timeout-2-minutes.md",
     "how-to/2026-03-12-legacy-auth-logout-sso-integration-research.md",
     "decisions/transparent-vs-cooperative-sso.md",
     "decisions/codex-prompt-standards.md",
     "debugging/stack-b-cookiedomain-fix.md",
-    "debugging/2026-03-12-stack-b-jellyfin-websocket-route.md",
     "stacks/stack-c.md",
     "decisions/independence-principle.md",
     "debugging/stack-c-slo-fixes.md",
@@ -205,7 +207,6 @@
     "00-MOC.md",
     "decisions/ha-architecture.md",
     "decisions/vault-approle-design.md",
-    "decisions/slo-logout-design.md",
-    "03-State/Current State.md"
+    "decisions/slo-logout-design.md"
   ]
 }

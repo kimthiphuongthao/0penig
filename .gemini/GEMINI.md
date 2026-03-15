@@ -52,10 +52,9 @@ sso-lab/
 - **HA**: nginx `ip_hash` + JwtSession (stateless cookie) — đã test, không dùng Redis session store
 - **Vault**: file storage mode, `command: server` only trong docker-compose
 - **SLO**: backchannel logout → Redis blacklist, mỗi stack có Redis riêng
-- **Cookie**: Stack B thiếu `cookieDomain` — đã phân tích, LOW priority, không ảnh hưởng correctness
+- **Cookie**: Stack B đã cấu hình `cookieDomain` đầy đủ — issue này đã resolved
 - **phpMyAdmin**: dùng `config.user.inc.php` mount, không dùng `PMA_AUTH_TYPE` env var
 
 ## Known bugs chưa fix
 
 - Jellyfin WebSocket: route dùng `http://` thay vì `ws://` → `01-jellyfin.json` stack-b
-- Stack B `config.json`: thiếu `cookieDomain: ".sso.local"` trong JwtSession (LOW priority)

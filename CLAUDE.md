@@ -1,7 +1,7 @@
 # CLAUDE.md — SSO Lab
 
 Lab SSO tích hợp legacy apps vào SSO/SLO qua OpenIG 6 + Keycloak 24 + Vault + Redis.
-Mục tiêu tối thượng: REFERENCE SOLUTION cho 5 login mechanisms (Form/Basic/Header/Token/LDAP) — app cụ thể chỉ là ví dụ, pattern phải generalize được. Xem `docs/legacy-auth-patterns-definitive.md`.
+Mục tiêu tối thượng: REFERENCE SOLUTION cho 5 login mechanisms (Form/Basic/Header/Token/LDAP) — app cụ thể chỉ là ví dụ, pattern phải generalize được. Xem `docs/deliverables/legacy-auth-patterns-definitive.md`.
 Path: `/Volumes/OS/claude/openig/sso-lab`
 
 ## Rules (auto-loaded)
@@ -28,8 +28,8 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] Docs sync: .claude/rules/ + CLAUDE.md alignment (2026-03-14)
 - [x] Code+security review: Stack A/B/C — evidence files tại `docs/reviews/2026-03-14-*.md`
 - [x] Cross-stack review summary: `docs/reviews/2026-03-14-cross-stack-review-summary.md`
-- [x] Standard Gateway Pattern v1.1: `docs/standard-gateway-pattern.md` (priority fix, confidence metadata, Confirmed Strengths section)
-- [x] Legacy auth patterns definitive reference: `docs/legacy-auth-patterns-definitive.md` (5 mechanisms, 5 logout types, security checklist)
+- [x] Standard Gateway Pattern v1.1: `docs/deliverables/standard-gateway-pattern.md` (priority fix, confidence metadata, Confirmed Strengths section)
+- [x] Legacy auth patterns definitive reference: `docs/deliverables/legacy-auth-patterns-definitive.md` (5 mechanisms, 5 logout types, security checklist)
 - [x] Workflow evaluation: A/B test Planner vs Codex (2 rounds, 2026-03-15) → Planner wins, workflow.md updated
 
 ### Pending
@@ -37,7 +37,7 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 
 ### Phase tiếp theo
 - [ ] **Fix phase**: implement fixes theo `.omc/plans/fix-phase-openig-gaps.md` (15 fixes, Batch 0→7) — tracking: `docs/fix-phase/checklist.md`
-- [ ] Phase 3: Vault Production Hardening — xem `docs/vault-hardening-gaps.md`
+- [ ] Phase 3: Vault Production Hardening — xem `docs/reference/vault-hardening-gaps.md`
 - [ ] Post-Stack C docs: OpenIG built-in filter selection guide
 - [ ] Redis persistence (appendonly yes) — đảm bảo SLO blacklist survive restart
 - [ ] Vault audit logging

@@ -7,7 +7,7 @@
 
 
 
-**Based on:** `docs/standard-gateway-pattern.md` v1.1
+**Based on:** `docs/deliverables/standard-gateway-pattern.md` v1.1
 **Source findings:** `docs/reviews/2026-03-14-cross-stack-review-summary.md` → Next Steps 1–7
 **Started:** 2026-03-14
 **Status legend:** `[ ]` pending · `[~]` in progress · `[x]` done · `[!]` blocked
@@ -67,7 +67,7 @@
 
 | ID | Task | Stack | Status | Notes |
 |----|------|-------|--------|-------|
-| 5a | SloHandlerJellyfin.groovy — namespace 'app3' → 'app4' | B | [ ] | **URGENT** — logout đang silently fail; B F5 priority #1 Stack B |
+| 5a | SloHandlerJellyfin.groovy — namespace 'app3' → 'app4' | B | [x] | ✅ Done 2026-03-15. Also fixed: client_id mismatch (OIDC_CLIENT_ID→OIDC_CLIENT_ID_APP4), post_logout_redirect_uri, Keycloak client config. Commit a3cb6c3 |
 | 5b | SloHandler.groovy — không log full logout URL chứa id_token_hint | A | [ ] | A F4 |
 
 ---

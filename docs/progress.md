@@ -53,7 +53,7 @@
 - [ ] Bật Vault audit logging — bắt buộc trước khi đưa vào production/OVA
 - [ ] Workaround admin "Logout all sessions" không trigger backchannel — đánh giá giải pháp via Keycloak REST API
 - [ ] Kiểm thử failover trong khi OAuth2 flow đang chạy (interrupt giữa chừng)
-- [ ] Phase 3: Vault Production Hardening — theo gap list tại `docs/vault-hardening-gaps.md`
+- [ ] Phase 3: Vault Production Hardening — theo gap list tại `docs/reference/vault-hardening-gaps.md`
 
 **Đóng gói & triển khai:**
 - [ ] Đánh giá và chọn phương án đóng gói: OVA / Docker Compose bundle / Vagrant box

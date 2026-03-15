@@ -33,9 +33,9 @@ Khi phát hiện issue cần sửa, **BẮT BUỘC báo cáo theo format**:
 
 ## Docs
 - Mọi docs nằm trong `docs/` với tên lowercase
-- `docs/test-cases.md` — 28 test cases SSO/SLO
-- `docs/test-report.md` — kết quả test gần nhất
-- `docs/vault-hardening-gaps.md` — 9 gaps Vault hardening
+- `docs/testing/test-cases.md` — 28 test cases SSO/SLO
+- `docs/testing/test-report.md` — kết quả test gần nhất
+- `docs/reference/vault-hardening-gaps.md` — 9 gaps Vault hardening
 
 ## /etc/hosts cần có
 ```
