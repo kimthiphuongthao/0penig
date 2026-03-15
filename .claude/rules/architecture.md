@@ -20,7 +20,18 @@ Vi phạm nguyên tắc này = lỗi thiết kế nghiêm trọng, **dừng lạ
 | stack-b | 9080 | Redmine, Jellyfin | Form login injection, Token injection |
 | stack-c | 18080 | Grafana, phpMyAdmin | Header injection, HTTP Basic Auth |
 
-Keycloak shared: `http://auth.sso.local:8080`, realm `sso-lab`.
+Keycloak shared: `http://auth.sso.local:8080`, realm `sso-realm`.
+
+## clientEndpoint namespace (MỖI app trong cùng OpenIG instance PHẢI unique)
+
+| Stack | App | clientEndpoint | Keycloak client |
+|-------|-----|----------------|-----------------|
+| A | WordPress | `/openid/app1` | `openig-client` |
+| A | WhoAmI | `/openid/app2` | `openig-client` |
+| B | Redmine | `/openid/app3` | `openig-client-b` |
+| B | Jellyfin | `/openid/app4` | `openig-client-b-app4` |
+| C | Grafana | `/openid/app5` | `openig-client-c-app5` |
+| C | phpMyAdmin | `/openid/app6` | `openig-client-c-app6` |
 
 ## HA pattern (tất cả stacks)
 - nginx `ip_hash` → sticky routing (cùng IP → cùng OpenIG node)

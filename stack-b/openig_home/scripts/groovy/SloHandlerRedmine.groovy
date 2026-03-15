@@ -12,12 +12,12 @@ def hostWithPort = hostHeader?.contains(':') ? hostHeader : (hostWithoutPort ? h
 
 def oauth2Keys = []
 if (hostWithPort) {
-    oauth2Keys.add('oauth2:http://' + hostWithPort + '/openid/app4')
+    oauth2Keys.add('oauth2:http://' + hostWithPort + '/openid/app3')
 }
 if (hostWithoutPort) {
-    oauth2Keys.add('oauth2:http://' + hostWithoutPort + '/openid/app4')
+    oauth2Keys.add('oauth2:http://' + hostWithoutPort + '/openid/app3')
 }
-oauth2Keys.add('oauth2:' + publicUrl + '/openid/app4')
+oauth2Keys.add('oauth2:' + publicUrl + '/openid/app3')
 
 def idToken = null
 for (def key : oauth2Keys.unique()) {

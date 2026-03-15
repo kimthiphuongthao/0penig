@@ -48,11 +48,11 @@
       }
     },
     {
-      "name": "SessionBlacklistFilterApp4",
+      "name": "SessionBlacklistFilterApp3",
       "type": "ScriptableFilter",
       "config": {
         "type": "application/x-groovy",
-        "file": "SessionBlacklistFilterApp4.groovy"
+        "file": "SessionBlacklistFilterApp3.groovy"
       }
     },
     {
@@ -87,7 +87,7 @@
         {
           "type": "OAuth2ClientFilter",
           "config": {
-            "clientEndpoint": "/openid/app4",
+            "clientEndpoint": "/openid/app3",
             "requireHttps": false,
             "registrations": ["RedmineClientReg"],
             "scopes": ["openid", "profile", "email"],
@@ -96,7 +96,7 @@
             "providerHandler": "ClientHandler"
           }
         },
-        "SessionBlacklistFilterApp4",
+        "SessionBlacklistFilterApp3",
         "VaultCredentialFilterRedmine",
         "RedmineCredentialInjectorFilter"
       ],

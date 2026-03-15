@@ -84,7 +84,7 @@ try {
         throw new IllegalStateException('KEYCLOAK_BROWSER_URL or OIDC_CLIENT_ID_APP4 is missing')
     }
 
-    String postLogoutUri = CANONICAL_ORIGIN + '/'
+    String postLogoutUri = CANONICAL_ORIGIN + '/web/index.html'
 
     String logoutUrl = postLogoutUri
     if (idToken?.trim()) {
