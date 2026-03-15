@@ -88,6 +88,29 @@ Claude detect stuck
 Claude tổng hợp → Codex resume với context mới
 ```
 
+## Planning Workflow — khi cần plan bất kỳ task nào
+
+**Standard (mọi task):**
+```
+PLANNER (Opus)
+  → Interview + codebase research → .omc/plans/*.md
+
+CRITIC (Opus)
+  → Full investigation: pre-mortem + gap analysis + assumptions + ambiguity scan
+  → REJECT → PLANNER revise → CRITIC lại
+  → ACCEPT → CODEX implement (prompt xịn → output xịn)
+```
+
+**High-stakes only** (plan rất lớn, resources lớn, không thể rollback):
+```
+PLANNER → CODEX cross-validate (technical feasibility) → CRITIC → CODEX implement
+```
+
+**Khi nào dùng High-stakes:** plan có >10 fixes cross-stack, hoặc thay đổi không reversible (secret rotation, DB migration, v.v.)
+**Standard là default** — không cần Codex cross-validate trừ khi explicitly cần.
+
+---
+
 ## Tra cứu docs trước khi giao Codex
 
 Verify đúng API/config TRƯỚC khi viết prompt cho Codex:
