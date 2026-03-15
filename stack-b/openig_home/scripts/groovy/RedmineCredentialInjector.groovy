@@ -1,15 +1,11 @@
 import org.forgerock.http.protocol.Response
 import org.forgerock.http.protocol.Status
-import java.util.concurrent.ConcurrentHashMap
-import groovy.transform.Field
 
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
-
-@Field static final ConcurrentHashMap<String, String> redmineSessionCache = new ConcurrentHashMap<>()
 
 def logPrefix = '[RedmineCredentialInjector] '
 
@@ -26,7 +22,7 @@ try {
         return response
     }
 
-    String redmineSessionCookies = redmineSessionCache.get(login)
+    String redmineSessionCookies = session['redmine_session_cookies'] as String
 
     if (redmineSessionCookies == null || redmineSessionCookies.isEmpty()) {
         logger.info(logPrefix + 'No cached Redmine session for ' + login + ' - logging in')
@@ -187,7 +183,7 @@ try {
             return response
         }
 
-        redmineSessionCache.put(login, newCookieHeader)
+        session['redmine_session_cookies'] = newCookieHeader
         redmineSessionCookies = newCookieHeader
         logger.info(logPrefix + 'Redmine login OK for ' + login)
     }
@@ -200,7 +196,7 @@ try {
 
         if ((statusCode == 301 || statusCode == 302) && location != null && location.contains('/login')) {
             logger.info(logPrefix + 'Detected redirect to /login, clearing cached cookies')
-            redmineSessionCache.remove(login)
+            session.remove('redmine_session_cookies')
 
             String path = request.uri?.rawPath
             if (path == null || path.isEmpty()) {

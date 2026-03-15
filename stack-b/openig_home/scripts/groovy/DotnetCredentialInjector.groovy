@@ -2,15 +2,10 @@ import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import org.forgerock.http.protocol.Response
 import org.forgerock.http.protocol.Status
-import java.util.concurrent.ConcurrentHashMap
-import groovy.transform.Field
 
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
-
-@Field static final ConcurrentHashMap<String, Object> vaultCacheDotnet = new ConcurrentHashMap<>()
-@Field static final ConcurrentHashMap<String, List<String>> dotnetSessionCache = new ConcurrentHashMap<>()
 
 def readBody = { HttpURLConnection conn ->
     InputStream stream
@@ -57,8 +52,8 @@ try {
     }
 
     long nowEpoch = (System.currentTimeMillis() / 1000L) as long
-    String vaultToken = vaultCacheDotnet.get("vault_b_token") as String
-    long vaultTokenExpiry = (vaultCacheDotnet.get("vault_b_token_expiry") ?: 0L) as long
+    String vaultToken = session["vault_b_token"] as String
+    long vaultTokenExpiry = (session["vault_b_token_expiry"] ?: 0L) as long
 
     if (!vaultToken || vaultTokenExpiry <= nowEpoch) {
         HttpURLConnection loginConn = (HttpURLConnection) new URL("${vaultAddr}/v1/auth/approle/login").openConnection()
@@ -88,8 +83,8 @@ try {
 
         long refreshedEpoch = (System.currentTimeMillis() / 1000L) as long
         long adjustedLease = Math.max(leaseDuration - 30L, 30L)
-        vaultCacheDotnet.put("vault_b_token", vaultToken)
-        vaultCacheDotnet.put("vault_b_token_expiry", refreshedEpoch + adjustedLease)
+        session["vault_b_token"] = vaultToken
+        session["vault_b_token_expiry"] = refreshedEpoch + adjustedLease
     }
 
     String encodedUser = URLEncoder.encode(username, "UTF-8")
@@ -100,8 +95,8 @@ try {
     int secretCode = secretConn.responseCode
     String secretBody = readBody(secretConn)
     if (secretCode == 403) {
-        vaultCacheDotnet.remove("vault_b_token")
-        vaultCacheDotnet.remove("vault_b_token_expiry")
+        session.remove("vault_b_token")
+        session.remove("vault_b_token_expiry")
         Response response = new Response(Status.BAD_GATEWAY)
         response.headers["Content-Type"] = ["text/html"]
         response.entity = "<html><body>SSO credential injection failed.</body></html>"
@@ -118,7 +113,13 @@ try {
         throw new IllegalStateException("Vault secret is missing username/password")
     }
 
-    List<String> dotnetSessionSetCookies = dotnetSessionCache.get(username) ?: []
+    List<String> dotnetSessionSetCookies = []
+    def existingCookies = session["dotnet_session_cookies"]
+    if (existingCookies instanceof Collection) {
+        dotnetSessionSetCookies.addAll(existingCookies.collect { it as String }.findAll { it })
+    } else if (existingCookies instanceof String && existingCookies.trim()) {
+        dotnetSessionSetCookies.add(existingCookies)
+    }
 
     if (dotnetSessionSetCookies.isEmpty()) {
         String baseUrl = (System.getenv("DOTNET_APP_BASE_URL") ?: "http://dotnet-app:5000")
@@ -186,7 +187,7 @@ try {
             throw new IllegalStateException("Dotnet login did not return session cookies")
         }
 
-        dotnetSessionCache.put(username, dotnetSessionSetCookies)
+        session["dotnet_session_cookies"] = dotnetSessionSetCookies
     }
 
     List<String> cookiePairs = dotnetSessionSetCookies

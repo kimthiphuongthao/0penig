@@ -2,10 +2,6 @@ import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import org.forgerock.http.protocol.Response
 import org.forgerock.http.protocol.Status
-import java.util.concurrent.ConcurrentHashMap
-import groovy.transform.Field
-
-@Field static final ConcurrentHashMap<String, Object> vaultCacheRedmine = new ConcurrentHashMap<>()
 
 def readResponseBody = { HttpURLConnection connection ->
     def stream = null
@@ -38,8 +34,8 @@ try {
     email = email.trim()
 
     def nowEpochSeconds = (System.currentTimeMillis() / 1000L) as long
-    def vaultToken = vaultCacheRedmine.get('vault_token_redmine') as String
-    def tokenExpiryRaw = vaultCacheRedmine.get('vault_token_expiry_redmine')
+    def vaultToken = session['vault_token_redmine'] as String
+    def tokenExpiryRaw = session['vault_token_expiry_redmine']
     def vaultTokenExpiry = tokenExpiryRaw != null ? (tokenExpiryRaw as Long) : 0L
 
     if (vaultToken == null || vaultToken.isEmpty() || vaultTokenExpiry <= nowEpochSeconds) {
@@ -84,8 +80,8 @@ try {
             throw new IllegalStateException('Vault auth.client_token is missing in response')
         }
 
-        vaultCacheRedmine.put('vault_token_redmine', newVaultToken)
-        vaultCacheRedmine.put('vault_token_expiry_redmine', nowEpochSeconds + leaseDuration)
+        session['vault_token_redmine'] = newVaultToken
+        session['vault_token_expiry_redmine'] = nowEpochSeconds + leaseDuration
         vaultToken = newVaultToken
     }
 
@@ -101,8 +97,8 @@ try {
     def credsBody = readResponseBody(credsConnection)
     credsConnection.disconnect()
     if (credsStatus == 403) {
-        vaultCacheRedmine.remove('vault_token_redmine')
-        vaultCacheRedmine.remove('vault_token_expiry_redmine')
+        session.remove('vault_token_redmine')
+        session.remove('vault_token_expiry_redmine')
         throw new IllegalStateException('Vault token rejected for Redmine lookup (HTTP 403)')
     }
     if (credsStatus < 200 || credsStatus >= 300) {

@@ -2,10 +2,6 @@ import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import org.forgerock.http.protocol.Response
 import org.forgerock.http.protocol.Status
-import java.util.concurrent.ConcurrentHashMap
-import groovy.transform.Field
-
-@Field static final ConcurrentHashMap<String, Object> vaultCacheJellyfin = new ConcurrentHashMap<>()
 
 def readResponseBody = { HttpURLConnection connection ->
     def stream = null
@@ -44,8 +40,8 @@ try {
     username = username.trim()
 
     def nowEpochSeconds = (System.currentTimeMillis() / 1000L) as long
-    def vaultToken = vaultCacheJellyfin.get('vault_token_jellyfin') as String
-    def tokenExpiryRaw = vaultCacheJellyfin.get('vault_token_expiry_jellyfin')
+    def vaultToken = session['vault_token_jellyfin'] as String
+    def tokenExpiryRaw = session['vault_token_expiry_jellyfin']
     def vaultTokenExpiry = tokenExpiryRaw != null ? (tokenExpiryRaw as Long) : 0L
 
     if (vaultToken == null || vaultToken.isEmpty() || vaultTokenExpiry <= nowEpochSeconds) {
@@ -90,8 +86,8 @@ try {
             throw new IllegalStateException('Vault auth.client_token is missing in response')
         }
 
-        vaultCacheJellyfin.put('vault_token_jellyfin', newVaultToken)
-        vaultCacheJellyfin.put('vault_token_expiry_jellyfin', nowEpochSeconds + leaseDuration)
+        session['vault_token_jellyfin'] = newVaultToken
+        session['vault_token_expiry_jellyfin'] = nowEpochSeconds + leaseDuration
         vaultToken = newVaultToken
     }
 
@@ -107,8 +103,8 @@ try {
     def credsBody = readResponseBody(credsConnection)
     credsConnection.disconnect()
     if (credsStatus == 403) {
-        vaultCacheJellyfin.remove('vault_token_jellyfin')
-        vaultCacheJellyfin.remove('vault_token_expiry_jellyfin')
+        session.remove('vault_token_jellyfin')
+        session.remove('vault_token_expiry_jellyfin')
         throw new IllegalStateException('Vault token rejected for Jellyfin lookup (HTTP 403)')
     }
     if (credsStatus < 200 || credsStatus >= 300) {
