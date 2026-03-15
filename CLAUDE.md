@@ -40,7 +40,7 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] FIX-08: Pin redirect base URLs — CANONICAL_ORIGIN_APPx env vars + fallbacks (3 stacks, 11 Groovy files)
 - [x] Stack B PKCS12 keystore — JwtSession encryption pattern consistency (all 3 stacks now identical)
 - [x] Stack B nginx ip_hash — replace broken hash $cookie_JSESSIONID with ip_hash (match Stack A/C)
-- [x] FIX-09: Remove Vault tokens from JwtSession (B+C) — fresh Vault login per request, phpMyAdmin creds remain in session (OpenIG 6 EL limitation)
+- [ ] FIX-09: Remove sensitive material from JwtSession (B+C) — Vault tokens done (76b648a), phpMyAdmin creds still in session → next: direct Auth header injection
 - [x] Stack B clientEndpoint collision fix: Redmine `/openid/app4` → `/openid/app3`, xóa dotnet routes, Keycloak updated
 - [x] Stack B Jellyfin SLO re-login: `post_logout_redirect_uri` → `/web/index.html`, spinner remaining (app permission, not SSO)
 - [x] Docs reorganize: `docs/` → `deliverables/`, `testing/`, `reference/`, `historical/` (8 deleted, 22 moved)
