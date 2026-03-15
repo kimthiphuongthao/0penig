@@ -84,44 +84,85 @@
         "backchannel.logout.url": "http://host.docker.internal:9080/openid/app3/backchannel_logout",
         "backchannel.logout.session.required": "true"
       }
-    },
-    {
-      "clientId": "openig-client-c-app5",
-      "name": "OpenIG Client C App5",
-      "enabled": true,
-      "protocol": "openid-connect",
-      "publicClient": false,
-      "secret": "secret-c",
-      "standardFlowEnabled": true,
-      "implicitFlowEnabled": false,
-      "directAccessGrantsEnabled": false,
-      "serviceAccountsEnabled": false,
-      "redirectUris": [
-        "http://grafana-c.sso.local:18080/openid/app5/*"
-      ],
-      "webOrigins": [
-        "http://grafana-c.sso.local:18080"
-      ],
-      "defaultClientScopes": [
-        "web-origins",
-        "acr",
-        "profile",
-        "roles",
-        "email"
-      ],
-      "optionalClientScopes": [
-        "address",
-        "phone",
-        "offline_access",
-        "microprofile-jwt"
-      ],
-      "attributes": {
-        "post.logout.redirect.uris": "http://grafana-c.sso.local:18080/",
-        "backchannel.logout.url": "http://host.docker.internal:18080/openid/app5/backchannel_logout",
-        "backchannel.logout.session.required": "true",
-        "backchannel.logout.revoke.offline.tokens": "false"
-      }
-    },
+      },
+      {
+        "clientId": "openig-client-b-app4",
+        "name": "OpenIG Client B App4",
+        "enabled": true,
+        "protocol": "openid-connect",
+        "publicClient": false,
+        "secret": "openig-client-b-app4-secret",
+        "standardFlowEnabled": true,
+        "implicitFlowEnabled": false,
+        "directAccessGrantsEnabled": false,
+        "serviceAccountsEnabled": false,
+        "redirectUris": [
+          "http://jellyfin-b.sso.local:9080/openid/app4/*",
+          "http://jellyfin-b.sso.local/openid/app4/*",
+          "http://localhost:9080/openid/app4/*"
+        ],
+        "webOrigins": [
+          "http://jellyfin-b.sso.local:9080",
+          "http://jellyfin-b.sso.local",
+          "http://localhost:9080"
+        ],
+        "defaultClientScopes": [
+          "web-origins",
+          "acr",
+          "profile",
+          "roles",
+          "email"
+        ],
+        "optionalClientScopes": [
+          "address",
+          "phone",
+          "offline_access",
+          "microprofile-jwt"
+        ],
+        "attributes": {
+          "post.logout.redirect.uris": "http://jellyfin-b.sso.local:9080/##http://jellyfin-b.sso.local/",
+          "backchannel.logout.url": "http://host.docker.internal:9080/openid/app4/backchannel_logout",
+          "backchannel.logout.session.required": "true",
+          "backchannel.logout.revoke.offline.tokens": "false"
+        }
+      },
+      {
+        "clientId": "openig-client-c-app5",
+        "name": "OpenIG Client C App5",
+        "enabled": true,
+        "protocol": "openid-connect",
+        "publicClient": false,
+        "secret": "secret-c",
+        "standardFlowEnabled": true,
+        "implicitFlowEnabled": false,
+        "directAccessGrantsEnabled": false,
+        "serviceAccountsEnabled": false,
+        "redirectUris": [
+          "http://grafana-c.sso.local:18080/openid/app5/*"
+        ],
+        "webOrigins": [
+          "http://grafana-c.sso.local:18080"
+        ],
+        "defaultClientScopes": [
+          "web-origins",
+          "acr",
+          "profile",
+          "roles",
+          "email"
+        ],
+        "optionalClientScopes": [
+          "address",
+          "phone",
+          "offline_access",
+          "microprofile-jwt"
+        ],
+        "attributes": {
+          "post.logout.redirect.uris": "http://grafana-c.sso.local:18080/",
+          "backchannel.logout.url": "http://host.docker.internal:18080/openid/app5/backchannel_logout",
+          "backchannel.logout.session.required": "true",
+          "backchannel.logout.revoke.offline.tokens": "false"
+        }
+      },
     {
       "clientId": "openig-client-c-app6",
       "name": "OpenIG Client C App6",

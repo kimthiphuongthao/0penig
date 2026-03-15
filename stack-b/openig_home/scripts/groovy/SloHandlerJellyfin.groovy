@@ -59,12 +59,12 @@ try {
 
     def oauth2Keys = []
     if (hostWithPort) {
-        oauth2Keys.add('oauth2:http://' + hostWithPort + '/openid/app3')
+        oauth2Keys.add('oauth2:http://' + hostWithPort + '/openid/app4')
     }
     if (hostWithoutPort) {
-        oauth2Keys.add('oauth2:http://' + hostWithoutPort + '/openid/app3')
+        oauth2Keys.add('oauth2:http://' + hostWithoutPort + '/openid/app4')
     }
-    oauth2Keys.add('oauth2:' + publicUrl + '/openid/app3')
+    oauth2Keys.add('oauth2:' + publicUrl + '/openid/app4')
 
     String idToken = null
     for (def oauth2Key : oauth2Keys.unique()) {
@@ -77,23 +77,23 @@ try {
     session.clear()
 
     String keycloakBrowserUrl = System.getenv('KEYCLOAK_BROWSER_URL')
-    String clientId = System.getenv('OIDC_CLIENT_ID')
+    String clientId = System.getenv('OIDC_CLIENT_ID_APP4')
     if (!keycloakBrowserUrl?.trim() || !clientId?.trim()) {
-        throw new IllegalStateException('KEYCLOAK_BROWSER_URL or OIDC_CLIENT_ID is missing')
+        throw new IllegalStateException('KEYCLOAK_BROWSER_URL or OIDC_CLIENT_ID_APP4 is missing')
     }
 
     if (!hostWithoutPort) {
         hostWithoutPort = 'jellyfin-b.sso.local'
     }
-    String fallbackHostWithPort = hostWithPort ?: hostWithoutPort
-    String postLogoutUri = 'http://' + fallbackHostWithPort + '/'
+    String postLogoutHost = hostHeader?.trim() ? hostHeader.trim() : (hostWithPort ?: (hostWithoutPort + ':9080'))
+    String postLogoutUri = 'http://' + postLogoutHost + '/'
 
-    String logoutUrl = keycloakBrowserUrl + '/realms/sso-realm/protocol/openid-connect/logout?client_id=' + clientId + '&post_logout_redirect_uri=' + URLEncoder.encode(postLogoutUri, 'UTF-8')
+    String logoutUrl = postLogoutUri
     if (idToken?.trim()) {
-        logoutUrl = logoutUrl + '&id_token_hint=' + URLEncoder.encode(idToken as String, 'UTF-8')
-        logger.info('[SloHandlerJellyfin] Redirecting with id_token_hint')
+        logoutUrl = keycloakBrowserUrl + '/realms/sso-realm/protocol/openid-connect/logout?client_id=' + clientId + '&post_logout_redirect_uri=' + URLEncoder.encode(postLogoutUri, 'UTF-8') + '&id_token_hint=' + URLEncoder.encode(idToken as String, 'UTF-8')
+        logger.info('[SloHandlerJellyfin] Redirecting with id_token_hint and post_logout_redirect_uri=' + postLogoutUri)
     } else {
-        logger.warn('[SloHandlerJellyfin] No id_token found in session')
+        logger.warn('[SloHandlerJellyfin] No id_token_hint available; local session invalidated, redirecting to post logout URI')
     }
 
     def response = new Response(Status.FOUND)
