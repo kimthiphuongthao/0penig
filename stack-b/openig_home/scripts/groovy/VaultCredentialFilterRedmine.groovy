@@ -33,13 +33,8 @@ try {
     }
     email = email.trim()
 
-    def nowEpochSeconds = (System.currentTimeMillis() / 1000L) as long
-    def vaultToken = session['vault_token_redmine'] as String
-    def tokenExpiryRaw = session['vault_token_expiry_redmine']
-    def vaultTokenExpiry = tokenExpiryRaw != null ? (tokenExpiryRaw as Long) : 0L
-
-    if (vaultToken == null || vaultToken.isEmpty() || vaultTokenExpiry <= nowEpochSeconds) {
-        if (vaultRoleIdFile == null || vaultRoleIdFile.trim().isEmpty()) {
+    // FIX-09: no session caching — fetch fresh from Vault every request
+    if (vaultRoleIdFile == null || vaultRoleIdFile.trim().isEmpty()) {
             throw new IllegalStateException('VAULT_ROLE_ID_FILE is not set')
         }
         if (vaultSecretIdFile == null || vaultSecretIdFile.trim().isEmpty()) {
@@ -80,10 +75,7 @@ try {
             throw new IllegalStateException('Vault auth.client_token is missing in response')
         }
 
-        session['vault_token_redmine'] = newVaultToken
-        session['vault_token_expiry_redmine'] = nowEpochSeconds + leaseDuration
-        vaultToken = newVaultToken
-    }
+    def vaultToken = newVaultToken
 
     def encodedEmail = URLEncoder.encode(email, 'UTF-8').replace('+', '%20')
     def credsConnection = (HttpURLConnection) new URL("${vaultAddr}/v1/secret/data/redmine-creds/${encodedEmail}").openConnection()
@@ -97,8 +89,6 @@ try {
     def credsBody = readResponseBody(credsConnection)
     credsConnection.disconnect()
     if (credsStatus == 403) {
-        session.remove('vault_token_redmine')
-        session.remove('vault_token_expiry_redmine')
         throw new IllegalStateException('Vault token rejected for Redmine lookup (HTTP 403)')
     }
     if (credsStatus < 200 || credsStatus >= 300) {

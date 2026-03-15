@@ -66,21 +66,14 @@ try {
     }
     username = username.trim()
 
+    // FIX-09: Vault token NOT cached in session (fetched fresh every request)
+    // phpMyAdmin credentials remain in session (HttpBasicAuthFilter requires session EL)
     String cachedUsername = session['phpmyadmin_username']?.toString()?.trim()
-    if (cachedUsername) {
-        if (cachedUsername == username) {
-            return next.handle(context, request)
-        }
-        session.remove('phpmyadmin_username')
-        session.remove('phpmyadmin_password')
+    if (cachedUsername && cachedUsername == username) {
+        return next.handle(context, request)
     }
 
-    long nowEpochSeconds = (System.currentTimeMillis() / 1000L) as long
-    String vaultToken = session['vault_token'] as String
-    long vaultTokenExpiry = (session['vault_token_expiry'] ?: 0L) as long
-
-    if (!vaultToken?.trim() || vaultTokenExpiry <= nowEpochSeconds) {
-        if (!vaultRoleIdFile?.trim()) {
+    if (!vaultRoleIdFile?.trim()) {
             throw new IllegalStateException('VAULT_ROLE_ID_FILE is not set')
         }
         if (!vaultSecretIdFile?.trim()) {
@@ -114,16 +107,11 @@ try {
 
         def loginJson = new JsonSlurper().parseText(loginBody)
         String newVaultToken = loginJson?.auth?.client_token as String
-        long leaseDuration = (loginJson?.auth?.lease_duration ?: 300L) as long
         if (!newVaultToken?.trim()) {
             throw new IllegalStateException('Vault auth.client_token is missing in response')
         }
 
-        long adjustedLease = Math.max(leaseDuration - 30L, 30L)
-        session['vault_token'] = newVaultToken
-        session['vault_token_expiry'] = nowEpochSeconds + adjustedLease
-        vaultToken = newVaultToken
-    }
+    String vaultToken = newVaultToken
 
     String encodedUsername = URLEncoder.encode(username, 'UTF-8').replace('+', '%20')
     HttpURLConnection credsConnection = (HttpURLConnection) new URL("${vaultAddr}/v1/secret/data/phpmyadmin/${encodedUsername}").openConnection()
@@ -138,8 +126,7 @@ try {
     credsConnection.disconnect()
 
     if (credsStatus == 403) {
-        session.remove('vault_token')
-        session.remove('vault_token_expiry')
+        // Vault token rejected — will re-login on next request
         throw new IllegalStateException('Vault token rejected for phpMyAdmin lookup (HTTP 403)')
     }
     if (credsStatus < 200 || credsStatus >= 300) {

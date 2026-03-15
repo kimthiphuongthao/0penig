@@ -39,13 +39,8 @@ try {
     email = email.trim()
     username = username.trim()
 
-    def nowEpochSeconds = (System.currentTimeMillis() / 1000L) as long
-    def vaultToken = session['vault_token_jellyfin'] as String
-    def tokenExpiryRaw = session['vault_token_expiry_jellyfin']
-    def vaultTokenExpiry = tokenExpiryRaw != null ? (tokenExpiryRaw as Long) : 0L
-
-    if (vaultToken == null || vaultToken.isEmpty() || vaultTokenExpiry <= nowEpochSeconds) {
-        if (vaultRoleIdFile == null || vaultRoleIdFile.trim().isEmpty()) {
+    // FIX-09: no session caching — fetch fresh from Vault every request
+    if (vaultRoleIdFile == null || vaultRoleIdFile.trim().isEmpty()) {
             throw new IllegalStateException('VAULT_ROLE_ID_FILE is not set')
         }
         if (vaultSecretIdFile == null || vaultSecretIdFile.trim().isEmpty()) {
@@ -86,10 +81,7 @@ try {
             throw new IllegalStateException('Vault auth.client_token is missing in response')
         }
 
-        session['vault_token_jellyfin'] = newVaultToken
-        session['vault_token_expiry_jellyfin'] = nowEpochSeconds + leaseDuration
-        vaultToken = newVaultToken
-    }
+    def vaultToken = newVaultToken
 
     def encodedEmail = URLEncoder.encode(email, 'UTF-8').replace('+', '%20')
     def credsConnection = (HttpURLConnection) new URL("${vaultAddr}/v1/secret/data/jellyfin-creds/${encodedEmail}").openConnection()
@@ -103,8 +95,6 @@ try {
     def credsBody = readResponseBody(credsConnection)
     credsConnection.disconnect()
     if (credsStatus == 403) {
-        session.remove('vault_token_jellyfin')
-        session.remove('vault_token_expiry_jellyfin')
         throw new IllegalStateException('Vault token rejected for Jellyfin lookup (HTTP 403)')
     }
     if (credsStatus < 200 || credsStatus >= 300) {
