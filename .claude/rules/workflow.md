@@ -11,6 +11,7 @@
 **Viết file (.md và mọi loại khác):**
 → Codex viết khi user/Claude chỉ định Codex
 → Gemini viết khi user/Claude chỉ định Gemini
+→ Writer (omc) chỉ chạy khi user chủ động yêu cầu — Claude KHÔNG tự gọi Writer
 → Claude KHÔNG tự viết file nào — khi chưa có chỉ định, Claude hỏi trước
 
 **Khi user gửi log/error:**
