@@ -91,24 +91,87 @@ Claude tổng hợp → Codex resume với context mới
 
 ## Planning Workflow — khi cần plan bất kỳ task nào
 
-**Standard (mọi task):**
+### Input cho Planner
+
+Planner cần nhận ĐỦ 2 loại input trong prompt:
+1. **Review findings** — output từ code-review / security-review (file paths, severity, evidence)
+2. **Architecture reference** — chỉ Planner đọc: `architecture.md`, `standard-gateway-pattern.md`, `gotchas.md`
+
+Thiếu architecture reference → plan sẽ thiếu enterprise framing (trust rules per mechanism, component roles).
+Đã verified qua 2 rounds A/B test (2026-03-15): Planner + architecture docs > Codex cho planning task.
+
+### Standard workflow (mọi task)
+
 ```
+Claude cung cấp input (review findings + architecture docs paths)
+    ↓
 PLANNER (Opus)
-  → Interview + codebase research → .omc/plans/*.md
-
-CRITIC (Opus)
-  → Full investigation: pre-mortem + gap analysis + assumptions + ambiguity scan
-  → REJECT → PLANNER revise → CRITIC lại
-  → ACCEPT → CODEX implement (prompt xịn → output xịn)
+  → Đọc review findings + architecture docs
+  → Interview user cho design decisions (1 question at a time)
+  → Spawn explore agent cho codebase verification
+  → Generate plan → .omc/plans/*.md
+    ↓
+CRITIC (Opus, read-only, disallowedTools: Write/Edit)
+  → Verify file refs, pre-mortem, gap analysis, multi-perspective
+  → Output: REJECT / REVISE / ACCEPT
+    ↓
+  REJECT → Claude extract structured findings (không forward raw text)
+         → Pass về PLANNER với specific issues cần sửa
+         → PLANNER revise → CRITIC lại (loop cho đến ACCEPT)
+    ↓
+  ACCEPT → Plan ready → Claude set Current Task trong MEMORY.md
 ```
 
-**High-stakes only** (plan rất lớn, resources lớn, không thể rollback):
+### High-stakes only (plan >10 fixes cross-stack, hoặc thay đổi không reversible)
+
 ```
 PLANNER → CODEX cross-validate (technical feasibility) → CRITIC → CODEX implement
 ```
 
-**Khi nào dùng High-stakes:** plan có >10 fixes cross-stack, hoặc thay đổi không reversible (secret rotation, DB migration, v.v.)
-**Standard là default** — không cần Codex cross-validate trừ khi explicitly cần.
+### Critic output handling
+
+Critic có `disallowedTools: Write, Edit` → output chỉ tồn tại trong Agent response text.
+Claude PHẢI extract findings thành structured list trước khi pass:
+- Findings theo severity (CRITICAL / MAJOR / MINOR)
+- Cụ thể: step nào cần sửa, vì sao, evidence
+- KHÔNG forward raw Critic text (Planner nhận noise → revise sai)
+
+### Codex prompt cho execution task (1 task = 1 conversation)
+
+Template cho pre-confirmed fix (đã có trong plan, đã có acceptance criteria):
+```
+[intent label] task — [Stack X] only.
+
+Context: [FIX-XX] already confirmed in .omc/plans/[plan-file].md.
+No investigation needed. Implement directly.
+
+File(s) to change: [exact paths]
+
+Changes:
+1. [specific change 1]
+2. [specific change 2]
+
+After implementing:
+- Verify change looks correct
+- Run: docker restart [containers]
+- Check: docker logs [container] 2>&1 | grep 'Loaded the route'
+- Report: what was changed (lines), restart result, any errors
+```
+
+Quy tắc label:
+- `bug fix` — sửa lỗi logic, namespace, missing check
+- `security hardening` — fail-closed, timeout, secret externalization
+- `config change` — TTL, requireHttps, env vars
+- KHÔNG dùng `security review + code fix` (mislabel → triggers wrong Codex skill)
+- KHÔNG dùng 'report format + chờ confirm' (đã pre-confirmed trong plan)
+
+### Post-batch documentation update
+
+Sau mỗi batch fix xong + user test confirm:
+1. Codex update `architecture.md` nếu architecture thay đổi (container, URLs, patterns)
+2. Codex update `standard-gateway-pattern.md` nếu controls mới implement
+3. Codex update `gotchas.md` nếu phát hiện gotcha mới
+4. Với `standard-gateway-pattern.md`: dùng 3-pass QA (Codex update → Critic verify → Codex revise nếu cần)
 
 ---
 
@@ -168,4 +231,4 @@ Tìm file path theo thứ tự:
 3. Có decision quan trọng: tạo action ghi rationale vào tài liệu phù hợp qua Codex/Gemini
 4. Sau mỗi action quan trọng (fix xong, investigation xong, decision confirmed, file committed): update `Last action` + `Next step` trong `## Current Task` MEMORY.md ngay — không chờ user nói "tắt máy"
 5. Tắt máy / kết thúc conversation: final update `## Current Task` → commit/push
-5. **Sau mỗi lần fix xong**: yêu cầu Codex chạy restart luôn (không chờ user nhắc), báo "đã restart, bạn test đi"
+6. **Sau mỗi lần fix xong**: yêu cầu Codex chạy restart luôn (không chờ user nhắc), báo "đã restart, bạn test đi"

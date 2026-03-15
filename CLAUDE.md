@@ -1,7 +1,8 @@
 # CLAUDE.md — SSO Lab
 
 Lab SSO tích hợp legacy apps vào SSO/SLO qua OpenIG 6 + Keycloak 24 + Vault + Redis.
-Path: `/Volumes/OS/claude/openig/sso-lab`, branch: `feat/subdomain-test`
+Mục tiêu tối thượng: REFERENCE SOLUTION cho 5 login mechanisms (Form/Basic/Header/Token/LDAP) — app cụ thể chỉ là ví dụ, pattern phải generalize được. Xem `docs/legacy-auth-patterns-definitive.md`.
+Path: `/Volumes/OS/claude/openig/sso-lab`
 
 ## Rules (auto-loaded)
 @.claude/rules/workflow.md
@@ -28,6 +29,8 @@ Path: `/Volumes/OS/claude/openig/sso-lab`, branch: `feat/subdomain-test`
 - [x] Code+security review: Stack A/B/C — evidence files tại `docs/reviews/2026-03-14-*.md`
 - [x] Cross-stack review summary: `docs/reviews/2026-03-14-cross-stack-review-summary.md`
 - [x] Standard Gateway Pattern v1.1: `docs/standard-gateway-pattern.md` (priority fix, confidence metadata, Confirmed Strengths section)
+- [x] Legacy auth patterns definitive reference: `docs/legacy-auth-patterns-definitive.md` (5 mechanisms, 5 logout types, security checklist)
+- [x] Workflow evaluation: A/B test Planner vs Codex (2 rounds, 2026-03-15) → Planner wins, workflow.md updated
 
 ### Pending
 - [ ] Workaround: admin "Logout all sessions" chưa trigger backchannel logout
