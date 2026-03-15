@@ -157,7 +157,7 @@ SLO path
 | Aspect | Finding |
 |--------|---------|
 | Implementation status | `IMPLEMENTED` |
-| Code evidence | Per-request `sid` recovery and Redis GET in `stack-c/openig_home/scripts/groovy/SessionBlacklistFilter.groovy:109-151`; fail-open path in `stack-c/openig_home/scripts/groovy/SessionBlacklistFilter.groovy:152-154` |
+| Code evidence | Per-request `sid` recovery and Redis GET in `stack-c/openig_home/scripts/groovy/SessionBlacklistFilter.groovy:109-151`; ~~fail-open path~~ **RESOLVED** (FIX-03, commit 278a29c): now returns 500 on Redis error in `stack-c/openig_home/scripts/groovy/SessionBlacklistFilter.groovy:152-154` |
 | Architecture assessment | `CONCERN` |
 | Security risk | Blacklist enforcement exists, but Redis failure logs a warning and still passes the request through. In practice, a Redis outage disables gateway-side SLO enforcement for protected apps. |
 | Standards reference | OWASP ASVS fail-safe defaults principle; OWASP Session Management Cheat Sheet |
@@ -168,7 +168,7 @@ SLO path
 | Gap | Hop | Severity | Risk | Recommended fix |
 |-----|-----|----------|------|-----------------|
 | ~~`logout_token` JWT signature and claim validation is missing~~ | ~~`H8`~~ | ~~`CRITICAL`~~ | ~~Forged backchannel logout requests can blacklist arbitrary user sessions~~ | **RESOLVED** — RS256 signature verification, JWKS-with-kid lookup, and full `iss`/`aud`/`events`/`iat`/`exp` claims validation implemented in all three stacks |
-| `SessionBlacklistFilter` is fail-open | `H10` | `HIGH` | Redis outage turns SLO enforcement off while requests still reach protected apps | Change the filter to fail closed for protected routes or return an explicit gateway error page when blacklist state is unavailable |
+| ~~`SessionBlacklistFilter` is fail-open~~ | ~~`H10`~~ | ~~`HIGH`~~ | ~~Redis outage turns SLO enforcement off while requests still reach protected apps~~ | **RESOLVED** — FIX-03 (commit 278a29c): catch block now returns 500 INTERNAL_SERVER_ERROR instead of passing request through. Session preserved for automatic recovery when Redis returns. |
 | Vault TLS is disabled | `H4` | `HIGH` | Vault tokens and app credentials travel in plaintext on the internal network | Enable TLS on the Vault listener, point `VAULT_ADDR` to `https://...`, and validate the presented certificate in the gateway JVM trust store |
 | `requireHttps: false` on all reviewed OIDC client routes | `H3` | `HIGH` | OIDC redirects and callbacks stay on HTTP, weakening confidentiality and cookie safety | Change OpenIG route config to require HTTPS and front the gateway with TLS-only nginx listeners |
 | Blacklist durability is not evidenced and TTL is fixed at `3600` | `H9` | `MEDIUM` | Redis restart can erase revocations, and active sessions can outlive blacklist entries | Derive TTL from token/session expiry and add a gateway-managed durable revocation journal for replay after restart |
@@ -226,4 +226,4 @@ SLO path
 
 **Overall workflow security tier:** `Tier 2 - Functionally complete with critical gap closed; remaining gaps are hardening`.
 
-Interpretation: the gateway implements the full SSO/SLO chain and backchannel logout JWT validation is now fully implemented across all three stacks (H8 resolved). The remaining open items — fail-open blacklist enforcement (`H10`), plaintext Vault transport (`H4`), HTTP-only OIDC endpoints (`H3`), and TTL/durability gaps (`H9`) — are hardening tasks rather than functional holes. The remediation wave should prioritize `H10`, `H4`, and `H3` next.
+Interpretation: the gateway implements the full SSO/SLO chain and backchannel logout JWT validation is now fully implemented across all three stacks (H8 resolved). The remaining open items — ~~fail-open blacklist enforcement (`H10`)~~ (RESOLVED), plaintext Vault transport (`H4`), HTTP-only OIDC endpoints (`H3`), and TTL/durability gaps (`H9`) — are hardening tasks rather than functional holes. The remediation wave should prioritize `H4` and `H3` next.

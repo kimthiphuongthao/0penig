@@ -19,6 +19,8 @@
 | Grafana logout chỉ reload trang | Grafana `/logout` trả 302 (không phải 401) → không trigger failureHandler → không SLO | Thêm route `00-grafana-logout.json` intercept `GET /logout` → SloHandlerGrafana |
 | Keycloak "Invalid parameter: id_token_hint" | SloHandler dùng `OIDC_CLIENT_ID` (shared) nhưng id_token được issue cho dedicated client (e.g. `openig-client-b-app4`) → client_id mismatch | Dùng env var riêng cho mỗi client (`OIDC_CLIENT_ID_APP4`), đảm bảo SloHandler dùng đúng client_id khớp với OAuth2ClientFilter |
 | Keycloak "Invalid redirect uri" khi logout | `post.logout.redirect.uris` chưa configured trong Keycloak client dedicated (chỉ có trong shared client) | Thêm `post.logout.redirect.uris` vào Keycloak client dedicated qua admin API hoặc realm-export.json |
+| Fail-closed redirect loop khi Redis down | Option B (clear session + redirect) gây infinite loop: Keycloak SSO session tự re-auth → tạo session mới → Redis vẫn down → clear → redirect → loop | Dùng Option A: trả 500 INTERNAL_SERVER_ERROR trực tiếp, KHÔNG clear session. Session preserved → hồi phục tự động khi Redis về |
+| `request.uri.toString()` trả URL nội bộ Docker | Trong OpenIG ScriptableFilter, `request.uri` đã bị rewrite thành backend URL (e.g. `http://wordpress/...`) → redirect gửi browser tới hostname Docker internal | Dùng `request.headers.getFirst('Host')` để xây redirect URL thay vì `request.uri.toString()` |
 
 ## Decision log
 
@@ -31,3 +33,4 @@
 | Custom SloHandler thay vì `defaultLogoutGoto` | OpenIG 6.0.2 không có `openIdEndSessionOnLogout` (feature không tồn tại — max version là 6.0.2, không có 6.5+). `defaultLogoutGoto` tĩnh không thể mang `id_token_hint`. | Dùng ScriptableHandler đọc `id_token` từ session key `oauth2:...` |
 | phpMyAdmin SLO hoạt động qua 401 | phpMyAdmin `auth_type=http` logout gửi 401 để clear browser Basic Auth → HttpBasicAuthFilter failureHandler trigger → redirect `/openid/app6/logout` → Keycloak end_session | Đây là by design, không cần dedicated logout intercept |
 | Jellyfin dùng dedicated Keycloak client | Jellyfin cần `openig-client-b-app4` riêng (không share `openig-client-b` với Redmine) vì namespace OIDC khác nhau | Đảm bảo SloHandler, OAuth2ClientFilter, backchannel logout, post_logout_redirect_uris đều dùng cùng client_id |
+| Fail-closed dùng 500 thay vì redirect | Option B (redirect) gây infinite loop do Keycloak SSO re-auth. Option A (500) đơn giản, session preserved, compatible với future K8s + Redis HA. |
