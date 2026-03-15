@@ -134,19 +134,19 @@ SLO path
 
 | Aspect | Finding |
 |--------|---------|
-| Implementation status | `PARTIAL` |
-| Code evidence | Backchannel routes in `stack-c/openig_home/config/routes/00-backchannel-logout-app5.json:2-8`, `stack-c/openig_home/config/routes/00-backchannel-logout-app6.json:2-8`; handler extracts and decodes `logout_token` in `stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:27-46`; only `sid/sub` presence is checked in `stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:40-48`; invalid processing returns `400` in `stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:67-69` |
-| Architecture assessment | `GAP` |
-| Security risk | The handler base64-decodes the JWT payload and trusts `sid` or `sub` without validating signature, issuer, audience, `events`, `iat`, or replay controls. A forged POST to the backchannel endpoint can blacklist arbitrary sessions if the endpoint is reachable. |
+| Implementation status | `IMPLEMENTED` |
+| Code evidence | Backchannel routes in `stack-c/openig_home/config/routes/00-backchannel-logout-app5.json:2-8`, `stack-c/openig_home/config/routes/00-backchannel-logout-app6.json:2-8`; RS256 algorithm check in `stack-a/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:252-256`, `stack-b/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:259-263`, `stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:251-255`; JWKS fetch with `kid` lookup and 10-minute cache in `stack-a/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:59-89`, `stack-b/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:58-88`, `stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:58-88`; RSA signature verification via `SHA256withRSA` in `stack-a/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:124-143`, `stack-b/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:123-142`, `stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:123-142`; `iss`/`aud`/`events`/`iat`/`exp`/`sid` claims validation in `stack-a/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:146-216`, `stack-b/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:145-223`, `stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:145-215`; kid-miss triggers JWKS refetch before reject in `stack-a/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:267-282`; JWKS failure returns `500` in `stack-a/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:261-264`; invalid token returns `400` in `stack-a/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:286-289`; expected audiences per stack: Stack A `openig-client` (line 20), Stack B `['openig-client-b', 'openig-client-b-app4']` (line 22), Stack C `['openig-client-c-app5', 'openig-client-c-app6']` (line 20) |
+| Architecture assessment | `ADEQUATE` |
+| Security risk | Full JWT validation is in place across all three stacks. Remaining hardening items: nginx IP allow-listing for the backchannel endpoint is not evidenced, and `requireHttps: false` means the backchannel endpoint is reachable over HTTP (addressed under H3). No replay controls beyond `iat`/`exp` window checks are implemented. |
 | Standards reference | OpenID Connect Back-Channel Logout 1.0; RFC 7519 (JWT) |
-| Recommended action | Validate `logout_token` against Keycloak JWKS and expected `iss`/`aud`/`events` values before writing revocations, and optionally add nginx IP allow-listing for the backchannel endpoint. |
+| Recommended action | Optionally add nginx IP allow-listing for the backchannel endpoint to limit exposure to Keycloak's egress address, and address the HTTP transport gap under H3. |
 
 ### H9: OpenIG -> Redis
 
 | Aspect | Finding |
 |--------|---------|
 | Implementation status | `IMPLEMENTED` |
-| Code evidence | Redis write path in `stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:51-63`; fixed TTL `EX 3600` in `stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:55` |
+| Code evidence | Redis write path in `stack-a/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:305-319`, `stack-b/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:312-326`, `stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:304-318`; fixed TTL `EX 3600` in `stack-a/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:310`, `stack-b/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:317`, `stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:309` |
 | Architecture assessment | `ADEQUATE` |
 | Security risk | Revocation storage exists, but the TTL is fixed at one hour instead of the remaining user session lifetime. No Redis persistence setting is evidenced in the reviewed repo, so restart durability of blacklist entries is uncertain. |
 | Standards reference | OpenID Connect Back-Channel Logout 1.0; RFC 7009 (revocation reliability expectations) |
@@ -167,7 +167,7 @@ SLO path
 
 | Gap | Hop | Severity | Risk | Recommended fix |
 |-----|-----|----------|------|-----------------|
-| `logout_token` JWT signature and claim validation is missing | `H8` | `CRITICAL` | Forged backchannel logout requests can blacklist arbitrary user sessions | Validate `logout_token` in Groovy against Keycloak JWKS and expected `iss`/`aud`/`events`; reject anything unsigned or mismatched before touching Redis |
+| ~~`logout_token` JWT signature and claim validation is missing~~ | ~~`H8`~~ | ~~`CRITICAL`~~ | ~~Forged backchannel logout requests can blacklist arbitrary user sessions~~ | **RESOLVED** — RS256 signature verification, JWKS-with-kid lookup, and full `iss`/`aud`/`events`/`iat`/`exp` claims validation implemented in all three stacks |
 | `SessionBlacklistFilter` is fail-open | `H10` | `HIGH` | Redis outage turns SLO enforcement off while requests still reach protected apps | Change the filter to fail closed for protected routes or return an explicit gateway error page when blacklist state is unavailable |
 | Vault TLS is disabled | `H4` | `HIGH` | Vault tokens and app credentials travel in plaintext on the internal network | Enable TLS on the Vault listener, point `VAULT_ADDR` to `https://...`, and validate the presented certificate in the gateway JVM trust store |
 | `requireHttps: false` on all reviewed OIDC client routes | `H3` | `HIGH` | OIDC redirects and callbacks stay on HTTP, weakening confidentiality and cookie safety | Change OpenIG route config to require HTTPS and front the gateway with TLS-only nginx listeners |
@@ -182,7 +182,7 @@ SLO path
 | Artifact | Current evidence | Risk | OpenIG-side action |
 |---------|------------------|------|--------------------|
 | OpenIG `JwtSession` | `stack-a/openig_home/config/config.json:20-29`, `stack-b/openig_home/config/config.json:11-18`, `stack-c/openig_home/config/config.json:20-29` show `sessionTimeout: "8 hours"` | Gateway session can outlive blacklist TTL and some upstream app sessions | Align `JwtSession` timeout with Keycloak realm session lifetime and use the same expiry basis for revocation TTL |
-| Redis blacklist entry | `stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:55` writes `EX 3600` | User can remain valid in OpenIG after blacklist entry expires | Compute TTL from validated `exp` or from the gateway session expiry |
+| Redis blacklist entry | `stack-a/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:310`, `stack-b/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:317`, `stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:309` write `EX 3600` | User can remain valid in OpenIG after blacklist entry expires | Compute TTL from validated `exp` or from the gateway session expiry |
 | Vault token cache | `stack-c/openig_home/scripts/groovy/VaultCredentialFilter.groovy:117-124` caches lease-adjusted token expiry | Vault lease and gateway session can drift apart; stale cached token handling depends on 403 retry path | Tie cache lifetime strictly to Vault lease and re-acquire only when needed |
 | Upstream app credentials/session material | WordPress cookies in `stack-a/openig_home/scripts/groovy/CredentialInjector.groovy:94-96`; Jellyfin token in `stack-b/openig_home/scripts/groovy/JellyfinTokenInjector.groovy:95-97`; phpMyAdmin creds in `stack-c/openig_home/scripts/groovy/VaultCredentialFilter.groovy:156-157` | App session material persists inside the gateway session and can outlive IdP intent | Reissue or clear cached app credentials whenever logout, blacklist, or re-auth boundaries are crossed |
 
@@ -191,13 +191,13 @@ SLO path
 | Dependency failure | SSO effect | SLO effect | Evidence |
 |--------------------|-----------|-----------|----------|
 | Vault unavailable | OIDC auth can still complete, but Vault-backed app session establishment fails with gateway `500` HTML pages; already-cached credentials may continue to work temporarily | No direct effect on blacklist, but user can be authenticated at IdP and still blocked from app access | `stack-c/openig_home/scripts/groovy/VaultCredentialFilter.groovy:111-165`; `stack-c/openig_home/config/routes/11-phpmyadmin.json:48-58` |
-| Redis unavailable | Initial SSO still works | Backchannel logout writes fail with `400`, and per-request blacklist checks fail open, so global logout propagation is effectively disabled | `stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:67-69`; `stack-c/openig_home/scripts/groovy/SessionBlacklistFilter.groovy:152-154` |
+| Redis unavailable | Initial SSO still works | Backchannel logout writes fail with `400`, and per-request blacklist checks fail open, so global logout propagation is effectively disabled | `stack-a/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:327-329`, `stack-b/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:334-336`, `stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:326-328`; `stack-c/openig_home/scripts/groovy/SessionBlacklistFilter.groovy:152-154` |
 | Keycloak unavailable | OIDC login falls into static `500` error pages for reviewed routes | Browser logout redirects to an unavailable end-session endpoint; existing local sessions continue until cleared or expired | `stack-a/openig_home/config/routes/01-wordpress.json:48-58`; `stack-c/openig_home/config/routes/11-phpmyadmin.json:48-58`; `stack-a/openig_home/scripts/groovy/SloHandler.groovy:24-35` |
 
 ### Orphan session scenarios
 
 - Browser closes without hitting an app logout intercept: OpenIG keeps an `8 hours` session and may retain upstream app state in that same session (`stack-a/openig_home/config/config.json:24`, `stack-c/openig_home/config/config.json:24`, `stack-a/openig_home/scripts/groovy/CredentialInjector.groovy:94-96`).
-- Backchannel logout is accepted but Redis later restarts or blacklist TTL expires first: the revocation marker disappears while the OpenIG session may still be valid (`stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:55`, `stack-c/openig_home/scripts/groovy/SessionBlacklistFilter.groovy:109-151`).
+- Backchannel logout is accepted but Redis later restarts or blacklist TTL expires first: the revocation marker disappears while the OpenIG session may still be valid (`stack-a/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:310`, `stack-b/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:317`, `stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:309`; `stack-c/openig_home/scripts/groovy/SessionBlacklistFilter.groovy:109-151`).
 - Redis is down during blacklist check: protected traffic is allowed through because the filter fails open (`stack-c/openig_home/scripts/groovy/SessionBlacklistFilter.groovy:152-154`).
 - Upstream app sessions can remain usable until the app or gateway notices a `401` or explicit user mismatch, especially for Jellyfin and WordPress (`stack-b/openig_home/scripts/groovy/JellyfinTokenInjector.groovy:109-117`, `stack-a/openig_home/scripts/groovy/CredentialInjector.groovy:46-105`).
 
@@ -205,7 +205,7 @@ SLO path
 
 | Area | Current state | Recommended |
 |------|---------------|-------------|
-| Logout auditing | Script handlers log warnings or errors locally, but no end-to-end correlation field is evident (`stack-a/openig_home/scripts/groovy/SloHandler.groovy:32`, `stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:67-69`, `stack-c/openig_home/scripts/groovy/SessionBlacklistFilter.groovy:152-154`) | Add request ID, `client_id`, `sid`, `sub`, outcome, and route name to every logout and blacklist event |
+| Logout auditing | Script handlers log warnings or errors locally, but no end-to-end correlation field is evident (`stack-a/openig_home/scripts/groovy/SloHandler.groovy:32`, `stack-a/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:324-329`, `stack-b/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:331-336`, `stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:323-328`, `stack-c/openig_home/scripts/groovy/SessionBlacklistFilter.groovy:152-154`) | Add request ID, `client_id`, `sid`, `sub`, outcome, and route name to every logout and blacklist event |
 | Vault auditing | Vault fetch uses a shared AppRole path and stores the resulting token in session (`stack-c/openig_home/scripts/groovy/VaultCredentialFilter.groovy:82-124`) | Log OIDC username, Vault secret path, and request ID at the gateway before and after each Vault fetch |
 | Credential-caching visibility | Upstream credentials are stored in session, but there is no structured log describing cache issue, reuse, or clear events beyond failures (`stack-b/openig_home/scripts/groovy/JellyfinTokenInjector.groovy:95-97`, `stack-c/openig_home/scripts/groovy/VaultCredentialFilter.groovy:156-157`) | Emit structured cache lifecycle logs for issue, reuse, expiry, blacklist clear, and 401 clear events |
 
@@ -220,10 +220,10 @@ SLO path
 | `H5` | `IMPLEMENTED` | `MEDIUM` | `P2` |
 | `H6` | `IMPLEMENTED` | `MEDIUM` | `P2` |
 | `H7` | `IMPLEMENTED` | `MEDIUM` | `P2` |
-| `H8` | `PARTIAL` | `CRITICAL` | `P0` |
+| `H8` | `IMPLEMENTED` | `LOW` | `P3` |
 | `H9` | `IMPLEMENTED` | `MEDIUM` | `P2` |
 | `H10` | `IMPLEMENTED` | `HIGH` | `P1` |
 
-**Overall workflow security tier:** `Tier 3 - Functionally complete but not production-safe`.
+**Overall workflow security tier:** `Tier 2 - Functionally complete with critical gap closed; remaining gaps are hardening`.
 
-Interpretation: the gateway implements the full SSO/SLO chain, but logout integrity and transport protections are not yet strong enough for production. The first remediation wave should close `H8`, `H10`, `H4`, and `H3`; the remaining issues are mostly hardening and lifecycle-alignment work around an already-functional design.
+Interpretation: the gateway implements the full SSO/SLO chain and backchannel logout JWT validation is now fully implemented across all three stacks (H8 resolved). The remaining open items — fail-open blacklist enforcement (`H10`), plaintext Vault transport (`H4`), HTTP-only OIDC endpoints (`H3`), and TTL/durability gaps (`H9`) — are hardening tasks rather than functional holes. The remediation wave should prioritize `H10`, `H4`, and `H3` next.
