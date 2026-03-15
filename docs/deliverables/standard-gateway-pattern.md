@@ -1,7 +1,7 @@
 ---
 # Standard OpenIG SSO/SLO Gateway Pattern
-**Version:** 1.0
-**Date:** 2026-03-14
+**Version:** 1.1
+**Date:** 2026-03-15
 **Derived from:** Code and security review of 3 integration stacks (WordPress, Redmine+Jellyfin, Grafana+phpMyAdmin)
 **Scope:** OpenIG 6 + Keycloak + Vault + Redis
 
@@ -111,7 +111,7 @@ What it is: All redirect base URLs, post-logout targets, and OAuth2 session name
 
 Why: Stack A, Stack B, and Stack C all derive redirect or session-resolution behavior from inbound host data, and Stack B shows a separate integrity failure where the logout handler reads the wrong OIDC namespace and silently fails RP-initiated logout. [Note: A F5 (Host-derived redirects) was confirmed by 2/4 reviewers.] Derived from: Stack A `§5 F5`; Stack B `F5`, `F7`; Stack C `§4 F9`; Cross-Stack Summary Universal Findings and Stack-Specific Findings.
 
-How to implement in OpenIG: Define canonical public origin constants per route and use them for redirect construction, post-logout redirect URIs, and OIDC session-key lookup. Verify that the namespace used by SLO handlers matches the route's registered `OAuth2ClientFilter` client ID, and configure nginx to strip or normalize inbound host-related headers before the request reaches OpenIG. **Stack B note:** The highest-urgency single fix for existing deployments is ensuring that the namespace used by `SloHandlerJellyfin` (and all other SLO handlers) exactly matches the `OAuth2ClientFilter` client ID. This drift is Stack B's priority #1 remediation item. Derived from: Stack B `F5`, `F7`; Stack C `§4 F9`; Stack A `§5 F5`.
+How to implement in OpenIG: Define canonical public origin constants per route and use them for redirect construction, post-logout redirect URIs, and OIDC session-key lookup. Verify that the namespace used by SLO handlers matches the route's registered `OAuth2ClientFilter` client ID, and configure nginx to strip or normalize inbound host-related headers before the request reaches OpenIG. **Stack B note:** The namespace drift between `SloHandlerJellyfin` and the active `OAuth2ClientFilter` client ID (`openig-client-b-app4`) was Stack B's priority #1 remediation item. **RESOLVED** (commit a3cb6c3, 2026-03-15): namespace corrected to `app4`, `OIDC_CLIENT_ID_APP4` env var added, `post_logout_redirect_uri` restored with null-check for `id_token_hint`. Derived from: Stack B `F5`, `F7`; Stack C `§4 F9`; Stack A `§5 F5`.
 
 ### 6. Bounded Dependency Behavior
 [Derived from: B F9, C F7, B F10, C F8]
@@ -170,6 +170,10 @@ For credential-injection adapters (Redmine, form-login apps), the adapter SHOULD
 
 For trusted-header adapters (Grafana-style), the gateway MUST inject the identity header (e.g. `X-WEBAUTH-USER`) only after OIDC session validation and revocation checks are complete. The identity header must never be injected on unauthenticated or revocation-indeterminate requests. This ensures that the downstream app never receives a spoofed or revoked identity. Derived from: Stack C `§5`.
 
+### Backchannel logout token validation (H8)
+
+All three stacks implement full RS256 logout token validation in `BackchannelLogoutHandler`: algorithm check (`alg=RS256`), JWKS lookup by `kid` with cache and kid-triggered re-fetch on miss, signature verification, and `iss`, `aud`, `events`, `iat`, `exp` claims validation before writing revocation state. This is a confirmed correct implementation shape that satisfies the validation requirements in Control 1 and the Backchannel Logout sequence. **IMPLEMENTED** across all stacks (H8 security hardening, 2026-03-14). Derived from: Stack A `§4`; Stack B "Confirmed Strengths"; Stack C `§3`.
+
 ## SLO Flow — Standard Sequence
 
 This sequence standardizes both RP-initiated and backchannel logout so logout correctness does not depend on stack-specific scripts or best-effort Redis behavior. Derived from: Stack A `§4`, `§5 F2-F5`; Stack B "Confirmed Strengths", `F2-F5`, `F10-F11`; Stack C `§3`, `§4 F2-F3`, `§4 F7-F9`.
@@ -211,7 +215,7 @@ Derived from: Cross-Stack Summary Universal Findings and Stack-Specific Findings
 | Bearer tokens in `localStorage` | Any same-origin JavaScript can read and persist bearer tokens | `B F8` | Use `httpOnly`, `Secure` cookies or server-side storage |
 | Unwired adapter safeguard scripts | Intended cleanup control exists in code but is inactive in the live route chain | `C F6` | Make required adapter filters explicit route-chain elements |
 | HTTP `400` for infrastructure failures in backchannel handler | IdP may treat transient failures as permanent and stop retrying logout delivery | `B F10`, `C F8` | Return `400` only for invalid logout tokens and `5xx` for internal failures |
-| `id_token_hint` read from wrong OIDC namespace | RP-initiated logout silently fails because the expected OIDC session is not found | `B F5` | Bind logout handlers to the exact `OAuth2ClientFilter` namespace/client ID in the route |
+| `id_token_hint` read from wrong OIDC namespace | RP-initiated logout silently fails because the expected OIDC session is not found | `B F5` | Bind logout handlers to the exact `OAuth2ClientFilter` namespace/client ID in the route. **RESOLVED** in Stack B (commit a3cb6c3, 2026-03-15). |
 | Missing Redis socket timeouts | Slow or half-open Redis connections can pin worker threads and degrade availability | `A §6`, `B F9`, `C F7` | Set explicit connect and read timeouts on all revocation socket operations |
 
 ## Checklist — New Integration Review

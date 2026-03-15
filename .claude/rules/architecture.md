@@ -30,7 +30,7 @@ Keycloak shared: `http://auth.sso.local:8080`, realm `sso-lab`.
 ## Cookie session
 - Stack A: `IG_SSO`, `cookieDomain: ".sso.local"`
 - Stack B: `IG_SSO_B`, `cookieDomain: ".sso.local"`
-- Stack C: `IG_SSO_C`, `cookieDomain: ".sso.local"`
+- Stack C: `IG_SSO`, `cookieDomain: ".sso.local"`
 
 ## SLO mechanism
 - Keycloak → backchannel logout → `BackchannelLogoutHandler.groovy` → Redis blacklist

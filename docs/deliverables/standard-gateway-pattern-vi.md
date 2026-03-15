@@ -1,7 +1,7 @@
 ---
 # Mẫu Chuẩn Gateway OpenIG cho SSO/SLO
-**Version:** 1.0
-**Date:** 2026-03-14
+**Version:** 1.1
+**Date:** 2026-03-15
 **Derived from:** Đánh giá mã nguồn và bảo mật của 3 stack tích hợp (WordPress, Redmine+Jellyfin, Grafana+phpMyAdmin)
 **Scope:** OpenIG 6 + Keycloak + Vault + Redis
 
@@ -111,7 +111,7 @@ Nội dung: Tất cả redirect base URL, post-logout target và OAuth2 session 
 
 Lý do: Stack A, Stack B và Stack C đều suy ra hành vi redirect hoặc session-resolution từ dữ liệu host inbound, và Stack B có thêm lỗi toàn vẹn khi logout handler đọc sai OIDC namespace làm RP-initiated logout âm thầm thất bại. Derived from: Stack A `§5 F5`; Stack B `F5`, `F7`; Stack C `§4 F9`; Cross-Stack Summary Universal Findings and Stack-Specific Findings.
 
-Cách triển khai trong OpenIG: Định nghĩa canonical public origin hằng cho từng route và dùng chúng để dựng redirect, `post_logout_redirect_uri`, và lookup OIDC session-key. Xác minh namespace mà SLO handler dùng trùng với client ID của `OAuth2ClientFilter` đã đăng ký trong route, và cấu hình nginx loại bỏ hoặc chuẩn hóa header liên quan host inbound trước khi request vào OpenIG. Derived from: Stack B `F5`, `F7`; Stack C `§4 F9`; Stack A `§5 F5`.
+Cách triển khai trong OpenIG: Định nghĩa canonical public origin hằng cho từng route và dùng chúng để dựng redirect, `post_logout_redirect_uri`, và lookup OIDC session-key. Xác minh namespace mà SLO handler dùng trùng với client ID của `OAuth2ClientFilter` đã đăng ký trong route, và cấu hình nginx loại bỏ hoặc chuẩn hóa header liên quan host inbound trước khi request vào OpenIG. **Ghi chú Stack B:** Lệch namespace giữa `SloHandlerJellyfin` và client ID `OAuth2ClientFilter` đang hoạt động (`openig-client-b-app4`) là mục sửa ưu tiên #1 của Stack B. **ĐÃ GIẢI QUYẾT** (commit a3cb6c3, 2026-03-15): namespace sửa thành `app4`, env var `OIDC_CLIENT_ID_APP4` được thêm, `post_logout_redirect_uri` khôi phục với null-check cho `id_token_hint`. Derived from: Stack B `F5`, `F7`; Stack C `§4 F9`; Stack A `§5 F5`.
 
 ### 6. Hành vi Dependency có Giới hạn (Bounded Dependency Behavior)
 [Derived from: B F9, C F7, B F10, C F8]
@@ -154,6 +154,26 @@ Nếu credential injection của adapter thất bại do Vault không truy cập
 
 Lý do: Ghi chú review bổ sung của Stack A chỉ ra đường lỗi synthetic login có thể thoái hóa thành proxy không xác thực. Hệ quả ở mức pattern là lỗi adapter phải giữ nguyên đảm bảo xác thực, không được bypass. Derived from: Stack A `§6` Subagent-only findings.
 
+## Điểm mạnh đã xác nhận (Confirmed Strengths — reference implementations)
+
+Các pattern dưới đây đã được xác nhận trên các stack đã đánh giá và thể hiện hình dạng triển khai đúng cần giữ lại trong tích hợp mới.
+
+### Thứ tự route
+
+Logout và backchannel route BẮT BUỘC đăng ký trước app route (ví dụ: `00-*.json` trước `10-*.json`). Stack B và Stack C đều xác nhận đây là pattern hoạt động đúng. Thứ tự này đảm bảo logout và session-revocation endpoint được xử lý trước logic gateway ứng dụng chính, ngăn session check cũ làm gián đoạn luồng logout. Derived from: Stack B "Confirmed Strengths"; Stack C `§3`.
+
+### Credential injection tự phục hồi
+
+Với adapter credential-injection (Redmine, form-login app), adapter NÊN retry credential injection khi nhận upstream 401 thay vì fail session. Pattern này xử lý credential rotation và session expiry một cách duyên dáng. Khi downstream app credential hết hạn nhưng gateway session vẫn còn hiệu lực, transparent retry với credential mới cho phép người dùng tiếp tục mà không cần re-authentication. Derived from: Stack B "Confirmed Strengths".
+
+### Thứ tự identity injection
+
+Với adapter trusted-header (kiểu Grafana), gateway BẮT BUỘC chỉ inject identity header (ví dụ: `X-WEBAUTH-USER`) sau khi OIDC session validation và revocation check hoàn tất. Identity header tuyệt đối không được inject trên request chưa xác thực hoặc revocation-indeterminate. Điều này đảm bảo downstream app không bao giờ nhận identity bị giả mạo hoặc đã bị thu hồi. Derived from: Stack C `§5`.
+
+### Validate logout token backchannel (H8)
+
+Cả ba stack đều triển khai đầy đủ validate logout token RS256 trong `BackchannelLogoutHandler`: kiểm tra algorithm (`alg=RS256`), JWKS lookup theo `kid` có cache và re-fetch khi kid miss, verify chữ ký, và validate claims `iss`, `aud`, `events`, `iat`, `exp` trước khi ghi trạng thái revocation. Đây là hình dạng triển khai đúng cần giữ lại, thỏa mãn yêu cầu validate trong Control 2 và trình tự Backchannel Logout. **ĐÃ TRIỂN KHAI** trên cả 3 stack (H8 security hardening, 2026-03-14). Derived from: Stack A `§4`; Stack B "Confirmed Strengths"; Stack C `§3`.
+
 ## Luồng SLO — Trình tự Chuẩn (SLO Flow — Standard Sequence)
 
 Trình tự này chuẩn hóa cả RP-initiated và backchannel logout để tính đúng đắn của logout không phụ thuộc script đặc thù từng stack hoặc hành vi Redis best-effort. Derived from: Stack A `§4`, `§5 F2-F5`; Stack B "Confirmed Strengths", `F2-F5`, `F10-F11`; Stack C `§3`, `§4 F2-F3`, `§4 F7-F9`.
@@ -195,7 +215,7 @@ Derived from: Cross-Stack Summary Universal Findings and Stack-Specific Findings
 | Bearer token trong `localStorage` | Bất kỳ JavaScript cùng origin đều có thể đọc và lưu token lâu dài | `B F8` | Dùng cookie `httpOnly`, `Secure` hoặc lưu trữ phía server |
 | Script safeguard của adapter không được wiring | Control dọn dẹp dự kiến có trong code nhưng không active trong route chain đang chạy | `C F6` | Biến filter adapter bắt buộc thành phần tử tường minh trong route chain |
 | Trả HTTP `400` cho lỗi hạ tầng trong backchannel handler | IdP có thể coi lỗi tạm thời là lỗi vĩnh viễn và dừng retry gửi logout | `B F10`, `C F8` | Chỉ trả `400` cho logout token không hợp lệ và trả `5xx` cho lỗi nội bộ |
-| Đọc `id_token_hint` từ sai OIDC namespace | RP-initiated logout âm thầm thất bại vì không tìm thấy OIDC session mong đợi | `B F5` | Gắn logout handler với đúng namespace/client ID của `OAuth2ClientFilter` trong route |
+| Đọc `id_token_hint` từ sai OIDC namespace | RP-initiated logout âm thầm thất bại vì không tìm thấy OIDC session mong đợi | `B F5` | Gắn logout handler với đúng namespace/client ID của `OAuth2ClientFilter` trong route. **ĐÃ GIẢI QUYẾT** ở Stack B (commit a3cb6c3, 2026-03-15). |
 | Thiếu timeout socket Redis | Kết nối Redis chậm hoặc half-open có thể ghim worker thread và làm giảm khả dụng | `A §6`, `B F9`, `C F7` | Đặt timeout connect/read tường minh cho mọi thao tác socket revocation |
 
 ## Checklist — Đánh giá Tích hợp Mới
