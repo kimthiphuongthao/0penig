@@ -32,10 +32,10 @@
 
 | ID | Task | Stack | Status | Notes |
 |----|------|-------|--------|-------|
-| 2a | config.json — sharedSecret + PKCS12 password → Vault/env | A | [ ] | |
-| 2b | config.json + 01-jellyfin.json + 02-redmine.json — sharedSecret + clientSecrets → Vault/env | B | [ ] | |
-| 2c | config.json + 10-grafana.json + 11-phpmyadmin.json — sharedSecret + clientSecrets → Vault/env | C | [ ] | |
-| 2d | Rotate tất cả exposed secrets + invalidate existing sessions | A, B, C | [ ] | Thực hiện sau 2a/2b/2c |
+| 2a | config.json — sharedSecret + PKCS12 password → Vault/env | A | [x] | ✅ Done 2026-03-15. Env vars via docker-compose + docker-entrypoint.sh sed substitution. Commit f677d9f |
+| 2b | config.json + 01-jellyfin.json + 02-redmine.json — sharedSecret + clientSecrets → Vault/env | B | [x] | ✅ Done 2026-03-15. Route files use native ${env['VAR']}. Commit f677d9f |
+| 2c | config.json + 10-grafana.json + 11-phpmyadmin.json — sharedSecret + clientSecrets → Vault/env | C | [x] | ✅ Done 2026-03-15. Same pattern as A+B. Commit f677d9f |
+| 2d | Rotate tất cả exposed secrets + invalidate existing sessions | A, B, C | [x] | ✅ Done 2026-03-15. sharedSecret + PKCS12 rotated; clientSecret externalized only (must match Keycloak). Commit f677d9f |
 
 ---
 
@@ -97,13 +97,13 @@
 | Group | Total | Done | In Progress | Pending |
 |-------|-------|------|-------------|---------|
 | 1 — Revocation | 5 | 4 | 0 | 1 |
-| 2 — Secrets | 4 | 0 | 0 | 4 |
+| 2 — Secrets | 4 | 4 | 0 | 0 |
 | 3 — Transport/Origin | 4 | 0 | 0 | 4 |
 | 4 — Session Storage | 3 | 0 | 0 | 3 |
 | 5 — Logout/Observability | 2 | 0 | 0 | 2 |
 | 6 — Adapter Contract | 3 | 0 | 0 | 3 |
 | 7 — Unsafe Method | 1 | 0 | 0 | 1 |
-| **Total** | **22** | **4** | **0** | **18** |
+| **Total** | **22** | **8** | **0** | **14** |
 
 ---
 
@@ -114,3 +114,4 @@
 | 2026-03-15 | 1a | FIX-02: Redis TTL 3600→28800 + RESP prefix fix | PASS — TTL≈28800 verified A+B+C | 792760f |
 | 2026-03-15 | 1b+1c | FIX-03+04: fail-closed 500 + socket timeout 200/500ms | PASS — tested Redis stop/start A+B+C | 278a29c |
 | 2026-03-15 | 1d | FIX-05: backchannel error code 400→500 for infra errors | PASS — tested Redis down→500, normal SLO→200 | 9b770cd |
+| 2026-03-15 | 2a+2b+2c+2d | FIX-06: externalize secrets to env vars + rotate sharedSecret/PKCS12 | PASS — 16 files, 3 entrypoint scripts, all routes loaded, SSO/SLO verified | f677d9f |
