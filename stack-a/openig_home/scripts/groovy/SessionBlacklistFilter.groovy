@@ -86,10 +86,10 @@ try {
 
     if (blacklisted) {
         session.clear()
-        String hostHeader = request.headers.getFirst('Host') as String
+        String CANONICAL_ORIGIN = System.getenv('CANONICAL_ORIGIN_APP1') ?: 'http://wp-a.sso.local'
         String originalPath = request.uri.path ?: '/'
         String originalQuery = request.uri.query ? '?' + request.uri.query : ''
-        String redirectUrl = 'http://' + (hostHeader ?: 'wp-a.sso.local') + originalPath + originalQuery
+        String redirectUrl = CANONICAL_ORIGIN + originalPath + originalQuery
         Response response = new Response(Status.FOUND)
         response.headers.put('Location', [redirectUrl as String])
         return newResultPromise(response)

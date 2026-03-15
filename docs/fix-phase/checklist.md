@@ -44,7 +44,7 @@
 
 | ID | Task | Stack | Status | Notes |
 |----|------|-------|--------|-------|
-| 3a | SloHandler*.groovy + SessionBlacklistFilter*.groovy — pin redirect base URLs, không dùng inbound Host | A, B, C | [ ] | A F5, B F7, C F9 |
+| 3a | SloHandler*.groovy + SessionBlacklistFilter*.groovy — pin redirect base URLs, không dùng inbound Host | A, B, C | [x] | ✅ Done 2026-03-15. CANONICAL_ORIGIN_APPx env vars + hardcoded fallbacks, 11 Groovy files. Also fixed CredentialInjector.groovy (Stack A) + RedmineCredentialInjector.groovy (Stack B) request.uri redirect |
 | 3b | requireHttps: false → true (config.json + route files) | B | [ ] | B F4. Phase 7a docs done (Lab Exception note). Phase 7b (actual change) deferred to Vault Hardening |
 | 3c | requireHttps: false → true (config.json + route files) | C | [ ] | C F4. Phase 7a docs done. Phase 7b deferred |
 | 3d | Validate Codex-only HTTP findings: VaultCredentialFilter, BackchannelLogoutHandler, SloHandler, CredentialInjector | A | [ ] | A §6 Codex-only — confirm scope trước khi fix |
@@ -98,12 +98,12 @@
 |-------|-------|------|-------------|---------|
 | 1 — Revocation | 5 | 4 | 0 | 1 |
 | 2 — Secrets | 4 | 4 | 0 | 0 |
-| 3 — Transport/Origin | 4 | 0 | 0 | 4 |
+| 3 — Transport/Origin | 4 | 1 | 0 | 3 |
 | 4 — Session Storage | 3 | 0 | 0 | 3 |
 | 5 — Logout/Observability | 2 | 0 | 0 | 2 |
 | 6 — Adapter Contract | 3 | 0 | 0 | 3 |
 | 7 — Unsafe Method | 1 | 0 | 0 | 1 |
-| **Total** | **22** | **8** | **0** | **14** |
+| **Total** | **22** | **9** | **0** | **13** |
 
 ---
 
@@ -115,3 +115,5 @@
 | 2026-03-15 | 1b+1c | FIX-03+04: fail-closed 500 + socket timeout 200/500ms | PASS — tested Redis stop/start A+B+C | 278a29c |
 | 2026-03-15 | 1d | FIX-05: backchannel error code 400→500 for infra errors | PASS — tested Redis down→500, normal SLO→200 | 9b770cd |
 | 2026-03-15 | 2a+2b+2c+2d | FIX-06: externalize secrets to env vars + rotate sharedSecret/PKCS12 | PASS — 16 files, 3 entrypoint scripts, all routes loaded, SSO/SLO verified | f677d9f |
+| 2026-03-15 | — | FIX-07 Phase 7a: Lab Exception notes in standard-gateway-pattern.md | PASS — docs only, no code change | 38a3f7e |
+| 2026-03-15 | 3a | FIX-08: pin redirect origins via CANONICAL_ORIGIN_APPx | PASS — 11 Groovy files, all routes loaded, no Host-header redirects remaining | pending |

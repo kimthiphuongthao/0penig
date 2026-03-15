@@ -160,8 +160,11 @@ return next.handle(context, request).then({ response ->
         logger.warn("[CredentialInjector] WP redirected to wp-login.php — cached session expired, clearing cache")
         session.remove('wp_session_cookies')
         // Redirect browser back to same URL so next request gets fresh WP login
+        def CANONICAL_ORIGIN = System.getenv('CANONICAL_ORIGIN_APP1') ?: 'http://wp-a.sso.local'
+        def retryPath = request.uri.path ?: '/'
+        def retryQuery = request.uri.query ? '?' + request.uri.query : ''
         def retryResp = new Response(response.status)
-        retryResp.headers['Location'] = request.uri.toString()
+        retryResp.headers['Location'] = CANONICAL_ORIGIN + retryPath + retryQuery
         return retryResp
     }
     return response

@@ -150,10 +150,10 @@ try {
     if (isBlacklisted(sid)) {
         session.clear()
         def response = new Response(Status.FOUND)
-        def host = request.headers.getFirst('Host') ?: 'openiga.sso.local'
+        def CANONICAL_ORIGIN = System.getenv('CANONICAL_ORIGIN_APP2') ?: 'http://whoami-a.sso.local'
         def path = request.uri.path ?: '/'
         def query = request.uri.query
-        def publicRedirect = 'http://' + host + path + (query ? '?' + query : '')
+        def publicRedirect = CANONICAL_ORIGIN + path + (query ? '?' + query : '')
         response.headers['Location'] = publicRedirect
         return newResultPromise(response)
     }

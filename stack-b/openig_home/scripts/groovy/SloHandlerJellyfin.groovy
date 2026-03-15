@@ -26,6 +26,8 @@ def buildAuthorization = { String deviceId, String accessToken ->
     "MediaBrowser Client='OpenIG', Device='SSO-Gateway', DeviceId='${deviceId}', Version='10.0.0', Token='${accessToken}'"
 }
 
+def CANONICAL_ORIGIN = System.getenv('CANONICAL_ORIGIN_APP4') ?: 'http://jellyfin-b.sso.local:9080'
+
 def publicUrl = System.getenv('OPENIG_PUBLIC_URL') ?: 'http://openigb.sso.local:9080'
 def hostHeader = request.headers.getFirst('Host') as String
 def hostWithoutPort = hostHeader?.split(':')?.getAt(0)
@@ -82,11 +84,7 @@ try {
         throw new IllegalStateException('KEYCLOAK_BROWSER_URL or OIDC_CLIENT_ID_APP4 is missing')
     }
 
-    if (!hostWithoutPort) {
-        hostWithoutPort = 'jellyfin-b.sso.local'
-    }
-    String postLogoutHost = hostHeader?.trim() ? hostHeader.trim() : (hostWithPort ?: (hostWithoutPort + ':9080'))
-    String postLogoutUri = 'http://' + postLogoutHost + '/'
+    String postLogoutUri = CANONICAL_ORIGIN + '/'
 
     String logoutUrl = postLogoutUri
     if (idToken?.trim()) {

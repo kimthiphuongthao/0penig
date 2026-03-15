@@ -4,6 +4,8 @@ import static org.forgerock.util.promise.Promises.newResultPromise
 import java.net.URLEncoder
 import java.net.URI
 
+def CANONICAL_ORIGIN = System.getenv('CANONICAL_ORIGIN_APP1') ?: 'http://wp-a.sso.local'
+
 def publicUrl = System.getenv('OPENIG_PUBLIC_URL') ?: 'http://openiga.sso.local:80'
 def hostHeader = request?.headers?.getFirst('Host')?.trim()
 def publicHost = new URI(publicUrl).host ?: 'openiga.sso.local'
@@ -22,8 +24,7 @@ if (!idToken) {
 session.clear()
 
 def baseLogoutUrl = 'http://auth.sso.local:8080/realms/sso-realm/protocol/openid-connect/logout'
-def hostOnly = host.split(':')[0]
-def postLogoutRedirectUri = hostOnly == 'openiga.sso.local' ? 'http://openiga.sso.local/app1/' : ('http://' + hostOnly + '/')
+def postLogoutRedirectUri = CANONICAL_ORIGIN + '/'
 def params = 'client_id=openig-client&post_logout_redirect_uri=' + URLEncoder.encode(postLogoutRedirectUri, 'UTF-8')
 if (idToken) {
     params += '&id_token_hint=' + URLEncoder.encode(idToken as String, 'UTF-8')

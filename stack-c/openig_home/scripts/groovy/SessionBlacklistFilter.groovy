@@ -143,8 +143,13 @@ try {
 
         String originalPath = request.uri.path ?: '/'
         String originalQuery = request.uri.query ? '?' + request.uri.query : ''
-        String redirectHost = hostHeader ?: hostWithoutPort ?: 'openigc.sso.local'
-        String redirectUrl = "http://${redirectHost}${originalPath}${originalQuery}"
+        String CANONICAL_ORIGIN
+        if (configuredClientEndpoint == '/openid/app6' || sessionCacheKey == 'oidc_sid_app6') {
+            CANONICAL_ORIGIN = System.getenv('CANONICAL_ORIGIN_APP6') ?: 'http://phpmyadmin-c.sso.local:18080'
+        } else {
+            CANONICAL_ORIGIN = System.getenv('CANONICAL_ORIGIN_APP5') ?: 'http://grafana-c.sso.local:18080'
+        }
+        String redirectUrl = CANONICAL_ORIGIN + originalPath + originalQuery
 
         Response response = new Response(Status.FOUND)
         response.headers.put('Location', [redirectUrl as String])

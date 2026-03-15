@@ -92,11 +92,9 @@ try {
     if (blacklisted) {
         session.clear()
         Response response = new Response(Status.FOUND)
-        String redirectHost = request.headers.getFirst('Host') as String
-        if (!redirectHost?.trim()) {
-            redirectHost = 'openigb.sso.local:9080'
-        }
-        response.headers.put('Location', [("http://${redirectHost}" + (request.uri.path ?: '/')) as String])
+        String CANONICAL_ORIGIN = System.getenv('CANONICAL_ORIGIN_APP4') ?: 'http://jellyfin-b.sso.local:9080'
+        String originalPath = request.uri.path ?: '/'
+        response.headers.put('Location', [(CANONICAL_ORIGIN + originalPath) as String])
         return newResultPromise(response)
     }
 

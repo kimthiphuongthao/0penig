@@ -79,7 +79,9 @@ try {
     if (blacklisted) {
         session.clear()
         Response response = new Response(Status.FOUND)
-        response.headers['Location'] = request.uri.toString()
+        String CANONICAL_ORIGIN_B = System.getenv('CANONICAL_ORIGIN_APP3') ?: 'http://redmine-b.sso.local:9080'
+        String originalPath = request.uri.path ?: '/'
+        response.headers['Location'] = CANONICAL_ORIGIN_B + originalPath
         return newResultPromise(response)
     }
 

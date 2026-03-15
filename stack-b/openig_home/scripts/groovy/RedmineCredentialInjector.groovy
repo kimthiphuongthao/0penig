@@ -211,20 +211,8 @@ try {
                 path = path + '?' + query
             }
 
-            String retryLocation = path
-            String host = request.headers.getFirst('Host')
-            if (host != null && !host.trim().isEmpty()) {
-                String scheme = request.uri?.scheme
-                if (scheme == null || scheme.isEmpty()) {
-                    String forwardedProto = request.headers.getFirst('X-Forwarded-Proto')
-                    if (forwardedProto != null && !forwardedProto.isEmpty()) {
-                        scheme = forwardedProto
-                    } else {
-                        scheme = 'http'
-                    }
-                }
-                retryLocation = scheme + '://' + host + path
-            }
+            String CANONICAL_ORIGIN = System.getenv('CANONICAL_ORIGIN_APP3') ?: 'http://redmine-b.sso.local:9080'
+            String retryLocation = CANONICAL_ORIGIN + path
 
             def retryResponse = new Response(Status.FOUND)
             retryResponse.headers.put('Location', [retryLocation])

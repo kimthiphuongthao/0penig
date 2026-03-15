@@ -3,6 +3,8 @@ import org.forgerock.http.protocol.Status
 import static org.forgerock.util.promise.Promises.newResultPromise
 import java.net.URLEncoder
 
+def CANONICAL_ORIGIN = System.getenv('CANONICAL_ORIGIN_APP3') ?: 'http://redmine-b.sso.local:9080'
+
 def publicUrl = System.getenv('OPENIG_PUBLIC_URL') ?: 'http://openigb.sso.local:9080'
 def hostHeader = request.headers.getFirst('Host') as String
 def hostWithoutPort = hostHeader?.split(':')?.getAt(0)
@@ -29,10 +31,7 @@ session.clear()
 
 def keycloakBrowserUrl = System.getenv('KEYCLOAK_BROWSER_URL')
 def clientId = System.getenv('OIDC_CLIENT_ID')
-if (!hostWithoutPort) {
-    hostWithoutPort = 'openigb.sso.local'
-}
-def postLogoutUri = hostWithoutPort == 'openigb.sso.local' ? (publicUrl + '/app4/') : ('http://' + hostWithPort + '/')
+def postLogoutUri = CANONICAL_ORIGIN + '/'
 
 def logoutUrl = keycloakBrowserUrl + '/realms/sso-realm/protocol/openid-connect/logout?client_id=' + clientId + '&post_logout_redirect_uri=' + URLEncoder.encode(postLogoutUri, 'UTF-8')
 if (idToken) {

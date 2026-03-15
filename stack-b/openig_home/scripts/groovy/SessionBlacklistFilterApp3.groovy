@@ -92,11 +92,8 @@ try {
     if (blacklisted) {
         session.clear()
         Response response = new Response(Status.FOUND)
-        String redirectHost = request.headers.getFirst('Host') as String
-        if (!redirectHost?.trim()) {
-            redirectHost = 'jellyfin-b.sso.local'
-        }
-        response.headers.put('Location', [('http://' + redirectHost + '/') as String])
+        String CANONICAL_ORIGIN = System.getenv('CANONICAL_ORIGIN_APP3') ?: 'http://redmine-b.sso.local:9080'
+        response.headers.put('Location', [(CANONICAL_ORIGIN + '/') as String])
         return newResultPromise(response)
     }
 
