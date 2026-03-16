@@ -341,10 +341,10 @@ Trong stack hiện tại:
 ### 8.1 Luồng WordPress (Stack A)
 
 1. `VaultCredentialFilter` đọc `preferred_username` từ OIDC user info.
-2. Nếu chưa có `vault_token` hoặc token hết hạn:
+2. Nếu chưa có Vault token hoặc token hết hạn (cached trong `globals` — server memory, NOT JwtSession cookie):
    - Đọc `role_id` và `secret_id` từ file (`VAULT_ROLE_ID_FILE`, `VAULT_SECRET_ID_FILE`).
    - Login AppRole: `POST /v1/auth/approle/login`.
-   - Cache token và expiry vào session OpenIG.
+   - Cache token vào `globals` ConcurrentHashMap (5 min TTL, per-ScriptableFilter instance).
 3. Đọc secret KV v2: `GET /v1/secret/data/wp-creds/{username}`.
 4. Gắn kết quả vào `attributes.wp_credentials`.
 5. `CredentialInjector.groovy`:
@@ -371,10 +371,10 @@ Trong stack hiện tại:
 ### 8.4 Luồng phpMyAdmin (Stack C)
 
 1. `VaultCredentialFilter.groovy` đọc `preferred_username` từ `id_token` trong session (3-key host-aware lookup).
-2. Nếu chưa có `vault_token` hoặc token hết hạn: Login AppRole Vault.
-3. Đọc secret KV v2: `GET /v1/secret/data/phpmyadmin/{username}`.
-4. Cache `phpmyadmin_username` và `phpmyadmin_password` vào session OpenIG.
-5. `HttpBasicAuthFilter` inject `Authorization: Basic` header từ credential đã cache vào mọi request upstream.
+2. Vault AppRole token cached trong `globals` (server memory, 5 min TTL). Nếu hết hạn → fresh login.
+3. Đọc secret KV v2: `GET /v1/secret/data/phpmyadmin/{username}` (fresh mỗi request).
+4. Set `attributes.phpmyadmin_username` và `attributes.phpmyadmin_password` (transient per-request, NOT persisted to JwtSession cookie).
+5. `HttpBasicAuthFilter` inject `Authorization: Basic` header từ `${attributes.phpmyadmin_*}` vào request upstream.
 
 ### 8.5 Luồng Grafana (Stack C)
 

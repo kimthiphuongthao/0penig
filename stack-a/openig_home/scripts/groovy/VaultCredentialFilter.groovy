@@ -33,12 +33,12 @@ try {
     }
     username = username.trim()
 
-    def nowEpochSeconds = (System.currentTimeMillis() / 1000L) as long
-    def vaultToken = session['vault_token'] as String
-    def tokenExpiryRaw = session['vault_token_expiry']
-    def vaultTokenExpiry = tokenExpiryRaw != null ? (tokenExpiryRaw as Long) : 0L
+    // FIX-09: Vault token cached in globals (per-instance ConcurrentHashMap, NOT in JwtSession cookie)
+    long nowEpochSeconds = (long)(System.currentTimeMillis() / 1000)
+    def cachedToken = globals['vault_token']
+    def vaultToken = null
 
-    if (vaultToken == null || vaultToken.isEmpty() || vaultTokenExpiry <= nowEpochSeconds) {
+    if (cachedToken == null || cachedToken.expiry <= nowEpochSeconds) {
         if (vaultRoleIdFile == null || vaultRoleIdFile.trim().isEmpty()) {
             throw new IllegalStateException('VAULT_ROLE_ID_FILE is not set')
         }
@@ -79,11 +79,12 @@ try {
             throw new IllegalStateException('Vault auth.client_token is missing in response')
         }
 
-        session['vault_token'] = newVaultToken
-        session['vault_token_expiry'] = nowEpochSeconds + leaseDuration
+        globals['vault_token'] = [token: newVaultToken, expiry: nowEpochSeconds + leaseDuration]
         vaultToken = newVaultToken
 
         loginConnection.disconnect()
+    } else {
+        vaultToken = cachedToken.token
     }
 
     def encodedUsername = URLEncoder.encode(username, 'UTF-8').replace('+', '%20')
@@ -98,9 +99,8 @@ try {
     def credsBody = readResponseBody(credsConnection)
     credsConnection.disconnect()
     if (credsStatus == 403) {
-        // Token rejected — purge cache so next request forces re-login
-        session.remove('vault_token')
-        session.remove('vault_token_expiry')
+        // Token rejected — invalidate globals cache, will re-login on next request
+        globals.remove('vault_token')
         def r = new Response(Status.BAD_GATEWAY)
         r.headers.put('Content-Type', ['text/html'])
         r.entity.setString('<html><body><h2>Vault token expired. Please retry.</h2></body></html>')
