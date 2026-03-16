@@ -66,14 +66,17 @@ try {
     }
     username = username.trim()
 
-    // FIX-09: Vault token NOT cached in session (fetched fresh every request)
-    // phpMyAdmin credentials remain in session (HttpBasicAuthFilter requires session EL)
-    String cachedUsername = session['phpmyadmin_username']?.toString()?.trim()
-    if (cachedUsername && cachedUsername == username) {
-        return next.handle(context, request)
-    }
+    // FIX-09: credentials set in attributes (transient per-request, NOT in JwtSession cookie)
+    // Only Vault AppRole token is cached in globals (expensive login call); credentials fetched fresh every request
+    long now = (long)(System.currentTimeMillis() / 1000)
 
-    if (!vaultRoleIdFile?.trim()) {
+    // Vault token: use globals cache (5 min TTL) or fresh AppRole login
+    def cachedToken = globals['vault_token']
+    String vaultToken
+    if (cachedToken && cachedToken.expiry > now) {
+        vaultToken = cachedToken.token
+    } else {
+        if (!vaultRoleIdFile?.trim()) {
             throw new IllegalStateException('VAULT_ROLE_ID_FILE is not set')
         }
         if (!vaultSecretIdFile?.trim()) {
@@ -111,7 +114,9 @@ try {
             throw new IllegalStateException('Vault auth.client_token is missing in response')
         }
 
-    String vaultToken = newVaultToken
+        globals['vault_token'] = [token: newVaultToken, expiry: now + 300]
+        vaultToken = newVaultToken
+    }
 
     String encodedUsername = URLEncoder.encode(username, 'UTF-8').replace('+', '%20')
     HttpURLConnection credsConnection = (HttpURLConnection) new URL("${vaultAddr}/v1/secret/data/phpmyadmin/${encodedUsername}").openConnection()
@@ -126,7 +131,8 @@ try {
     credsConnection.disconnect()
 
     if (credsStatus == 403) {
-        // Vault token rejected — will re-login on next request
+        // Vault token rejected — invalidate cache, will re-login on next request
+        globals.remove('vault_token')
         throw new IllegalStateException('Vault token rejected for phpMyAdmin lookup (HTTP 403)')
     }
     if (credsStatus < 200 || credsStatus >= 300) {
@@ -140,8 +146,9 @@ try {
         throw new IllegalStateException('Vault response is missing username or password')
     }
 
-    session['phpmyadmin_username'] = pmaUsername
-    session['phpmyadmin_password'] = pmaPassword
+    // Set in attributes for downstream HttpBasicAuthFilter (transient, not persisted to cookie)
+    attributes.phpmyadmin_username = pmaUsername
+    attributes.phpmyadmin_password = pmaPassword
     return next.handle(context, request)
 } catch (Exception e) {
     logger.error('[VaultCredentialFilter] Failed to fetch phpMyAdmin credentials from Vault', e)

@@ -82,7 +82,7 @@
         ],
         "add": {
           "X-WEBAUTH-USER": [
-            "${session['grafana_username']}"
+            "${attributes.openid['user_info']['preferred_username']}"
           ]
         }
       }

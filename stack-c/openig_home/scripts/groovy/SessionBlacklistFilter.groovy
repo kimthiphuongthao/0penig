@@ -21,11 +21,6 @@ def decodeSidFromToken = { String jwt ->
     (payload?.sid ?: payload?.sub) as String
 }
 
-def decodePreferredUsernameFromToken = { String jwt ->
-    def payload = decodeClaimsFromToken(jwt)
-    (payload?.preferred_username ?: payload?.preferredUsername ?: payload?.email ?: payload?.sub) as String
-}
-
 def readRespLine = { InputStream input ->
     ByteArrayOutputStream buffer = new ByteArrayOutputStream()
     int previous = -1
@@ -90,20 +85,6 @@ try {
         idToken = session[oauth2SessionKey]?.get('atr')?.get('id_token') as String
         if (idToken?.trim()) {
             break
-        }
-    }
-
-    boolean shouldCacheGrafanaUsername = configuredClientEndpoint == '/openid/app5' ||
-        sessionCacheKey == 'oidc_sid_app5' ||
-        (hostWithoutPort ?: '').contains('grafana')
-    if (shouldCacheGrafanaUsername && idToken?.trim()) {
-        String preferredUsername = decodePreferredUsernameFromToken(idToken)
-        if (preferredUsername?.trim()) {
-            String normalizedUsername = preferredUsername.trim()
-            session['grafana_username'] = normalizedUsername
-            if (binding.hasVariable('attributes') && attributes != null) {
-                attributes.grafana_username = normalizedUsername
-            }
         }
     }
 

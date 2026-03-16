@@ -84,8 +84,8 @@
       "name": "PhpMyAdminBasicAuth",
       "type": "HttpBasicAuthFilter",
       "config": {
-        "username": "${session['phpmyadmin_username']}",
-        "password": "${session['phpmyadmin_password']}",
+        "username": "${attributes.phpmyadmin_username}",
+        "password": "${attributes.phpmyadmin_password}",
         "cacheHeader": false,
         "failureHandler": {
           "type": "ScriptableHandler",
