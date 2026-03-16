@@ -8,7 +8,8 @@ set -e
 SRC=/opt/openig
 DST=/tmp/openig
 
-# Copy entire openig home to writable tmpfs location
+# Copy entire openig home to writable tmpfs location (clean first to avoid stale config on restart)
+rm -rf "$DST"
 cp -r "$SRC" "$DST"
 
 # Substitute placeholders in config.json
