@@ -21,7 +21,7 @@
             "type": "JwtSession",
             "config": {
                 "cookieName": "IG_SSO",
-                "sessionTimeout": "8 hours",
+                "sessionTimeout": "30 minutes",
                 "sharedSecret": "__JWT_SHARED_SECRET__",
                 "keystore": "JwtKeyStore",
                 "alias": "openig-jwt",
