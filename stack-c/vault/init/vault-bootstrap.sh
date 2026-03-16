@@ -63,3 +63,11 @@ POLICY
 else
   echo "Already bootstrapped."
 fi
+
+# Post-bootstrap hardening (idempotent, runs every bootstrap call)
+vault write secret/config max_versions=5 2>/dev/null || true
+vault write auth/approle/role/openig-role-c \
+  token_ttl=1h token_max_ttl=4h \
+  secret_id_ttl=72h \
+  policies=openig-policy-c 2>/dev/null || true
+echo "Vault hardening applied."

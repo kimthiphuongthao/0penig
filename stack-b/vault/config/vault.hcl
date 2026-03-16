@@ -7,4 +7,7 @@ listener "tcp" {
   tls_disable = true
 }
 
+api_addr      = "http://127.0.0.1:8200"
+disable_mlock = false
+
 ui = true
