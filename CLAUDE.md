@@ -62,7 +62,7 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [ ] Phase 3: Vault Production Hardening — xem `docs/reference/vault-hardening-gaps.md`
 - [ ] Post-Stack C docs: OpenIG built-in filter selection guide
 - [x] Redis persistence (appendonly yes) — đảm bảo SLO blacklist survive restart
-- [ ] Vault audit logging
+- [x] Vault audit logging
 - [ ] Đóng gói: OVA / Docker Compose bundle — single-command deploy
 - [ ] Slide + tài liệu báo cáo phương án giải pháp
 
