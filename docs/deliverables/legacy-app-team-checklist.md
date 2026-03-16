@@ -323,7 +323,7 @@ Sau khi gateway team deploy xong, app team tester có thể tự chạy các tes
 
 ### TC-5: Session timeout
 1. Đăng nhập thành công.
-2. Chờ hết thời gian session (hỏi gateway team thời gian mặc định — thường 8 giờ; có thể rút ngắn trong môi trường test).
+2. Chờ hết thời gian session (hỏi gateway team thời gian mặc định — thường 30 phút; có thể điều chỉnh tùy môi trường).
 3. Truy cập app.
 4. **Kết quả mong đợi:** Redirect về trang đăng nhập, sau khi đăng nhập lại tiếp tục truy cập bình thường.
 
@@ -353,7 +353,7 @@ Gateway team cấu hình để tự động xử lý logout khi người dùng c
 
 Khi gateway down, người dùng không thể đăng nhập mới. Người dùng đang có session hợp lệ có thể bị ảnh hưởng tùy cấu hình. Đây là trade-off của mô hình centralized gateway — gateway chạy HA (High Availability) với ít nhất 2 node để giảm thiểu downtime.
 
-**Lưu ý về SLO khi hạ tầng gặp sự cố:** Nếu thành phần lưu trữ trạng thái logout (Redis) bị gián đoạn đúng lúc có lệnh logout, phiên đăng nhập ở một số app có thể chưa bị thu hồi ngay. Phiên đó sẽ hết hạn tự nhiên theo thời gian session timeout (mặc định 8 giờ). Trong môi trường production, hạ tầng Redis chạy HA (High Availability) để giảm thiểu khả năng này xảy ra.
+**Lưu ý về SLO khi hạ tầng gặp sự cố:** Nếu thành phần lưu trữ trạng thái logout (Redis) bị gián đoạn đúng lúc có lệnh logout, phiên đăng nhập ở một số app có thể chưa bị thu hồi ngay. Phiên đó sẽ hết hạn tự nhiên theo thời gian session timeout (mặc định 30 phút). Trong môi trường production, hạ tầng Redis chạy HA (High Availability) để giảm thiểu khả năng này xảy ra.
 
 **6. Có thể truy cập app trực tiếp (không qua gateway) để debug không?**
 
