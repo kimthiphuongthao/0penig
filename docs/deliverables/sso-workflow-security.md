@@ -148,9 +148,9 @@ SLO path
 | Implementation status | `IMPLEMENTED` |
 | Code evidence | Redis write path in `stack-a/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:305-319`, `stack-b/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:312-326`, `stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:304-318`; fixed TTL `EX 3600` in `stack-a/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:310`, `stack-b/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:317`, `stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:309` |
 | Architecture assessment | `ADEQUATE` |
-| Security risk | Revocation storage exists, but the TTL is fixed at one hour instead of the remaining user session lifetime. No Redis persistence setting is evidenced in the reviewed repo, so restart durability of blacklist entries is uncertain. |
+| Security risk | Revocation storage exists, but the TTL is fixed at one hour instead of the remaining user session lifetime. ~~No Redis persistence setting is evidenced in the reviewed repo, so restart durability of blacklist entries is uncertain.~~ **UPDATE (2026-03-16):** Redis AOF persistence enabled (appendonly yes, appendfsync everysec) across all 3 stacks — blacklist keys verified to survive restart. |
 | Standards reference | OpenID Connect Back-Channel Logout 1.0; RFC 7009 (revocation reliability expectations) |
-| Recommended action | Derive blacklist TTL from validated token expiry or the OpenIG session expiry. If Redis persistence remains outside the remediation boundary, add a gateway-managed durable revocation journal that can be replayed after restart. |
+| Recommended action | Derive blacklist TTL from validated token expiry or the OpenIG session expiry. ~~If Redis persistence remains outside the remediation boundary, add a gateway-managed durable revocation journal that can be replayed after restart.~~ **RESOLVED:** Redis persistence enabled. |
 
 ### H10: SessionBlacklistFilter -> Redis
 

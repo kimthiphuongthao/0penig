@@ -49,7 +49,7 @@
 ### Kế hoạch
 **Kỹ thuật — hoàn thiện trước khi đóng gói:**
 - [ ] Investigate 2 lỗi tồn đọng trong logs: `BackchannelLogoutHandler: logout_token is missing` và `Authorization call-back failed: no authorization in progress`
-- [ ] Bật Redis persistence (`appendonly yes`) — đảm bảo blacklist SLO không mất khi Redis restart
+- [x] Bật Redis persistence (`appendonly yes`) — đảm bảo blacklist SLO không mất khi Redis restart (commit 00f5558)
 - [ ] Bật Vault audit logging — bắt buộc trước khi đưa vào production/OVA
 - [ ] Workaround admin "Logout all sessions" không trigger backchannel — đánh giá giải pháp via Keycloak REST API
 - [ ] Kiểm thử failover trong khi OAuth2 flow đang chạy (interrupt giữa chừng)

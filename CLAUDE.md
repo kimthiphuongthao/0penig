@@ -61,7 +61,7 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] **Fix phase COMPLETE**: 15 fixes (11 implemented, 2 WONT_FIX, 2 verified-no-action) — tracking: `docs/fix-phase/checklist.md`
 - [ ] Phase 3: Vault Production Hardening — xem `docs/reference/vault-hardening-gaps.md`
 - [ ] Post-Stack C docs: OpenIG built-in filter selection guide
-- [ ] Redis persistence (appendonly yes) — đảm bảo SLO blacklist survive restart
+- [x] Redis persistence (appendonly yes) — đảm bảo SLO blacklist survive restart
 - [ ] Vault audit logging
 - [ ] Đóng gói: OVA / Docker Compose bundle — single-command deploy
 - [ ] Slide + tài liệu báo cáo phương án giải pháp
