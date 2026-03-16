@@ -18,6 +18,7 @@ networks:
 volumes:
   mysql_data:
   wordpress_data:
+  redis_a_data:
 
 services:
 
@@ -145,6 +146,9 @@ services:
   redis-a:
     image: redis:7-alpine
     container_name: sso-redis-a
+    command: redis-server --appendonly yes --appendfsync everysec
+    volumes:
+      - redis_a_data:/data
     networks:
       - backend
     restart: unless-stopped

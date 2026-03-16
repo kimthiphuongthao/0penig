@@ -15,6 +15,7 @@ volumes:
   redmine_data:
   jellyfin_config:
   jellyfin_cache:
+  redis_b_data:
 
 services:
 
@@ -130,6 +131,9 @@ services:
   redis-b:
     image: redis:7-alpine
     container_name: sso-redis-b
+    command: redis-server --appendonly yes --appendfsync everysec
+    volumes:
+      - redis_b_data:/data
     networks:
       - backend-b
     restart: unless-stopped

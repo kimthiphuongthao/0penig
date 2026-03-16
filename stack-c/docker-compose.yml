@@ -4,6 +4,9 @@ networks:
   backend-c:
     driver: bridge
 
+volumes:
+  redis_c_data:
+
 services:
   nginx-c:
     image: nginx:1.25-alpine
@@ -99,8 +102,12 @@ services:
 
   redis-c:
     image: redis:7-alpine
+    command: redis-server --appendonly yes --appendfsync everysec
+    volumes:
+      - redis_c_data:/data
     networks:
       - backend-c
+    restart: unless-stopped
 
   vault-c:
     image: hashicorp/vault:1.15
