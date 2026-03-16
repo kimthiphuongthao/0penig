@@ -42,10 +42,10 @@ Related: [[Stack A]] [[Stack C]] [[OpenIG]] [[Keycloak]] [[Vault]]
 |---|---|
 | `00-backchannel-logout-app3.json` | Handles Keycloak `POST /openid/app3/backchannel_logout` and runs `BackchannelLogoutHandler.groovy`. |
 | `00-backchannel-logout-app4.json` | Handles Keycloak `POST /openid/app4/backchannel_logout` and runs `BackchannelLogoutHandler.groovy`. |
-| `00-dotnet-logout.json` | Legacy `/app3/Account/Logout` intercept on `openigb.sso.local`, handled by `DotnetSloHandler.groovy`. |
+| `00-dotnet-logout.json` (DELETED) | Legacy `/app3/Account/Logout` intercept on `openigb.sso.local`, handled by `DotnetSloHandler.groovy`. |
 | `00-jellyfin-logout.json` | Intercepts Jellyfin logout requests and delegates to `SloHandlerJellyfin.groovy`. |
 | `00-redmine-logout.json` | Intercepts Redmine `POST /logout` and delegates to `SloHandlerRedmine.groovy`. |
-| `01-dotnet.json` | Legacy .NET SSO chain for `/app3*` and `/openid/app3*` to `dotnet-app:5000`, with OAuth2 + blacklist + credential injection. |
+| `01-dotnet.json` (DELETED) | Legacy .NET SSO chain for `/app3*` and `/openid/app3*` to `dotnet-app:5000`, with OAuth2 + blacklist + credential injection. |
 | `01-jellyfin.json` | Main Jellyfin SSO chain to `jellyfin:8096`: OAuth2 (`/openid/app3`) + app3 blacklist + Vault creds + token injector + response rewrite. |
 | `02-redmine.json` | Main Redmine SSO chain to `redmine:3000`: OAuth2 (`/openid/app4`) + app4 blacklist + Vault creds + form-login credential injector. |
 
@@ -54,8 +54,8 @@ Related: [[Stack A]] [[Stack C]] [[OpenIG]] [[Keycloak]] [[Vault]]
 | Script file | Purpose |
 |---|---|
 | `BackchannelLogoutHandler.groovy` | Parses Keycloak `logout_token`, extracts `sid/sub`, writes Redis `blacklist:{sid}` with TTL. |
-| `DotnetCredentialInjector.groovy` | Legacy ASP.NET login automation (antiforgery token + cookies) using Vault-backed creds; injects upstream `Cookie`. |
-| `DotnetSloHandler.groovy` | Legacy .NET logout redirect to Keycloak end-session with optional `id_token_hint`. |
+| `DotnetCredentialInjector.groovy` (DELETED) | Legacy ASP.NET login automation (antiforgery token + cookies) using Vault-backed creds; injects upstream `Cookie`. |
+| `DotnetSloHandler.groovy` (DELETED) | Legacy .NET logout redirect to Keycloak end-session with optional `id_token_hint`. |
 | `JellyfinResponseRewriter.groovy` | Rewrites Jellyfin HTML to seed `localStorage` credentials and steer browser flow away from local login. |
 | `JellyfinTokenInjector.groovy` | Calls Jellyfin auth API, stores token/user/device in session, injects MediaBrowser `Authorization`, clears on `401`. |
 | `RedmineCredentialInjector.groovy` | Performs Redmine `/login` GET+POST (CSRF + credentials), caches `_redmine_session`, injects cookies, retries on `/login` redirect. |

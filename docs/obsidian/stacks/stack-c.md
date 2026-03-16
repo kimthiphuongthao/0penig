@@ -105,7 +105,7 @@ Related: [[OpenIG]] [[Keycloak]] [[Vault]] [[Stack C]]
   - `openig-client-c-app5` -> `secret-c`
   - `openig-client-c-app6` -> `secret-c`
 - OpenIG JWT session:
-  - Cookie: `IG_SSO` on domain `.sso.local`
+  - Cookie: `IG_SSO_C` on domain `.sso.local`
   - Stack-C specific `sharedSecret` configured in `stack-c/openig_home/config/config.json`
 - MariaDB bootstrap (dev):
   - `MYSQL_ROOT_PASSWORD=rootpass`

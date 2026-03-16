@@ -80,7 +80,7 @@ SLO path
 | Aspect | Finding |
 |--------|---------|
 | Implementation status | `PARTIAL` |
-| Code evidence | `requireHttps: false` in `stack-a/openig_home/config/routes/01-wordpress.json:37`, `stack-a/openig_home/config/routes/02-app2.json:37`, `stack-b/openig_home/config/routes/01-jellyfin.json:97`, `stack-b/openig_home/config/routes/01-dotnet.json:78`, `stack-b/openig_home/config/routes/02-redmine.json:91`, `stack-c/openig_home/config/routes/10-grafana.json:45`, `stack-c/openig_home/config/routes/11-phpmyadmin.json:45`; HTML failure handlers in `stack-a/openig_home/config/routes/01-wordpress.json:48-58`, `stack-c/openig_home/config/routes/11-phpmyadmin.json:48-58` |
+| Code evidence | `requireHttps: false` in `stack-a/openig_home/config/routes/01-wordpress.json:37`, `stack-a/openig_home/config/routes/02-app2.json:37`, `stack-b/openig_home/config/routes/01-jellyfin.json:97`, `stack-b/openig_home/config/routes/02-redmine.json:91`, `stack-c/openig_home/config/routes/10-grafana.json:45`, `stack-c/openig_home/config/routes/11-phpmyadmin.json:45`; HTML failure handlers in `stack-a/openig_home/config/routes/01-wordpress.json:48-58`, `stack-c/openig_home/config/routes/11-phpmyadmin.json:48-58` |
 | Architecture assessment | `ADEQUATE` |
 | Security risk | The gateway uses HTTP for OIDC callbacks and logout redirects. PKCE and full JWT validation are not evidenced in the custom scripts that later consume token claims, so the overall control plane is weaker than current OIDC guidance. |
 | Standards reference | OpenID Connect Core 1.0; RFC 7636 (PKCE); RFC 7519 (JWT) |

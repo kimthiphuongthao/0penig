@@ -67,7 +67,7 @@ Tất cả domain đã được cấu hình trỏ về `127.0.0.1`:
 | Stack | Routes Loaded |
 |:---|:---|
 | **Stack A** (`sso-openig-1`) | `00-wp-logout`, `00-backchannel-logout-app1`, `01-wordpress`, `02-app2` (4 routes) |
-| **Stack B** (`sso-b-openig-1`) | `00-redmine-logout`, `00-dotnet-logout`, `01-dotnet`, `02-redmine` + `00-jellyfin-logout`, `01-jellyfin`, `00-backchannel-logout-app3/4` (8 routes) |
+| **Stack B** (`sso-b-openig-1`) | `00-redmine-logout`, `02-redmine`, `00-jellyfin-logout`, `01-jellyfin`, `00-backchannel-logout-app3`, `00-backchannel-logout-app4` (6 routes) |
 | **Stack C** (`stack-c-openig-c1-1`) | `00-backchannel-logout-app5`, `00-backchannel-logout-app6`, `10-grafana`, `11-phpmyadmin` (4 routes) |
 
 - **Ghi chú Stack C:** Có WARN ban đầu `"has not been loaded yet, removal ignored"` cho `10-grafana.json` và `11-phpmyadmin.json` — đây là hành vi hot-reload của OpenIG (thử unload route chưa tồn tại khi restart). Sau đó cả 2 routes đều được load thành công. **Không ảnh hưởng đến hoạt động.**
@@ -237,7 +237,7 @@ Tất cả domain đã được cấu hình trỏ về `127.0.0.1`:
 Phân tích từ code (confirmed facts từ config.json các stack):
 - Stack A: JwtSession dùng cookie IG_SSO, có cookieDomain: '.sso.local' → đúng thiết kế
 - Stack B: JwtSession dùng cookie IG_SSO_B, THIẾU cookieDomain → kém tối ưu nhưng không lỗi
-- Stack C: JwtSession dùng cookie IG_SSO, có cookieDomain: '.sso.local' → đúng thiết kế
+- Stack C: JwtSession dùng cookie IG_SSO_C, có cookieDomain: '.sso.local' → đúng thiết kế
 
 Lý do FALSE FAIL:
 - Test được thực hiện trên unauthenticated request → cookie IG_SSO/IG_SSO_B chỉ xuất hiện SAU khi login thành công
