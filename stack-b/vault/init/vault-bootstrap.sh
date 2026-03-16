@@ -34,6 +34,14 @@ fi
 
 export VAULT_TOKEN="$(cat "${KEYS_FILE}.root")"
 
+# Enable audit logging (idempotent — skip if already enabled)
+if ! vault audit list 2>/dev/null | grep -q "file/"; then
+  vault audit enable file file_path=/vault/file/audit.log || true
+  echo "Vault audit logging enabled"
+else
+  echo "Vault audit logging already enabled"
+fi
+
 if [ ! -f "$BOOTSTRAP_FLAG" ]; then
   vault secrets enable -path=secret kv-v2
   vault auth enable approle
