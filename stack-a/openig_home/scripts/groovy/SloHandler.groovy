@@ -30,7 +30,7 @@ if (idToken) {
     params += '&id_token_hint=' + URLEncoder.encode(idToken as String, 'UTF-8')
 }
 def logoutUrl = baseLogoutUrl + '?' + params
-logger.warn('SloHandler: logout URL = ' + logoutUrl)
+logger.info('[SloHandler] Redirecting to Keycloak end_session (client_id=openig-client, post_logout_redirect_uri={}, id_token_hint={})', postLogoutRedirectUri, idToken ? 'PRESENT' : 'ABSENT')
 
 def response = new Response(Status.FOUND)
 response.headers['Location'] = logoutUrl

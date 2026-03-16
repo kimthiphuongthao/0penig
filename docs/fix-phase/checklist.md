@@ -68,7 +68,7 @@
 | ID | Task | Stack | Status | Notes |
 |----|------|-------|--------|-------|
 | 5a | SloHandlerJellyfin.groovy — namespace 'app3' → 'app4' | B | [x] | ✅ Done 2026-03-15. Also fixed: client_id mismatch (OIDC_CLIENT_ID→OIDC_CLIENT_ID_APP4), post_logout_redirect_uri, Keycloak client config. Commit a3cb6c3 |
-| 5b | SloHandler.groovy — không log full logout URL chứa id_token_hint | A | [ ] | A F4 |
+| 5b | SloHandler.groovy — không log full logout URL chứa id_token_hint | A | [x] | ✅ Done 2026-03-16. Redacted: logs client_id, post_logout_redirect_uri, id_token_hint=PRESENT/ABSENT only. Verified in logs. |
 
 ---
 
@@ -100,7 +100,7 @@
 | 2 — Secrets | 4 | 4 | 0 | 0 |
 | 3 — Transport/Origin | 4 | 1 | 0 | 3 |
 | 4 — Session Storage | 3 | 2 | 0 | 1 |
-| 5 — Logout/Observability | 2 | 0 | 0 | 2 |
+| 5 — Logout/Observability | 2 | 2 | 0 | 0 |
 | 6 — Adapter Contract | 3 | 0 | 0 | 3 |
 | 7 — Unsafe Method | 1 | 0 | 0 | 1 |
 | **Total** | **22** | **11** | **0** | **11** |
