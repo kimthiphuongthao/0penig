@@ -78,8 +78,8 @@
 | ID | Task | Stack | Status | Notes |
 |----|------|-------|--------|-------|
 | 6a | Wire PhpMyAdminCookieFilter vào route chain 11-phpmyadmin.json | C | [!] | WONT_FIX — Token mismatch confirmed (phpMyAdmin CSRF protection incompatible with cookie manipulation). User switch handled by `cacheHeader: false` + fresh attributes per request (FIX-09). |
-| 6b | CredentialInjector.groovy — validate synthetic login failure → fail closed (không proxy unauthenticated) | A | [ ] | A §6 Subagent-only |
-| 6c | Validate adapter cleanup hooks wired đúng vào route chain | A | [ ] | A §6 Codex-only |
+| 6b | CredentialInjector.groovy — validate synthetic login failure → fail closed (không proxy unauthenticated) | A | [x] | ✅ Done 2026-03-16. FIX-15: WP login non-302 → return 502 (fail-closed). Verified no regression on normal flow. |
+| 6c | Validate adapter cleanup hooks wired đúng vào route chain | A | [x] | ✅ Done 2026-03-16. FIX-14: unsafe methods (POST/PUT) with expired WP session → 409 instead of redirect. GET/HEAD still redirects. |
 
 ---
 
@@ -88,7 +88,7 @@
 
 | ID | Task | Stack | Status | Notes |
 |----|------|-------|--------|-------|
-| 7a | CredentialInjector.groovy — POST/PUT/PATCH/DELETE expired session → 401 thay vì redirect (mất body) | A | [ ] | A §6 Codex-only |
+| 7a | CredentialInjector.groovy — POST/PUT/PATCH/DELETE expired session → 409 thay vì redirect (mất body) | A | [x] | ✅ Done 2026-03-16. FIX-14: unsafe methods → 409 Conflict. GET/HEAD → redirect (preserved). |
 
 ---
 
@@ -101,8 +101,8 @@
 | 3 — Transport/Origin | 4 | 1 | 0 | 3 |
 | 4 — Session Storage | 3 | 2 | 0 | 1 |
 | 5 — Logout/Observability | 2 | 2 | 0 | 0 |
-| 6 — Adapter Contract | 3 | 0 | 0 | 3 |
-| 7 — Unsafe Method | 1 | 0 | 0 | 1 |
+| 6 — Adapter Contract | 3 | 2 | 0 | 1 |
+| 7 — Unsafe Method | 1 | 1 | 0 | 0 |
 | **Total** | **22** | **11** | **0** | **11** |
 
 ---

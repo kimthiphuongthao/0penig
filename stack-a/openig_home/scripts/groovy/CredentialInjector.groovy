@@ -102,7 +102,13 @@ if (wpSessionCookies == null || wpSessionCookies.isEmpty()) {
                 logger.warn("[CredentialInjector] WP login 302 but no Set-Cookie headers returned")
             }
         } else {
+            // FIX-15: fail-closed — do not proxy unauthenticated if WP login fails
             logger.error("[CredentialInjector] WP login failed — HTTP " + statusCode + " for user '" + wpUsername + "'")
+            conn.disconnect()
+            def failResp = new Response(Status.BAD_GATEWAY)
+            failResp.entity.setString("<html><body><h2>WordPress login failed (HTTP " + statusCode + "). Please retry or contact support.</h2></body></html>")
+            failResp.headers.put('Content-Type', ['text/html'])
+            return failResp
         }
 
         conn.disconnect()
@@ -159,7 +165,16 @@ return next.handle(context, request).then({ response ->
     if ((status == 301 || status == 302) && location != null && location.contains('wp-login.php') && !location.contains('action=logout')) {
         logger.warn("[CredentialInjector] WP redirected to wp-login.php — cached session expired, clearing cache")
         session.remove('wp_session_cookies')
-        // Redirect browser back to same URL so next request gets fresh WP login
+        // FIX-14: unsafe methods (POST/PUT/PATCH/DELETE) → 409 instead of redirect (body would be lost)
+        def method = request.method?.toUpperCase()
+        if (method != 'GET' && method != 'HEAD') {
+            logger.warn("[CredentialInjector] Unsafe method ${method} with expired WP session — returning 409")
+            def conflictResp = new Response(Status.CONFLICT)
+            conflictResp.entity.setString("<html><body><h2>Session expired. Please reload the page and retry your action.</h2></body></html>")
+            conflictResp.headers.put('Content-Type', ['text/html'])
+            return conflictResp
+        }
+        // GET/HEAD: redirect browser back to same URL so next request gets fresh WP login
         def CANONICAL_ORIGIN = System.getenv('CANONICAL_ORIGIN_APP1') ?: 'http://wp-a.sso.local'
         def retryPath = request.uri.path ?: '/'
         def retryQuery = request.uri.query ? '?' + request.uri.query : ''
