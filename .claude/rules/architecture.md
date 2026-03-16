@@ -51,7 +51,7 @@ Keycloak shared: `http://auth.sso.local:8080`, realm `sso-realm`.
 ## Vault — file storage
 - Config: `vault/config/vault.hcl` (multi-line HCL, KHÔNG semicolon)
 - docker-compose: `command: server` (KHÔNG explicit `-config` path)
-- Keys: `vault/data/.vault-keys.unseal`, `vault/data/.vault-keys.root`
+- Keys: `vault/keys/.vault-keys.unseal`, `vault/keys/.vault-keys.admin`
 - Bootstrap flag: `vault/data/.bootstrap-done`
 - Sau Docker restart: sealed → bootstrap → regenerate `secret_id` → restart OpenIG
 
