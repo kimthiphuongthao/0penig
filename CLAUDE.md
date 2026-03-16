@@ -55,7 +55,7 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] **Code review + security review round 2**: 25 fixes (3 rounds, 6 subagent + 2 Codex). Cookie IG_SSO_C, atomic globals.compute(), RESP parsing, admin PRODUCTION, nginx hardening, dead code cleanup, Vault policy fix, etc.
 
 ### Pending
-- [ ] Workaround: admin "Logout all sessions" chưa trigger backchannel logout
+- [x] Workaround: admin "Logout all sessions" — session timeout 30min + access token 5min (max 5min delay)
 
 ### Phase tiếp theo
 - [x] **Fix phase COMPLETE**: 15 fixes (11 implemented, 2 WONT_FIX, 2 verified-no-action) — tracking: `docs/fix-phase/checklist.md`
