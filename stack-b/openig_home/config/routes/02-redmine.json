@@ -52,7 +52,13 @@
       "type": "ScriptableFilter",
       "config": {
         "type": "application/x-groovy",
-        "file": "SessionBlacklistFilterApp3.groovy"
+        "file": "SessionBlacklistFilter.groovy",
+        "args": {
+          "clientEndpoint": "/openid/app3",
+          "sessionCacheKey": "oidc_sid_app3",
+          "canonicalOrigin": "http://redmine-b.sso.local:9080",
+          "canonicalOriginEnvVar": "CANONICAL_ORIGIN_APP3"
+        }
       }
     },
     {

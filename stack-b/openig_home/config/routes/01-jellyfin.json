@@ -58,7 +58,13 @@
       "type": "ScriptableFilter",
       "config": {
         "type": "application/x-groovy",
-        "file": "SessionBlacklistFilterApp4.groovy"
+        "file": "SessionBlacklistFilter.groovy",
+        "args": {
+          "clientEndpoint": "/openid/app4",
+          "sessionCacheKey": "oidc_sid_app4",
+          "canonicalOrigin": "http://jellyfin-b.sso.local:9080",
+          "canonicalOriginEnvVar": "CANONICAL_ORIGIN_APP4"
+        }
       }
     },
     {

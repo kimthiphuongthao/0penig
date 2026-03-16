@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Giải pháp SSO/SLO cho ứng dụng Legacy — Đồ án 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ===========================================
+   CSS CUSTOM PROPERTIES — DARK BOTANICAL
+   =========================================== */
+:root {
+    --bg-primary: #0f0f0f;
+    --bg-secondary: #171717;
+    --bg-card: #1a1a1a;
+    --text-primary: #e8e4df;
+    --text-secondary: #9a9590;
+    --text-muted: #6b6560;
+    --accent-warm: #d4a574;
+    --accent-pink: #e8b4b8;
+    --accent-gold: #c9b896;
+    --accent-sage: #8fa68a;
+    --accent-copper: #b87a56;
+
+    --font-display: 'Cormorant', serif;
+    --font-body: 'IBM Plex Sans', sans-serif;
+
+    --title-size: clamp(2rem, 5.5vw, 4.5rem);
+    --h2-size: clamp(1.5rem, 3.5vw, 2.8rem);
+    --h3-size: clamp(1rem, 2vw, 1.5rem);
+    --subtitle-size: clamp(0.8rem, 1.3vw, 1.05rem);
+    --body-size: clamp(0.7rem, 1.1vw, 0.95rem);
+    --small-size: clamp(0.6rem, 0.85vw, 0.78rem);
+    --tag-size: clamp(0.55rem, 0.75vw, 0.7rem);
+
+    --slide-padding: clamp(2rem, 5vw, 5rem);
+    --content-gap: clamp(0.8rem, 2vw, 1.8rem);
+    --element-gap: clamp(0.3rem, 0.8vw, 0.7rem);
+
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+    --duration-normal: 0.7s;
+    --duration-slow: 1s;
+}
+
+/* ===========================================
+   RESET + BASE
+   =========================================== */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* ===========================================
+   VIEWPORT FITTING: MANDATORY BASE STYLES
+   =========================================== */
+html, body { height: 100%; overflow-x: hidden; }
+html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
+
+body {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-weight: 300;
+    -webkit-font-smoothing: antialiased;
+}
+
+.slide {
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    overflow: hidden;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    padding: var(--slide-padding);
+}
+
+.slide-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-height: 100%;
+    overflow: hidden;
+}
+
+img, .image-container { max-width: 100%; max-height: min(50vh, 400px); object-fit: contain; }
+
+/* ===========================================
+   RESPONSIVE BREAKPOINTS
+   =========================================== */
+@media (max-height: 700px) {
+    :root {
+        --slide-padding: clamp(1rem, 3vw, 2.5rem);
+        --content-gap: clamp(0.5rem, 1.5vw, 1rem);
+        --title-size: clamp(1.5rem, 4.5vw, 3rem);
+        --h2-size: clamp(1.2rem, 3vw, 2rem);
+    }
+}
+@media (max-height: 600px) {
+    :root {
+        --slide-padding: clamp(0.8rem, 2.5vw, 1.8rem);
+        --content-gap: clamp(0.4rem, 1vw, 0.8rem);
+        --title-size: clamp(1.2rem, 4vw, 2.2rem);
+        --body-size: clamp(0.65rem, 1vw, 0.85rem);
+    }
+    .nav-dots, .decorative { display: none; }
+}
+@media (max-height: 500px) {
+    :root {
+        --slide-padding: clamp(0.5rem, 2vw, 1.2rem);
+        --title-size: clamp(1rem, 3.5vw, 1.8rem);
+        --h2-size: clamp(0.9rem, 2.5vw, 1.3rem);
+        --body-size: clamp(0.6rem, 0.9vw, 0.8rem);
+    }
+}
+@media (max-width: 600px) {
+    :root { --title-size: clamp(1.3rem, 7vw, 2.5rem); }
+    .two-col { grid-template-columns: 1fr !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.2s !important; }
+    html { scroll-behavior: auto; }
+}
+
+/* ===========================================
+   DARK BOTANICAL THEME
+   =========================================== */
+
+/* --- Orb decorations --- */
+.orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(clamp(50px, 8vw, 90px));
+    opacity: 0.25;
+    pointer-events: none;
+    animation: orbFloat 10s ease-in-out infinite alternate;
+}
+.orb-warm {
+    background: radial-gradient(circle, var(--accent-warm), transparent 70%);
+}
+.orb-pink {
+    background: radial-gradient(circle, var(--accent-pink), transparent 70%);
+}
+.orb-gold {
+    background: radial-gradient(circle, var(--accent-gold), transparent 70%);
+}
+.orb-sage {
+    background: radial-gradient(circle, var(--accent-sage), transparent 70%);
+}
+
+@keyframes orbFloat {
+    from { transform: translate(0, 0) scale(1); }
+    to { transform: translate(clamp(-12px, -2vw, -20px), clamp(-15px, -2.5vh, -25px)) scale(1.06); }
+}
+
+/* --- Typography --- */
+h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 400;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+}
+h1 { font-size: var(--title-size); }
+h2 { font-size: var(--h2-size); color: var(--text-primary); }
+h3 { font-size: var(--h3-size); color: var(--accent-gold); font-weight: 500; }
+em { font-style: italic; color: var(--accent-warm); }
+strong { font-weight: 500; color: var(--text-primary); }
+
+.tag {
+    display: inline-block;
+    font-size: var(--tag-size);
+    text-transform: uppercase;
+    letter-spacing: 0.35em;
+    color: var(--text-muted);
+}
+
+.section-num {
+    font-family: var(--font-display);
+    font-size: clamp(3rem, 7vw, 6rem);
+    font-weight: 700;
+    color: rgba(212, 165, 116, 0.08);
+    position: absolute;
+    top: var(--slide-padding);
+    right: var(--slide-padding);
+    line-height: 1;
+}
+
+/* --- Accent line --- */
+.accent-line {
+    width: 1px;
+    height: clamp(30px, 4vh, 50px);
+    background: linear-gradient(to bottom, transparent, var(--accent-warm), transparent);
+    margin: clamp(0.5rem, 1vh, 1rem) 0;
+}
+.accent-line-h {
+    width: clamp(40px, 5vw, 60px);
+    height: 1px;
+    background: linear-gradient(to right, var(--accent-warm), transparent);
+    margin: clamp(0.5rem, 1vh, 0.8rem) 0;
+}
+
+/* --- Cards --- */
+.card {
+    background: var(--bg-card);
+    border: 1px solid rgba(232, 228, 223, 0.06);
+    border-radius: clamp(8px, 1.2vw, 16px);
+    padding: clamp(1rem, 2vw, 1.8rem);
+    max-width: min(90vw, 1000px);
+}
+.card-glow {
+    box-shadow: 0 0 clamp(20px, 3vw, 40px) rgba(212, 165, 116, 0.05);
+}
+
+/* --- Grids --- */
+.two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(1rem, 2.5vw, 2.5rem);
+    align-items: start;
+}
+.three-col {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: clamp(0.8rem, 1.5vw, 1.5rem);
+}
+.five-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, clamp(140px, 15vw, 200px)), 1fr));
+    gap: clamp(0.6rem, 1.2vw, 1.2rem);
+}
+
+/* --- Bullet list --- */
+.bullet-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.3rem, 0.7vh, 0.6rem);
+}
+.bullet-list li {
+    font-size: var(--body-size);
+    line-height: 1.5;
+    color: var(--text-secondary);
+    padding-left: clamp(0.8rem, 1.5vw, 1.2rem);
+    position: relative;
+}
+.bullet-list li::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: clamp(0.35rem, 0.7vh, 0.5rem);
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--accent-warm);
+}
+
+/* --- Table-like rows --- */
+.data-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: clamp(0.5rem, 1vh, 0.8rem) 0;
+    border-bottom: 1px solid rgba(232, 228, 223, 0.06);
+    font-size: var(--body-size);
+}
+.data-row:last-child { border-bottom: none; }
+.data-label { color: var(--text-secondary); }
+.data-value { color: var(--accent-gold); font-weight: 500; }
+
+/* --- Stat blocks --- */
+.stat-block {
+    text-align: center;
+}
+.stat-number {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    font-weight: 600;
+    color: var(--accent-gold);
+    line-height: 1;
+}
+.stat-label {
+    font-size: var(--small-size);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    margin-top: clamp(0.2rem, 0.4vh, 0.3rem);
+}
+
+/* --- Diagram boxes --- */
+.diagram-box {
+    border: 1px solid rgba(232, 228, 223, 0.12);
+    border-radius: clamp(6px, 1vw, 10px);
+    padding: clamp(0.5rem, 1vw, 1rem);
+    text-align: center;
+    font-size: var(--small-size);
+    color: var(--text-secondary);
+    background: rgba(26, 26, 26, 0.6);
+}
+.diagram-box.highlight {
+    border-color: var(--accent-warm);
+    color: var(--accent-warm);
+    background: rgba(212, 165, 116, 0.05);
+}
+.diagram-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: var(--small-size);
+}
+
+/* --- Flow steps --- */
+.flow-step {
+    display: flex;
+    align-items: flex-start;
+    gap: clamp(0.6rem, 1.2vw, 1rem);
+}
+.flow-num {
+    font-family: var(--font-display);
+    font-size: clamp(1.2rem, 2vw, 1.8rem);
+    font-weight: 600;
+    color: var(--accent-warm);
+    min-width: clamp(1.5rem, 2.5vw, 2rem);
+    line-height: 1.2;
+}
+.flow-text {
+    font-size: var(--body-size);
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+.flow-text strong { color: var(--text-primary); }
+
+/* --- Tags/badges --- */
+.tech-tag {
+    display: inline-block;
+    padding: clamp(0.15rem, 0.3vh, 0.25rem) clamp(0.5rem, 0.8vw, 0.7rem);
+    border: 1px solid rgba(201, 184, 150, 0.25);
+    border-radius: 100px;
+    font-size: var(--tag-size);
+    color: var(--accent-gold);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+.status-pass {
+    color: var(--accent-sage);
+    border-color: rgba(143, 166, 138, 0.3);
+}
+.status-fixed {
+    color: var(--accent-warm);
+    border-color: rgba(212, 165, 116, 0.3);
+}
+
+/* ===========================================
+   ANIMATIONS
+   =========================================== */
+.reveal {
+    opacity: 0;
+    transform: translateY(clamp(15px, 2.5vh, 30px));
+    transition: opacity var(--duration-normal) var(--ease-out-expo),
+                transform var(--duration-normal) var(--ease-out-expo);
+}
+.reveal-left {
+    opacity: 0;
+    transform: translateX(clamp(-25px, -3vw, -40px));
+    transition: opacity var(--duration-normal) var(--ease-out-expo),
+                transform var(--duration-normal) var(--ease-out-expo);
+}
+.reveal-scale {
+    opacity: 0;
+    transform: scale(0.92);
+    transition: opacity var(--duration-normal) var(--ease-out-expo),
+                transform var(--duration-normal) var(--ease-out-expo);
+}
+.slide.visible .reveal,
+.slide.visible .reveal-left,
+.slide.visible .reveal-scale {
+    opacity: 1;
+    transform: translateY(0) translateX(0) scale(1);
+}
+.slide.visible .reveal:nth-child(1) { transition-delay: 0.05s; }
+.slide.visible .reveal:nth-child(2) { transition-delay: 0.12s; }
+.slide.visible .reveal:nth-child(3) { transition-delay: 0.2s; }
+.slide.visible .reveal:nth-child(4) { transition-delay: 0.28s; }
+.slide.visible .reveal:nth-child(5) { transition-delay: 0.36s; }
+.slide.visible .reveal:nth-child(6) { transition-delay: 0.44s; }
+
+/* ===========================================
+   PROGRESS BAR + NAV DOTS
+   =========================================== */
+.progress-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent-warm), var(--accent-gold));
+    z-index: 9999;
+    transition: width 0.3s ease;
+}
+.nav-dots {
+    position: fixed;
+    right: clamp(0.8rem, 1.5vw, 1.5rem);
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.4rem, 0.8vh, 0.6rem);
+    z-index: 9998;
+}
+.nav-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(232, 228, 223, 0.15);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+    padding: 0;
+}
+.nav-dot.active {
+    background: var(--accent-warm);
+    box-shadow: 0 0 8px rgba(212, 165, 116, 0.4);
+    transform: scale(1.4);
+}
+.nav-dot:hover { background: rgba(232, 228, 223, 0.4); }
+
+/* ===========================================
+   SLIDE-SPECIFIC LAYOUTS
+   =========================================== */
+.title-slide {
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+.title-slide h1 { margin-bottom: clamp(0.3rem, 1vh, 0.8rem); }
+
+.content-slide .slide-content {
+    gap: var(--content-gap);
+    justify-content: center;
+}
+
+/* --- Mechanism cards (slide 5) --- */
+.mech-card {
+    background: var(--bg-card);
+    border: 1px solid rgba(232, 228, 223, 0.06);
+    border-radius: clamp(6px, 1vw, 12px);
+    padding: clamp(0.6rem, 1.2vw, 1.2rem);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.2rem, 0.4vh, 0.4rem);
+}
+.mech-card .mech-icon {
+    font-size: clamp(1rem, 1.8vw, 1.5rem);
+    line-height: 1;
+}
+.mech-card h4 {
+    font-family: var(--font-display);
+    font-size: clamp(0.85rem, 1.3vw, 1.1rem);
+    font-weight: 500;
+    color: var(--text-primary);
+}
+.mech-card p {
+    font-size: var(--small-size);
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+/* --- Stack cards (slide 6) --- */
+.stack-card {
+    background: var(--bg-card);
+    border: 1px solid rgba(232, 228, 223, 0.06);
+    border-radius: clamp(8px, 1.2vw, 14px);
+    padding: clamp(0.8rem, 1.5vw, 1.5rem);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.4rem, 0.8vh, 0.7rem);
+}
+.stack-card .stack-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.stack-card .stack-name {
+    font-family: var(--font-display);
+    font-size: clamp(1rem, 1.8vw, 1.4rem);
+    font-weight: 600;
+    color: var(--accent-warm);
+}
+.stack-card .stack-port {
+    font-size: var(--tag-size);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+/* --- Control items (slide 9) --- */
+.control-item {
+    display: flex;
+    align-items: flex-start;
+    gap: clamp(0.5rem, 1vw, 0.8rem);
+    padding: clamp(0.4rem, 0.7vh, 0.6rem) 0;
+}
+.control-num {
+    font-family: var(--font-display);
+    font-size: clamp(0.9rem, 1.5vw, 1.2rem);
+    font-weight: 600;
+    color: var(--accent-warm);
+    min-width: clamp(1.2rem, 2vw, 1.8rem);
+}
+.control-text {
+    font-size: var(--body-size);
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+.control-text strong { color: var(--text-primary); }
+
+/* ===========================================
+   INLINE EDITING (opt-in)
+   =========================================== */
+.edit-hotzone {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 80px;
+    height: 80px;
+    z-index: 10000;
+    cursor: pointer;
+}
+.edit-toggle {
+    position: fixed;
+    top: clamp(0.5rem, 1vh, 1rem);
+    left: clamp(0.5rem, 1vw, 1rem);
+    background: var(--bg-card);
+    border: 1px solid rgba(232, 228, 223, 0.15);
+    color: var(--text-secondary);
+    padding: clamp(0.3rem, 0.5vh, 0.5rem) clamp(0.6rem, 1vw, 0.8rem);
+    border-radius: 6px;
+    font-size: var(--small-size);
+    font-family: var(--font-body);
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease, background 0.2s ease;
+    z-index: 10001;
+}
+.edit-toggle.show,
+.edit-toggle.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+.edit-toggle.active {
+    background: var(--accent-warm);
+    color: var(--bg-primary);
+    border-color: var(--accent-warm);
+}
+.edit-toggle:hover { background: rgba(212, 165, 116, 0.15); }
+.edit-toggle.active:hover { background: var(--accent-copper); }
+
+[contenteditable="true"] {
+    outline: 1px dashed rgba(212, 165, 116, 0.3);
+    outline-offset: 4px;
+    border-radius: 4px;
+    cursor: text;
+}
+[contenteditable="true"]:focus {
+    outline-color: var(--accent-warm);
+}
+
+.save-indicator {
+    position: fixed;
+    bottom: clamp(0.5rem, 1vh, 1rem);
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--accent-warm);
+    color: var(--bg-primary);
+    padding: 0.3rem 0.8rem;
+    border-radius: 4px;
+    font-size: var(--small-size);
+    font-weight: 500;
+    opacity: 0;
+    transition: all 0.3s ease;
+    z-index: 10002;
+    pointer-events: none;
+}
+.save-indicator.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+</style>
+</head>
+<body>
+
+<!-- Progress bar -->
+<div class="progress-bar" id="progressBar"></div>
+
+<!-- Navigation dots -->
+<nav class="nav-dots" id="navDots" aria-label="Slide navigation"></nav>
+
+<!-- Inline editing controls -->
+<div class="edit-hotzone" id="editHotzone"></div>
+<button class="edit-toggle" id="editToggle" title="Edit mode (E)">Edit</button>
+<div class="save-indicator" id="saveIndicator">Saved</div>
+
+<!-- ===================================================
+     SLIDE 1: TITLE
+     =================================================== -->
+<section class="slide title-slide" data-slide="0">
+    <div class="orb orb-warm" style="width:clamp(250px,35vw,450px);height:clamp(250px,35vw,450px);top:-8%;right:-10%;animation-delay:0s"></div>
+    <div class="orb orb-pink" style="width:clamp(180px,25vw,320px);height:clamp(180px,25vw,320px);bottom:5%;left:-6%;animation-delay:-3s"></div>
+    <div class="orb orb-gold" style="width:clamp(100px,15vw,200px);height:clamp(100px,15vw,200px);top:45%;right:18%;animation-delay:-6s"></div>
+
+    <div class="accent-line reveal"></div>
+    <div class="tag reveal">Đồ án tốt nghiệp · 2026</div>
+    <h1 class="reveal" style="margin-top:clamp(0.5rem,1.5vh,1rem)">Giải pháp <em>SSO/SLO</em><br>cho ứng dụng Legacy</h1>
+    <p class="reveal" style="font-size:var(--subtitle-size);color:var(--text-secondary);max-width:600px;line-height:1.6;margin-top:clamp(0.3rem,0.8vh,0.6rem)">
+        Tích hợp xác thực tập trung qua reverse-proxy gateway<br>không sửa code ứng dụng đích
+    </p>
+    <div class="reveal" style="display:flex;gap:clamp(1.5rem,3vw,2.5rem);margin-top:clamp(1rem,2.5vh,2rem)">
+        <div class="stat-block"><div class="stat-number">6</div><div class="stat-label">Ứng dụng</div></div>
+        <div class="stat-block"><div class="stat-number">5</div><div class="stat-label">Cơ chế login</div></div>
+        <div class="stat-block"><div class="stat-number">28</div><div class="stat-label">Test cases</div></div>
+        <div class="stat-block"><div class="stat-number">15</div><div class="stat-label">Security fixes</div></div>
+    </div>
+    <div class="reveal" style="display:flex;gap:clamp(0.4rem,0.8vw,0.7rem);margin-top:clamp(1rem,2vh,1.5rem)">
+        <span class="tech-tag">OpenIG 6</span>
+        <span class="tech-tag">Keycloak 24</span>
+        <span class="tech-tag">Vault</span>
+        <span class="tech-tag">Redis</span>
+    </div>
+</section>
+
+<!-- ===================================================
+     SLIDE 2: BÀI TOÁN
+     =================================================== -->
+<section class="slide content-slide" data-slide="1">
+    <div class="section-num">01</div>
+    <div class="orb orb-pink" style="width:clamp(200px,28vw,350px);height:clamp(200px,28vw,350px);bottom:-5%;right:-8%;animation-delay:-2s"></div>
+    <div class="slide-content">
+        <div class="tag reveal">Đặt vấn đề</div>
+        <h2 class="reveal">Bài toán <em>thực tế</em></h2>
+        <div class="accent-line-h reveal"></div>
+        <div class="two-col" style="margin-top:clamp(0.5rem,1vh,1rem)">
+            <div>
+                <h3 class="reveal" style="margin-bottom:clamp(0.4rem,0.8vh,0.6rem)">Hiện trạng</h3>
+                <ul class="bullet-list reveal">
+                    <li>Mỗi ứng dụng legacy có <strong>cơ chế login riêng</strong> — Form, Basic, Header, Token, LDAP</li>
+                    <li>Người dùng phải <strong>nhập mật khẩu nhiều lần</strong> khi truy cập các hệ thống khác nhau</li>
+                    <li>Không có cơ chế <strong>đăng xuất tập trung</strong> — logout 1 app, các app khác vẫn giữ session</li>
+                    <li>Credentials <strong>phân tán</strong>, khó quản lý, khó audit</li>
+                </ul>
+            </div>
+            <div>
+                <h3 class="reveal" style="margin-bottom:clamp(0.4rem,0.8vh,0.6rem)">Thách thức</h3>
+                <ul class="bullet-list reveal">
+                    <li>Ứng dụng legacy <strong>không thể sửa code</strong> — vendor lock-in, out of support, thiếu source</li>
+                    <li>Mỗi app dùng framework/protocol <strong>hoàn toàn khác nhau</strong></li>
+                    <li>Cần giải pháp <strong>không xâm lấn</strong> (non-intrusive) — không động vào application layer</li>
+                    <li>Vẫn phải đảm bảo <strong>security standards</strong> — revocation, secret management, HA</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===================================================
+     SLIDE 3: MỤC TIÊU
+     =================================================== -->
+<section class="slide content-slide" data-slide="2">
+    <div class="section-num">02</div>
+    <div class="orb orb-warm" style="width:clamp(180px,22vw,280px);height:clamp(180px,22vw,280px);top:10%;left:-5%;animation-delay:-4s"></div>
+    <div class="slide-content" style="align-items:center;text-align:center">
+        <div class="tag reveal">Mục tiêu đồ án</div>
+        <h2 class="reveal">Reference Solution</h2>
+        <div class="accent-line reveal"></div>
+        <p class="reveal" style="font-size:var(--subtitle-size);color:var(--text-secondary);max-width:650px;line-height:1.7">
+            Xây dựng giải pháp mẫu (<em>reference implementation</em>) cho phép tích hợp bất kỳ ứng dụng legacy nào
+            vào hệ thống SSO/SLO thông qua <strong>reverse-proxy gateway</strong> — mọi xử lý đều ở tầng gateway,
+            ứng dụng đích <strong>giữ nguyên 100%</strong>.
+        </p>
+        <div class="reveal" style="display:flex;gap:clamp(1.5rem,4vw,3rem);margin-top:clamp(1rem,2vh,1.5rem)">
+            <div class="stat-block">
+                <div class="stat-number" style="color:var(--accent-warm)">5</div>
+                <div class="stat-label">Cơ chế xác thực</div>
+            </div>
+            <div class="stat-block">
+                <div class="stat-number" style="color:var(--accent-pink)">5</div>
+                <div class="stat-label">Kiểu logout</div>
+            </div>
+            <div class="stat-block">
+                <div class="stat-number" style="color:var(--accent-sage)">0</div>
+                <div class="stat-label">Sửa code app</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===================================================
+     SLIDE 4: KIẾN TRÚC TỔNG QUAN
+     =================================================== -->
+<section class="slide content-slide" data-slide="3">
+    <div class="section-num">03</div>
+    <div class="orb orb-gold" style="width:clamp(150px,20vw,250px);height:clamp(150px,20vw,250px);bottom:8%;right:-3%;animation-delay:-1s"></div>
+    <div class="slide-content">
+        <div class="tag reveal">Kiến trúc</div>
+        <h2 class="reveal">Kiến trúc <em>tổng quan</em></h2>
+        <div class="accent-line-h reveal"></div>
+        <div class="two-col reveal" style="margin-top:clamp(0.3rem,0.8vh,0.5rem)">
+            <div style="display:flex;flex-direction:column;gap:clamp(0.4rem,0.8vh,0.6rem)">
+                <div class="diagram-box" style="border-color:var(--accent-pink)">Browser</div>
+                <div class="diagram-arrow">↓</div>
+                <div class="diagram-box highlight">nginx — TLS termination, sticky routing</div>
+                <div class="diagram-arrow">↓</div>
+                <div class="diagram-box highlight" style="border-color:var(--accent-gold);color:var(--accent-gold);background:rgba(201,184,150,0.05)">
+                    OpenIG — SSO/SLO engine, credential injection
+                </div>
+                <div class="diagram-arrow">↓</div>
+                <div class="diagram-box">Legacy Application</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:clamp(0.5rem,1vh,0.8rem)">
+                <div class="flow-step">
+                    <div class="flow-num">K</div>
+                    <div class="flow-text"><strong>Keycloak</strong> — IdP tập trung, OIDC provider, backchannel logout sender</div>
+                </div>
+                <div class="flow-step">
+                    <div class="flow-num">V</div>
+                    <div class="flow-text"><strong>Vault</strong> — Secret management, credentials per-user, AppRole auth</div>
+                </div>
+                <div class="flow-step">
+                    <div class="flow-num">R</div>
+                    <div class="flow-text"><strong>Redis</strong> — Revocation store, session blacklist, TTL-bounded</div>
+                </div>
+                <div class="flow-step">
+                    <div class="flow-num" style="color:var(--accent-sage)">HA</div>
+                    <div class="flow-text"><strong>2 OpenIG nodes</strong> + ip_hash + JwtSession stateless cookie</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===================================================
+     SLIDE 5: 5 CƠ CHẾ LOGIN
+     =================================================== -->
+<section class="slide content-slide" data-slide="4">
+    <div class="section-num">04</div>
+    <div class="orb orb-sage" style="width:clamp(150px,18vw,220px);height:clamp(150px,18vw,220px);top:-3%;left:10%;animation-delay:-5s"></div>
+    <div class="slide-content">
+        <div class="tag reveal">Login mechanisms</div>
+        <h2 class="reveal">5 cơ chế <em>xác thực</em></h2>
+        <div class="accent-line-h reveal"></div>
+        <div class="five-grid reveal" style="margin-top:clamp(0.3rem,0.6vh,0.5rem)">
+            <div class="mech-card">
+                <div class="mech-icon" style="color:var(--accent-warm)">&#9998;</div>
+                <h4>Form Login</h4>
+                <p>POST username/password qua HTML form. Gateway inject credentials, forward session cookie.</p>
+                <span class="tech-tag" style="margin-top:auto">WordPress · Redmine</span>
+            </div>
+            <div class="mech-card">
+                <div class="mech-icon" style="color:var(--accent-gold)">&#128274;</div>
+                <h4>HTTP Basic</h4>
+                <p>Authorization: Basic header. Gateway inject Base64 credentials mỗi request.</p>
+                <span class="tech-tag" style="margin-top:auto">phpMyAdmin</span>
+            </div>
+            <div class="mech-card">
+                <div class="mech-icon" style="color:var(--accent-sage)">&#9776;</div>
+                <h4>Header Injection</h4>
+                <p>App trust header do proxy inject (X-WEBAUTH-USER). Gateway strip → re-inject.</p>
+                <span class="tech-tag" style="margin-top:auto">Grafana</span>
+            </div>
+            <div class="mech-card">
+                <div class="mech-icon" style="color:var(--accent-pink)">&#10070;</div>
+                <h4>Token API</h4>
+                <p>REST API login → bearer token. Gateway bridge token vào browser localStorage.</p>
+                <span class="tech-tag" style="margin-top:auto">Jellyfin</span>
+            </div>
+            <div class="mech-card">
+                <div class="mech-icon" style="color:var(--accent-copper)">&#9881;</div>
+                <h4>LDAP</h4>
+                <p>App xác thực qua LDAP/AD. Gateway inject LDAP credentials hoặc Kerberos delegation.</p>
+                <span class="tech-tag" style="margin-top:auto">Pattern reference</span>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===================================================
+     SLIDE 6: 3 STACKS TRIỂN KHAI
+     =================================================== -->
+<section class="slide content-slide" data-slide="5">
+    <div class="section-num">05</div>
+    <div class="orb orb-warm" style="width:clamp(160px,20vw,260px);height:clamp(160px,20vw,260px);bottom:-5%;left:-6%;animation-delay:-3s"></div>
+    <div class="slide-content">
+        <div class="tag reveal">Triển khai</div>
+        <h2 class="reveal">3 stacks <em>độc lập</em></h2>
+        <div class="accent-line-h reveal"></div>
+        <div class="three-col reveal" style="margin-top:clamp(0.3rem,0.6vh,0.5rem)">
+            <div class="stack-card">
+                <div class="stack-header">
+                    <span class="stack-name">Stack A</span>
+                    <span class="stack-port">:80</span>
+                </div>
+                <ul class="bullet-list">
+                    <li><strong>WordPress</strong> — Form login injection</li>
+                    <li><strong>WhoAmI</strong> — OIDC standard (no injection)</li>
+                </ul>
+                <div style="display:flex;gap:0.3rem;flex-wrap:wrap;margin-top:auto">
+                    <span class="tech-tag status-pass">SSO ✓</span>
+                    <span class="tech-tag status-pass">SLO ✓</span>
+                </div>
+            </div>
+            <div class="stack-card">
+                <div class="stack-header">
+                    <span class="stack-name">Stack B</span>
+                    <span class="stack-port">:9080</span>
+                </div>
+                <ul class="bullet-list">
+                    <li><strong>Redmine</strong> — Form login injection</li>
+                    <li><strong>Jellyfin</strong> — Token API injection</li>
+                </ul>
+                <div style="display:flex;gap:0.3rem;flex-wrap:wrap;margin-top:auto">
+                    <span class="tech-tag status-pass">SSO ✓</span>
+                    <span class="tech-tag status-pass">SLO ✓</span>
+                </div>
+            </div>
+            <div class="stack-card">
+                <div class="stack-header">
+                    <span class="stack-name">Stack C</span>
+                    <span class="stack-port">:18080</span>
+                </div>
+                <ul class="bullet-list">
+                    <li><strong>Grafana</strong> — Header injection</li>
+                    <li><strong>phpMyAdmin</strong> — HTTP Basic Auth</li>
+                </ul>
+                <div style="display:flex;gap:0.3rem;flex-wrap:wrap;margin-top:auto">
+                    <span class="tech-tag status-pass">SSO ✓</span>
+                    <span class="tech-tag status-pass">SLO ✓</span>
+                </div>
+            </div>
+        </div>
+        <p class="reveal" style="font-size:var(--small-size);color:var(--text-muted);margin-top:clamp(0.5rem,1vh,0.8rem);text-align:center">
+            Mỗi stack có OpenIG, Vault, Redis, nginx riêng — chỉ Keycloak là shared IdP duy nhất
+        </p>
+    </div>
+</section>
+
+<!-- ===================================================
+     SLIDE 7: SSO FLOW
+     =================================================== -->
+<section class="slide content-slide" data-slide="6">
+    <div class="section-num">06</div>
+    <div class="orb orb-gold" style="width:clamp(130px,16vw,200px);height:clamp(130px,16vw,200px);top:5%;right:5%;animation-delay:-2s"></div>
+    <div class="slide-content">
+        <div class="tag reveal">SSO Flow</div>
+        <h2 class="reveal">Luồng <em>đăng nhập</em></h2>
+        <div class="accent-line-h reveal"></div>
+        <div class="reveal" style="display:flex;flex-direction:column;gap:clamp(0.4rem,0.8vh,0.6rem);margin-top:clamp(0.3rem,0.6vh,0.5rem)">
+            <div class="flow-step">
+                <div class="flow-num">1</div>
+                <div class="flow-text">User truy cập app → <strong>nginx</strong> forward tới OpenIG (ip_hash sticky)</div>
+            </div>
+            <div class="flow-step">
+                <div class="flow-num">2</div>
+                <div class="flow-text">OpenIG check <strong>JwtSession</strong> cookie → chưa có → redirect sang <strong>Keycloak</strong> login</div>
+            </div>
+            <div class="flow-step">
+                <div class="flow-num">3</div>
+                <div class="flow-text">User đăng nhập Keycloak → OIDC callback → OpenIG nhận <strong>id_token + access_token</strong></div>
+            </div>
+            <div class="flow-step">
+                <div class="flow-num">4</div>
+                <div class="flow-text">OpenIG gọi <strong>Vault</strong> lấy credentials cho app đích (AppRole → per-user secret)</div>
+            </div>
+            <div class="flow-step">
+                <div class="flow-num">5</div>
+                <div class="flow-text"><strong>Adapter filter</strong> inject credentials vào app theo cơ chế phù hợp (Form/Basic/Header/Token)</div>
+            </div>
+            <div class="flow-step">
+                <div class="flow-num">6</div>
+                <div class="flow-text">App phản hồi → OpenIG tạo <strong>JwtSession cookie</strong> → trả browser. Lần sau: session tự động</div>
+            </div>
+        </div>
+        <p class="reveal" style="font-size:var(--small-size);color:var(--accent-sage);margin-top:clamp(0.4rem,0.8vh,0.6rem)">
+            User chỉ đăng nhập 1 lần — truy cập app khác tự động SSO qua Keycloak session
+        </p>
+    </div>
+</section>
+
+<!-- ===================================================
+     SLIDE 8: SLO FLOW
+     =================================================== -->
+<section class="slide content-slide" data-slide="7">
+    <div class="section-num">07</div>
+    <div class="orb orb-pink" style="width:clamp(180px,24vw,300px);height:clamp(180px,24vw,300px);bottom:0;left:-4%;animation-delay:-4s"></div>
+    <div class="slide-content">
+        <div class="tag reveal">SLO Flow</div>
+        <h2 class="reveal">Luồng <em>đăng xuất</em></h2>
+        <div class="accent-line-h reveal"></div>
+        <div class="two-col reveal" style="margin-top:clamp(0.3rem,0.6vh,0.5rem)">
+            <div style="display:flex;flex-direction:column;gap:clamp(0.35rem,0.7vh,0.5rem)">
+                <h3 style="font-size:var(--h3-size)">RP-Initiated</h3>
+                <div class="flow-step">
+                    <div class="flow-num">1</div>
+                    <div class="flow-text">User click logout → OpenIG <strong>SloHandler</strong> intercept</div>
+                </div>
+                <div class="flow-step">
+                    <div class="flow-num">2</div>
+                    <div class="flow-text">SloHandler build <strong>end_session_endpoint</strong> URL + id_token_hint</div>
+                </div>
+                <div class="flow-step">
+                    <div class="flow-num">3</div>
+                    <div class="flow-text">Redirect browser → Keycloak <strong>xóa SSO session</strong></div>
+                </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:clamp(0.35rem,0.7vh,0.5rem)">
+                <h3 style="font-size:var(--h3-size)">Backchannel</h3>
+                <div class="flow-step">
+                    <div class="flow-num">4</div>
+                    <div class="flow-text">Keycloak gửi <strong>logout_token</strong> (JWT RS256) tới mỗi OpenIG</div>
+                </div>
+                <div class="flow-step">
+                    <div class="flow-num">5</div>
+                    <div class="flow-text"><strong>BackchannelLogoutHandler</strong> validate JWT → extract sid</div>
+                </div>
+                <div class="flow-step">
+                    <div class="flow-num">6</div>
+                    <div class="flow-text">Ghi <strong>blacklist:sid</strong> vào Redis (TTL = session timeout)</div>
+                </div>
+            </div>
+        </div>
+        <div class="card reveal" style="margin-top:clamp(0.5rem,1vh,0.8rem);padding:clamp(0.5rem,1vw,0.8rem);text-align:center">
+            <p style="font-size:var(--body-size);color:var(--text-secondary)">
+                Mỗi request tiếp theo → <strong>SessionBlacklistFilter</strong> check Redis → nếu blacklisted → kick session → yêu cầu đăng nhập lại
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- ===================================================
+     SLIDE 9: SECURITY CONTROLS
+     =================================================== -->
+<section class="slide content-slide" data-slide="8">
+    <div class="section-num">08</div>
+    <div class="orb orb-warm" style="width:clamp(140px,18vw,230px);height:clamp(140px,18vw,230px);top:-3%;right:-5%;animation-delay:-1s"></div>
+    <div class="slide-content">
+        <div class="tag reveal">Security</div>
+        <h2 class="reveal">7 Required <em>Controls</em></h2>
+        <div class="accent-line-h reveal"></div>
+        <div class="two-col reveal" style="margin-top:clamp(0.2rem,0.5vh,0.4rem)">
+            <div style="display:flex;flex-direction:column;gap:clamp(0.2rem,0.5vh,0.35rem)">
+                <div class="control-item">
+                    <div class="control-num">1</div>
+                    <div class="control-text"><strong>Revocation Contract</strong> — Redis TTL ≥ session timeout, fail-closed 500</div>
+                </div>
+                <div class="control-item">
+                    <div class="control-num">2</div>
+                    <div class="control-text"><strong>Secret Externalization</strong> — Vault runtime, không hardcode</div>
+                </div>
+                <div class="control-item">
+                    <div class="control-num">3</div>
+                    <div class="control-text"><strong>Transport Security</strong> — HTTPS, Secure cookie, requireHttps</div>
+                </div>
+                <div class="control-item">
+                    <div class="control-num">4</div>
+                    <div class="control-text"><strong>Session Storage</strong> — Không lưu secrets trong JwtSession</div>
+                </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:clamp(0.2rem,0.5vh,0.35rem)">
+                <div class="control-item">
+                    <div class="control-num">5</div>
+                    <div class="control-text"><strong>Pinned Origins</strong> — Static redirect URLs, không derive từ Host header</div>
+                </div>
+                <div class="control-item">
+                    <div class="control-num">6</div>
+                    <div class="control-text"><strong>Bounded Dependencies</strong> — Socket timeout 200/500ms, error code chuẩn</div>
+                </div>
+                <div class="control-item">
+                    <div class="control-num">7</div>
+                    <div class="control-text"><strong>Adapter Contract</strong> — Filter chain verified end-to-end, fail-closed</div>
+                </div>
+            </div>
+        </div>
+        <p class="reveal" style="font-size:var(--small-size);color:var(--text-muted);margin-top:clamp(0.4rem,0.8vh,0.6rem);text-align:center">
+            Derived từ code review + security review 3 stacks — tài liệu hóa trong Standard Gateway Pattern v1.1
+        </p>
+    </div>
+</section>
+
+<!-- ===================================================
+     SLIDE 10: VAULT + REDIS
+     =================================================== -->
+<section class="slide content-slide" data-slide="9">
+    <div class="section-num">09</div>
+    <div class="orb orb-sage" style="width:clamp(160px,20vw,260px);height:clamp(160px,20vw,260px);bottom:-3%;right:8%;animation-delay:-5s"></div>
+    <div class="slide-content">
+        <div class="tag reveal">Infrastructure</div>
+        <h2 class="reveal">Vault + <em>Redis</em></h2>
+        <div class="accent-line-h reveal"></div>
+        <div class="two-col reveal" style="margin-top:clamp(0.3rem,0.6vh,0.5rem)">
+            <div>
+                <h3 style="margin-bottom:clamp(0.3rem,0.6vh,0.5rem)">Vault — Secret Management</h3>
+                <ul class="bullet-list">
+                    <li><strong>File storage</strong> — persist data, production-grade (không dev mode)</li>
+                    <li><strong>AppRole auth</strong> — role_id + secret_id, TTL 72h rotation</li>
+                    <li><strong>Per-user credentials</strong> — mỗi SSO user map tới app credentials riêng</li>
+                    <li><strong>Audit logging</strong> — mọi access đều được ghi log</li>
+                    <li><strong>KV max_versions=5</strong> — secret versioning cho rollback</li>
+                </ul>
+            </div>
+            <div>
+                <h3 style="margin-bottom:clamp(0.3rem,0.6vh,0.5rem)">Redis — Revocation Store</h3>
+                <ul class="bullet-list">
+                    <li><strong>Session blacklist</strong> — key: blacklist:sid, value: "revoked"</li>
+                    <li><strong>TTL = session timeout</strong> (1800s) — tự cleanup khi session hết hạn</li>
+                    <li><strong>appendonly yes</strong> — persist blacklist survive restart</li>
+                    <li><strong>Fail-closed</strong> — Redis down → trả 500, không proxy unauthenticated</li>
+                    <li><strong>Socket timeout</strong> — connect 200ms, read 500ms → bounded latency</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===================================================
+     SLIDE 11: HA PATTERN
+     =================================================== -->
+<section class="slide content-slide" data-slide="10">
+    <div class="section-num">10</div>
+    <div class="orb orb-gold" style="width:clamp(130px,16vw,210px);height:clamp(130px,16vw,210px);top:8%;left:-3%;animation-delay:-3s"></div>
+    <div class="slide-content" style="align-items:center;text-align:center">
+        <div class="tag reveal">High Availability</div>
+        <h2 class="reveal">HA Pattern — <em>Stateless</em></h2>
+        <div class="accent-line reveal"></div>
+        <div class="reveal" style="display:flex;flex-direction:column;gap:clamp(0.3rem,0.6vh,0.5rem);align-items:center;max-width:700px;margin-top:clamp(0.3rem,0.6vh,0.4rem)">
+            <div class="diagram-box" style="width:min(60%,300px);border-color:var(--accent-pink)">Browser request</div>
+            <div class="diagram-arrow">↓</div>
+            <div class="diagram-box highlight" style="width:min(70%,350px)">nginx — ip_hash sticky routing</div>
+            <div style="display:flex;gap:clamp(1rem,3vw,2.5rem);width:min(80%,450px);justify-content:center">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:clamp(0.2rem,0.4vh,0.3rem)">
+                    <div class="diagram-arrow">↙</div>
+                    <div class="diagram-box" style="border-color:var(--accent-gold);color:var(--accent-gold)">OpenIG node 1</div>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:clamp(0.2rem,0.4vh,0.3rem)">
+                    <div class="diagram-arrow">↘</div>
+                    <div class="diagram-box" style="border-color:var(--accent-gold);color:var(--accent-gold)">OpenIG node 2</div>
+                </div>
+            </div>
+        </div>
+        <div class="reveal" style="display:flex;gap:clamp(1.5rem,4vw,3rem);margin-top:clamp(0.8rem,1.5vh,1.2rem)">
+            <div class="stat-block">
+                <div style="font-family:var(--font-display);font-size:clamp(1rem,1.8vw,1.4rem);font-weight:600;color:var(--accent-warm)">JwtSession</div>
+                <div class="stat-label">Encrypted cookie</div>
+            </div>
+            <div class="stat-block">
+                <div style="font-family:var(--font-display);font-size:clamp(1rem,1.8vw,1.4rem);font-weight:600;color:var(--accent-gold)">PKCS12</div>
+                <div class="stat-label">Shared keystore</div>
+            </div>
+            <div class="stat-block">
+                <div style="font-family:var(--font-display);font-size:clamp(1rem,1.8vw,1.4rem);font-weight:600;color:var(--accent-sage)">Failover</div>
+                <div class="stat-label">Node down = auto-switch</div>
+            </div>
+        </div>
+        <p class="reveal" style="font-size:var(--small-size);color:var(--text-muted);margin-top:clamp(0.4rem,0.8vh,0.6rem);max-width:550px">
+            Session mã hóa trong cookie → stateless → mọi node đều đọc được → không cần session replication
+        </p>
+    </div>
+</section>
+
+<!-- ===================================================
+     SLIDE 12: KẾT QUẢ KIỂM THỬ
+     =================================================== -->
+<section class="slide content-slide" data-slide="11">
+    <div class="section-num">11</div>
+    <div class="orb orb-pink" style="width:clamp(170px,22vw,280px);height:clamp(170px,22vw,280px);top:-5%;right:-6%;animation-delay:-2s"></div>
+    <div class="slide-content">
+        <div class="tag reveal">Kiểm thử</div>
+        <h2 class="reveal">Kết quả <em>kiểm thử</em></h2>
+        <div class="accent-line-h reveal"></div>
+        <div class="reveal" style="display:flex;gap:clamp(1.5rem,4vw,3rem);justify-content:center;margin:clamp(0.5rem,1.5vh,1rem) 0">
+            <div class="stat-block">
+                <div class="stat-number">28</div>
+                <div class="stat-label">Test cases</div>
+            </div>
+            <div class="stat-block">
+                <div class="stat-number" style="color:var(--accent-sage)">17</div>
+                <div class="stat-label">Pass</div>
+            </div>
+            <div class="stat-block">
+                <div class="stat-number" style="color:var(--accent-pink)">3</div>
+                <div class="stat-label">Fail → Fixed</div>
+            </div>
+            <div class="stat-block">
+                <div class="stat-number" style="color:var(--accent-copper)">4</div>
+                <div class="stat-label">Manual</div>
+            </div>
+        </div>
+        <div class="two-col reveal">
+            <div>
+                <h3 style="margin-bottom:clamp(0.3rem,0.6vh,0.4rem)">Đã verify</h3>
+                <ul class="bullet-list">
+                    <li><strong>SSO</strong> — Login 1 lần, truy cập tất cả 6 apps</li>
+                    <li><strong>SLO</strong> — Logout 1 app, tất cả bị kick</li>
+                    <li><strong>Cross-stack SLO</strong> — Logout Stack A → Stack B/C revoked</li>
+                    <li><strong>Token refresh</strong> — Access token hết hạn → tự động refresh</li>
+                </ul>
+            </div>
+            <div>
+                <h3 style="margin-bottom:clamp(0.3rem,0.6vh,0.4rem)">Stress test</h3>
+                <ul class="bullet-list">
+                    <li><strong>Node failover</strong> — Kill 1 OpenIG → auto-switch, session preserved</li>
+                    <li><strong>Redis down</strong> — Fail-closed 500, không proxy unauthenticated</li>
+                    <li><strong>Vault restart</strong> — Re-seal → bootstrap → regenerate AppRole</li>
+                    <li><strong>Concurrent logout</strong> — Per-session OK, admin workaround 5min</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===================================================
+     SLIDE 13: FIX PHASE
+     =================================================== -->
+<section class="slide content-slide" data-slide="12">
+    <div class="section-num">12</div>
+    <div class="orb orb-warm" style="width:clamp(150px,18vw,240px);height:clamp(150px,18vw,240px);bottom:0;left:-5%;animation-delay:-4s"></div>
+    <div class="slide-content">
+        <div class="tag reveal">Security Hardening</div>
+        <h2 class="reveal">15 <em>security fixes</em></h2>
+        <div class="accent-line-h reveal"></div>
+        <div class="two-col reveal" style="margin-top:clamp(0.2rem,0.5vh,0.4rem)">
+            <div style="display:flex;flex-direction:column;gap:clamp(0.15rem,0.3vh,0.25rem)">
+                <div class="data-row"><span class="data-label">FIX-01</span><span class="data-value"><span class="tech-tag status-fixed">Done</span> Jellyfin logout namespace</span></div>
+                <div class="data-row"><span class="data-label">FIX-02</span><span class="data-value"><span class="tech-tag status-fixed">Done</span> Redis TTL alignment</span></div>
+                <div class="data-row"><span class="data-label">FIX-03/04</span><span class="data-value"><span class="tech-tag status-fixed">Done</span> Fail-closed + timeout</span></div>
+                <div class="data-row"><span class="data-label">FIX-05</span><span class="data-value"><span class="tech-tag status-fixed">Done</span> Backchannel 400→500</span></div>
+                <div class="data-row"><span class="data-label">FIX-06</span><span class="data-value"><span class="tech-tag status-fixed">Done</span> Secret externalization</span></div>
+                <div class="data-row"><span class="data-label">FIX-07</span><span class="data-value"><span class="tech-tag status-fixed">Done</span> HTTPS enforcement docs</span></div>
+                <div class="data-row"><span class="data-label">FIX-08</span><span class="data-value"><span class="tech-tag status-fixed">Done</span> Pinned redirect origins</span></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:clamp(0.15rem,0.3vh,0.25rem)">
+                <div class="data-row"><span class="data-label">FIX-09</span><span class="data-value"><span class="tech-tag status-fixed">Done</span> JwtSession cleanup</span></div>
+                <div class="data-row"><span class="data-label">FIX-10</span><span class="data-value"><span class="tech-tag" style="color:var(--text-muted)">Won't Fix</span> phpMyAdmin CSRF</span></div>
+                <div class="data-row"><span class="data-label">FIX-11</span><span class="data-value"><span class="tech-tag" style="color:var(--text-muted)">Won't Fix</span> Token localStorage</span></div>
+                <div class="data-row"><span class="data-label">FIX-12</span><span class="data-value"><span class="tech-tag status-pass">Verified</span> sid/sub consistency</span></div>
+                <div class="data-row"><span class="data-label">FIX-13</span><span class="data-value"><span class="tech-tag status-fixed">Done</span> Log redaction</span></div>
+                <div class="data-row"><span class="data-label">FIX-14</span><span class="data-value"><span class="tech-tag status-fixed">Done</span> Unsafe method 409</span></div>
+                <div class="data-row"><span class="data-label">FIX-15</span><span class="data-value"><span class="tech-tag status-fixed">Done</span> WP fail-closed</span></div>
+            </div>
+        </div>
+        <p class="reveal" style="font-size:var(--small-size);color:var(--text-muted);margin-top:clamp(0.3rem,0.6vh,0.5rem);text-align:center">
+            11 implemented · 2 won't fix (documented) · 2 verified no-action · + 25 fixes từ code review round 2
+        </p>
+    </div>
+</section>
+
+<!-- ===================================================
+     SLIDE 14: DELIVERABLES
+     =================================================== -->
+<section class="slide content-slide" data-slide="13">
+    <div class="section-num">13</div>
+    <div class="orb orb-gold" style="width:clamp(140px,18vw,230px);height:clamp(140px,18vw,230px);top:5%;right:-4%;animation-delay:-6s"></div>
+    <div class="slide-content">
+        <div class="tag reveal">Deliverables</div>
+        <h2 class="reveal">Sản phẩm <em>bàn giao</em></h2>
+        <div class="accent-line-h reveal"></div>
+        <div class="two-col reveal" style="margin-top:clamp(0.3rem,0.6vh,0.5rem)">
+            <div>
+                <h3 style="margin-bottom:clamp(0.3rem,0.6vh,0.5rem)">Tài liệu kỹ thuật</h3>
+                <ul class="bullet-list">
+                    <li><strong>Standard Gateway Pattern v1.1</strong> — 7 controls + 3 recommended + anti-patterns</li>
+                    <li><strong>Legacy Auth Patterns</strong> — 5 login mechanisms + 5 logout types definitive reference</li>
+                    <li><strong>SSO Workflow Security</strong> — Hop-by-hop assessment H1–H10</li>
+                    <li><strong>Integration Guide</strong> — Step-by-step standalone guide</li>
+                </ul>
+            </div>
+            <div>
+                <h3 style="margin-bottom:clamp(0.3rem,0.6vh,0.5rem)">Cho App Team</h3>
+                <ul class="bullet-list">
+                    <li><strong>Legacy App Team Checklist</strong> — file tối thượng, 10 sections, 3-reviewer QA</li>
+                    <li><strong>Survey Checklist</strong> — khảo sát app trước tích hợp</li>
+                    <li><strong>28 Test Cases</strong> — infrastructure, SSO, SLO, edge cases</li>
+                    <li><strong>Vault Hardening Gaps</strong> — 9 gaps, 6 resolved, 3 deferred</li>
+                </ul>
+            </div>
+        </div>
+        <div class="card card-glow reveal" style="margin-top:clamp(0.5rem,1vh,0.8rem);text-align:center;padding:clamp(0.6rem,1vw,1rem)">
+            <p style="font-size:var(--body-size);color:var(--accent-warm);font-family:var(--font-display);font-weight:500;font-size:clamp(0.9rem,1.3vw,1.1rem)">
+                "App team chỉ cần điền checklist — gateway team xử lý toàn bộ phần còn lại"
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- ===================================================
+     SLIDE 15: KẾT LUẬN
+     =================================================== -->
+<section class="slide title-slide" data-slide="14">
+    <div class="orb orb-warm" style="width:clamp(280px,38vw,480px);height:clamp(280px,38vw,480px);top:-10%;left:-12%;animation-delay:0s"></div>
+    <div class="orb orb-pink" style="width:clamp(200px,28vw,350px);height:clamp(200px,28vw,350px);bottom:-5%;right:-8%;animation-delay:-3s"></div>
+    <div class="orb orb-gold" style="width:clamp(120px,15vw,200px);height:clamp(120px,15vw,200px);top:50%;right:20%;animation-delay:-5s"></div>
+
+    <div class="accent-line reveal"></div>
+    <div class="tag reveal">Kết luận</div>
+    <h2 class="reveal" style="font-size:var(--h2-size);margin-top:clamp(0.3rem,0.8vh,0.5rem)">Kết luận & <em>Hướng phát triển</em></h2>
+    <div class="reveal" style="max-width:600px;margin-top:clamp(0.5rem,1.5vh,1rem)">
+        <ul class="bullet-list" style="text-align:left">
+            <li>Giải pháp <strong>non-intrusive</strong> — 6 apps, 5 cơ chế login, 0 code app bị sửa</li>
+            <li>Security-first — 15 fixes + 25 hardening changes, 7 required controls documented</li>
+            <li>HA-ready — 2-node stateless, fail-closed, bounded dependencies</li>
+            <li>Reproducible — Standard Gateway Pattern cho bất kỳ legacy app nào</li>
+        </ul>
+    </div>
+    <div class="reveal" style="max-width:600px;margin-top:clamp(0.8rem,1.5vh,1.2rem)">
+        <h3 style="text-align:left;margin-bottom:clamp(0.3rem,0.5vh,0.4rem)">Hướng phát triển</h3>
+        <ul class="bullet-list" style="text-align:left">
+            <li><strong>HTTPS/TLS</strong> — Self-signed CA + nginx termination (Phase 7b)</li>
+            <li><strong>Kubernetes</strong> — Multi-tenancy, shared OpenIG/Vault/Redis trên K8s</li>
+            <li><strong>Docker Compose bundle</strong> — Single-command deploy cho training</li>
+            <li><strong>LDAP mechanism</strong> — Mở rộng pattern cho Kerberos/LDAP delegation</li>
+        </ul>
+    </div>
+    <div class="reveal" style="display:flex;gap:clamp(0.4rem,0.8vw,0.7rem);margin-top:clamp(1rem,2vh,1.5rem)">
+        <span class="tech-tag">OpenIG 6</span>
+        <span class="tech-tag">Keycloak 24</span>
+        <span class="tech-tag">Vault</span>
+        <span class="tech-tag">Redis</span>
+        <span class="tech-tag">Docker</span>
+    </div>
+    <p class="reveal" style="font-size:var(--small-size);color:var(--text-muted);margin-top:clamp(0.8rem,1.5vh,1.2rem)">
+        Cảm ơn hội đồng đã lắng nghe
+    </p>
+</section>
+
+<!-- ===========================================
+     JAVASCRIPT: SLIDE CONTROLLER + INLINE EDITING
+     =========================================== -->
+<script>
+/* === SLIDE PRESENTATION CONTROLLER === */
+class SlidePresentation {
+    constructor() {
+        this.slides = document.querySelectorAll('.slide');
+        this.currentSlide = 0;
+        this.isScrolling = false;
+
+        this.setupIntersectionObserver();
+        this.setupKeyboardNav();
+        this.setupTouchNav();
+        this.setupWheelNav();
+        this.setupProgressBar();
+        this.setupNavDots();
+
+        /* Activate first slide */
+        this.slides[0].classList.add('visible');
+    }
+
+    setupIntersectionObserver() {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                    const idx = Array.from(this.slides).indexOf(entry.target);
+                    if (idx !== -1) {
+                        this.currentSlide = idx;
+                        this.updateProgressBar();
+                        this.updateNavDots();
+                    }
+                }
+            });
+        }, { threshold: 0.4 });
+
+        this.slides.forEach(slide => observer.observe(slide));
+    }
+
+    goToSlide(index) {
+        if (index >= 0 && index < this.slides.length) {
+            this.slides[index].scrollIntoView({ behavior: 'smooth' });
+            this.currentSlide = index;
+            this.updateProgressBar();
+            this.updateNavDots();
+        }
+    }
+
+    setupKeyboardNav() {
+        document.addEventListener('keydown', (e) => {
+            /* Skip navigation when editing text */
+            if (e.target.getAttribute('contenteditable') === 'true') return;
+
+            switch(e.key) {
+                case 'ArrowDown':
+                case 'ArrowRight':
+                case ' ':
+                case 'PageDown':
+                    e.preventDefault();
+                    this.goToSlide(this.currentSlide + 1);
+                    break;
+                case 'ArrowUp':
+                case 'ArrowLeft':
+                case 'PageUp':
+                    e.preventDefault();
+                    this.goToSlide(this.currentSlide - 1);
+                    break;
+                case 'Home':
+                    e.preventDefault();
+                    this.goToSlide(0);
+                    break;
+                case 'End':
+                    e.preventDefault();
+                    this.goToSlide(this.slides.length - 1);
+                    break;
+            }
+        });
+    }
+
+    setupTouchNav() {
+        let touchStartY = 0;
+        document.addEventListener('touchstart', (e) => {
+            touchStartY = e.touches[0].clientY;
+        }, { passive: true });
+        document.addEventListener('touchend', (e) => {
+            const diff = touchStartY - e.changedTouches[0].clientY;
+            if (Math.abs(diff) > 50) {
+                this.goToSlide(this.currentSlide + (diff > 0 ? 1 : -1));
+            }
+        }, { passive: true });
+    }
+
+    setupWheelNav() {
+        let wheelTimeout;
+        document.addEventListener('wheel', (e) => {
+            if (this.isScrolling) return;
+            clearTimeout(wheelTimeout);
+            wheelTimeout = setTimeout(() => {
+                if (Math.abs(e.deltaY) > 30) {
+                    this.isScrolling = true;
+                    this.goToSlide(this.currentSlide + (e.deltaY > 0 ? 1 : -1));
+                    setTimeout(() => { this.isScrolling = false; }, 800);
+                }
+            }, 50);
+        }, { passive: true });
+    }
+
+    setupProgressBar() {
+        this.progressBar = document.getElementById('progressBar');
+        this.updateProgressBar();
+    }
+
+    updateProgressBar() {
+        const progress = ((this.currentSlide + 1) / this.slides.length) * 100;
+        this.progressBar.style.width = progress + '%';
+    }
+
+    setupNavDots() {
+        const nav = document.getElementById('navDots');
+        this.slides.forEach((_, i) => {
+            const dot = document.createElement('button');
+            dot.className = 'nav-dot' + (i === 0 ? ' active' : '');
+            dot.setAttribute('aria-label', 'Go to slide ' + (i + 1));
+            dot.addEventListener('click', () => this.goToSlide(i));
+            nav.appendChild(dot);
+        });
+        this.dots = nav.querySelectorAll('.nav-dot');
+    }
+
+    updateNavDots() {
+        this.dots.forEach((dot, i) => {
+            dot.classList.toggle('active', i === this.currentSlide);
+        });
+    }
+}
+
+/* === INLINE EDITOR === */
+class InlineEditor {
+    constructor() {
+        this.isActive = false;
+        this.editToggle = document.getElementById('editToggle');
+        this.saveIndicator = document.getElementById('saveIndicator');
+        this.editableSelectors = 'h1, h2, h3, h4, p, li, span.data-label, span.data-value, .flow-text, .control-text, .mech-card p, .stat-label';
+
+        this.setupHotzone();
+        this.setupKeyboard();
+        this.loadSavedContent();
+    }
+
+    setupHotzone() {
+        const hotzone = document.getElementById('editHotzone');
+        let hideTimeout = null;
+
+        hotzone.addEventListener('mouseenter', () => {
+            clearTimeout(hideTimeout);
+            this.editToggle.classList.add('show');
+        });
+        hotzone.addEventListener('mouseleave', () => {
+            hideTimeout = setTimeout(() => {
+                if (!this.isActive) this.editToggle.classList.remove('show');
+            }, 400);
+        });
+        this.editToggle.addEventListener('mouseenter', () => { clearTimeout(hideTimeout); });
+        this.editToggle.addEventListener('mouseleave', () => {
+            hideTimeout = setTimeout(() => {
+                if (!this.isActive) this.editToggle.classList.remove('show');
+            }, 400);
+        });
+
+        this.editToggle.addEventListener('click', () => this.toggleEditMode());
+        hotzone.addEventListener('click', () => this.toggleEditMode());
+    }
+
+    setupKeyboard() {
+        document.addEventListener('keydown', (e) => {
+            if ((e.key === 'e' || e.key === 'E') && !e.target.getAttribute('contenteditable')) {
+                this.toggleEditMode();
+            }
+            if (e.key === 's' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                this.saveContent();
+                this.showSaveIndicator();
+            }
+        });
+    }
+
+    toggleEditMode() {
+        this.isActive = !this.isActive;
+        this.editToggle.classList.toggle('active', this.isActive);
+        this.editToggle.textContent = this.isActive ? 'Done' : 'Edit';
+
+        document.querySelectorAll(this.editableSelectors).forEach(el => {
+            if (this.isActive) {
+                el.setAttribute('contenteditable', 'true');
+            } else {
+                el.removeAttribute('contenteditable');
+            }
+        });
+
+        if (!this.isActive) {
+            this.saveContent();
+            this.showSaveIndicator();
+        }
+    }
+
+    saveContent() {
+        const data = {};
+        document.querySelectorAll('.slide').forEach((slide, si) => {
+            data['slide_' + si] = slide.innerHTML;
+        });
+        try {
+            localStorage.setItem('sso-presentation-content', JSON.stringify(data));
+        } catch(e) { /* localStorage full or unavailable */ }
+    }
+
+    loadSavedContent() {
+        try {
+            const saved = localStorage.getItem('sso-presentation-content');
+            if (saved) {
+                const data = JSON.parse(saved);
+                document.querySelectorAll('.slide').forEach((slide, si) => {
+                    if (data['slide_' + si]) {
+                        slide.innerHTML = data['slide_' + si];
+                    }
+                });
+            }
+        } catch(e) { /* parse error or unavailable */ }
+    }
+
+    showSaveIndicator() {
+        this.saveIndicator.classList.add('show');
+        setTimeout(() => { this.saveIndicator.classList.remove('show'); }, 1500);
+    }
+}
+
+/* === INIT === */
+document.addEventListener('DOMContentLoaded', () => {
+    new SlidePresentation();
+    new InlineEditor();
+});
+</script>
+
+</body>
+</html>

@@ -68,7 +68,9 @@
         "file": "SessionBlacklistFilter.groovy",
         "args": {
           "clientEndpoint": "/openid/app6",
-          "sessionCacheKey": "oidc_sid_app6"
+          "sessionCacheKey": "oidc_sid_app6",
+          "canonicalOrigin": "http://phpmyadmin-c.sso.local:18080",
+          "canonicalOriginEnvVar": "CANONICAL_ORIGIN_APP6"
         }
       }
     },

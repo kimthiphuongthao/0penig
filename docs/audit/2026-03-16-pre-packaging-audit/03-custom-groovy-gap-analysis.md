@@ -1,0 +1,76 @@
+# Task 1C: Gap Analysis — Custom Groovy vs OpenIG Built-in
+
+**Agent:** analyst (Opus, READ-ONLY)
+**Date:** 2026-03-16
+
+---
+
+## Executive Summary
+
+Of 24 Groovy files across 3 stacks, **none can be fully replaced by OpenIG 6.0.2 built-in filters**. The custom code addresses five capability gaps: (1) backchannel logout with JWT validation, (2) session blacklisting via Redis, (3) Vault AppRole credential fetching, (4) Keycloak end_session_endpoint with id_token_hint, and (5) response body rewriting. However, there is **massive cross-stack duplication** — 24 files contain effectively only 7 distinct logical patterns.
+
+---
+
+## Per-File Verdict Table
+
+| Groovy File | Stack | Purpose | Verdict | Rationale |
+|---|---|---|---|---|
+| BackchannelLogoutHandler.groovy | A | Backchannel JWT validation + Redis blacklist | **KEEP** | No built-in backchannel logout |
+| BackchannelLogoutHandler.groovy | B | Same, audience list [openig-client-b, openig-client-b-app4] | **KEEP** | Same — only audience/redis host differ |
+| BackchannelLogoutHandler.groovy | C | Same, audience list [openig-client-c-app5, openig-client-c-app6] | **KEEP** | Same — millis vs seconds variance |
+| SessionBlacklistFilter.groovy | A | Check Redis blacklist, fail-closed 500 | **KEEP** | No built-in session revocation |
+| SessionBlacklistFilterApp2.groovy | A | Same for WhoAmI (app2) | **KEEP** | Different session key |
+| SessionBlacklistFilter.groovy | B | Same for Stack B (app3+app4) | **KEEP** | Different redis host |
+| SessionBlacklistFilterApp3.groovy | B | Same for Redmine | **KEEP** | App-specific session key |
+| SessionBlacklistFilterApp4.groovy | B | Same for Jellyfin | **KEEP** | App-specific session key |
+| SessionBlacklistFilter.groovy | C | Parameterized via `args` (app5+app6) | **KEEP** | Best implementation — uses args |
+| VaultCredentialFilter.groovy | A | Vault AppRole → WordPress creds | **KEEP** | No built-in Vault client |
+| VaultCredentialFilterRedmine.groovy | B | Vault AppRole → Redmine creds | **KEEP** | Same Vault pattern |
+| VaultCredentialFilterJellyfin.groovy | B | Vault AppRole → Jellyfin creds | **KEEP** | Same Vault pattern |
+| VaultCredentialFilter.groovy | C | Vault AppRole → phpMyAdmin creds | **KEEP** | Extra id_token decode step |
+| CredentialInjector.groovy | A | WordPress multi-step login + cookie cache | **KEEP** | Beyond PasswordReplayFilter |
+| RedmineCredentialInjector.groovy | B | Redmine GET+CSRF+POST login | **KEEP** | Beyond PasswordReplayFilter |
+| JellyfinTokenInjector.groovy | B | Jellyfin JSON API auth + header injection | **KEEP** | Unique token injection pattern |
+| JellyfinResponseRewriter.groovy | B | Inject JS into HTML for localStorage | **KEEP** | No built-in response rewriting |
+| SloHandler.groovy | A | Clear session + Keycloak end_session redirect | **KEEP** | No built-in end_session support |
+| SloHandlerRedmine.groovy | B | Same for Redmine (with try-catch) | **KEEP** | Same + has error handling |
+| SloHandlerJellyfin.groovy | B | Same + Jellyfin /Sessions/Logout API call | **KEEP** | Extra app-specific logout |
+| SloHandlerGrafana.groovy | C | Same for Grafana | **KEEP** | Missing try-catch (known gap) |
+| SloHandlerPhpMyAdmin.groovy | C | Same for phpMyAdmin | **KEEP** | Missing try-catch (known gap) |
+| PhpMyAdminCookieFilter.groovy | C | Track cookie ownership (INACTIVE) | **KEEP (dead)** | WONT_FIX — phpMyAdmin CSRF incompatible |
+| App1ResponseRewriter.groovy | A | Empty file (0 bytes) | **REMOVE** | Dead code |
+
+---
+
+## Cross-Stack Duplication Analysis
+
+| Pattern | Current | Target | Lines Saved |
+|---------|---------|--------|-------------|
+| BackchannelLogoutHandler (3 copies, ~95% identical) | 3 files, ~1043 lines | 1 file, ~350 lines | **~693** |
+| SessionBlacklistFilter (6 copies, ~85% identical) | 6 files, ~752 lines | 1 file, ~155 lines | **~597** |
+| VaultCredentialFilter (4 copies, ~75% identical) | 4 files, ~546 lines | 4+1 shared, ~350 lines | **~196** |
+| SloHandler (5 copies, ~70% identical) | 5 files, ~300 lines | 1-2 files, ~110 lines | **~190** |
+| **Total** | **18 files, ~2641 lines** | **7-8 files, ~965 lines** | **~1676** |
+
+---
+
+## PasswordReplayFilter Investigation
+
+**Q: Could `PasswordReplayFilterHeaplet` replace CredentialInjector (WordPress)?**
+
+**A: No.** PasswordReplayFilter cannot replace because:
+1. No cookie caching in JwtSession (replays form on every qualifying response)
+2. No session expiry detection on response (redirect-to-wp-login.php)
+3. No FIX-14 unsafe method handling (409 for POST/PUT)
+4. WordPress `testcookie` requirement not supported
+
+Same reasoning applies to Redmine (CSRF extraction + GET-then-POST flow).
+
+---
+
+## Open Questions
+
+1. Does `ScriptableHandler` support `args` binding? (prerequisite for parameterization of BackchannelLogoutHandler + SloHandler)
+2. Can OpenIG 6 load shared Groovy utilities from classpath / `evaluate()`?
+3. Is JWKS cache TTL unit difference (Stack C millis vs A/B seconds) intentional or bug?
+4. Should `App1ResponseRewriter.groovy` (0 bytes) be deleted?

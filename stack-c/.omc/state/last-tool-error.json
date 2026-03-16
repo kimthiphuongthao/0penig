@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"git add stack-a/vault/init/vault-bootstrap.sh stack-b/vault/init/vault-bootstrap.sh stack-c/vault/init/vault-bootstrap.sh && git commit -m \\\"$(cat <<'EOF'\\nfeat: enable Vault file audit lo...",
+  "error": "Exit code 128\nfatal: pathspec 'stack-a/vault/init/vault-bootstrap.sh' did not match any files",
+  "timestamp": "2026-03-16T07:46:13.103Z",
+  "retry_count": 2
+}

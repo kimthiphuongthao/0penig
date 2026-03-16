@@ -1,0 +1,84 @@
+# Consolidated Action Items — Pre-Packaging Audit
+
+**Date:** 2026-03-16
+**Source:** 6 audit reports (Tasks 1A through 4)
+
+---
+
+## Priority 1 — CRITICAL (fix before any deployment)
+
+| # | Finding | Source | Files | Effort |
+|---|---------|--------|-------|--------|
+| C-1 | JWKS cache race condition — non-atomic check-then-act on 2 volatile fields | Code Review | 3x BackchannelLogoutHandler.groovy | LOW — use `globals.compute()` pattern |
+| C-2 | App session tokens in JwtSession over HTTP (WP cookies, Jellyfin token, Redmine cookies) | Security | CredentialInjector.groovy, JellyfinTokenInjector.groovy, RedmineCredentialInjector.groovy | HIGH — requires server-side storage or accept as documented lab limitation |
+
+---
+
+## Priority 2 — HIGH (fix before packaging)
+
+| # | Finding | Source | Files | Effort |
+|---|---------|--------|-------|--------|
+| H-1 | SloHandler missing try-catch (3 files) | Code+Security+Architecture | SloHandler.groovy (A), SloHandlerGrafana.groovy (C), SloHandlerPhpMyAdmin.groovy (C) | LOW — wrap in try-catch, follow SloHandlerRedmine pattern |
+| H-2 | `vault/keys/` not in .gitignore | Security | .gitignore | TRIVIAL — 1 line |
+| H-3 | Redmine port 3000 exposed — bypasses SSO | Security | stack-b/docker-compose.yml | TRIVIAL — remove ports mapping |
+| H-4 | Redis without authentication (all stacks) | Security | 3x docker-compose.yml + 9 Groovy files | MEDIUM — add requirepass + AUTH commands |
+| H-5 | Secrets in docker-compose.yml committed to git | Security | 3x docker-compose.yml | MEDIUM — .env file + .gitignore |
+| H-6 | JWKS TTL unit inconsistency (Stack C millis vs A/B seconds) | Code Review | 3x BackchannelLogoutHandler.groovy | LOW — standardize to seconds |
+| H-7 | Stack C docker-compose missing platform/user/restart/healthchecks | Architecture | stack-c/docker-compose.yml | LOW — copy patterns from A/B |
+| H-8 | SessionBlacklistFilterApp2 divergent Base64 implementation | Code Review | SessionBlacklistFilterApp2.groovy | LOW — align with other files |
+| H-9 | Stack C nginx missing proxy_buffer_size 128k | Architecture | stack-c/nginx/nginx.conf | TRIVIAL — add 2 lines |
+
+---
+
+## Priority 3 — MEDIUM (recommended before packaging)
+
+| # | Finding | Source | Effort |
+|---|---------|--------|--------|
+| M-1 | Hardcoded Keycloak URLs in BackchannelLogoutHandler (3 files) | Architecture | LOW — System.getenv() |
+| M-2 | Missing CANONICAL_ORIGIN_* env vars in A/B docker-compose | Architecture | TRIVIAL |
+| M-3 | No security response headers on nginx (all stacks) | Security | LOW — add_header directives |
+| M-4 | JwtSession cookies lack SameSite flag | Security | LOW — nginx proxy_cookie_flags |
+| M-5 | Weak OIDC client secrets Stack C ("secret-c") | Security | TRIVIAL — generate random |
+| M-6 | OpenIG containers run as root (Stacks A/B) | Security | MEDIUM — fix volume permissions |
+| M-7 | Vault TLS disabled + UI enabled | Security | MEDIUM — deferred to TLS phase |
+| M-8 | Hardcoded passwords in vault-bootstrap.sh | Security | MEDIUM — .env sourcing |
+| M-9 | Vault 403 error status inconsistency (502 vs 500) | Code Review | LOW — standardize to 500 |
+| M-10 | Stack A SloHandler hardcoded Keycloak URL (no env var) | Code+Architecture | TRIVIAL |
+| M-11 | readRespLine doesn't throw on EOF | Code Review | LOW |
+| M-12 | base64UrlDecode unnecessary manual padding | Code Review | LOW |
+| M-13 | Externalize Keycloak URLs in Stack A+C routes (match B pattern) | Architecture | MEDIUM |
+| M-14 | App1ResponseRewriter.groovy dead code (0 bytes) | Code+Analyst | TRIVIAL — delete |
+
+---
+
+## Priority 4 — Consolidation (post-packaging, maintenance improvement)
+
+| # | Task | Lines Saved | Prerequisite |
+|---|------|-------------|-------------|
+| P-1 | Parameterize BackchannelLogoutHandler via `args` (3 → 1 file) | ~693 | Verify ScriptableHandler supports `args` |
+| P-2 | Parameterize SessionBlacklistFilter (6 → 1 file, Stack C pattern) | ~597 | None — Stack C already proves pattern |
+| P-3 | Extract shared Vault login utility | ~196 | Verify OpenIG Groovy classpath includes |
+| P-4 | Parameterize SloHandler via `args` (5 → 1-2 files) | ~190 | Verify ScriptableHandler `args` |
+| **Total** | | **~1676** | |
+
+---
+
+## Open Questions (require investigation before consolidation)
+
+1. Does OpenIG 6.0.2 `ScriptableHandler` support `args` binding? (prerequisite for P-1, P-4)
+2. Can OpenIG 6 load shared Groovy utility scripts from classpath / `evaluate()`? (prerequisite for P-3)
+3. Is JWKS cache TTL unit difference (Stack C millis vs A/B seconds) intentional or bug?
+
+---
+
+## Quick Win Batch (can be done in one Codex session)
+
+Items that can be fixed together with minimal risk:
+- H-2: Add `vault/keys/` to .gitignore
+- H-3: Remove Redmine port 3000 exposure
+- H-9: Add proxy_buffer_size to Stack C nginx
+- M-2: Add CANONICAL_ORIGIN env vars to A/B docker-compose
+- M-10: SloHandler Stack A → env var for Keycloak URL
+- M-14: Delete App1ResponseRewriter.groovy
+
+**Estimated impact:** 6 fixes, ~30 minutes, zero risk of regression.

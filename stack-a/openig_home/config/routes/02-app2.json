@@ -80,7 +80,13 @@
       "type": "ScriptableFilter",
       "config": {
         "type": "application/x-groovy",
-        "file": "SessionBlacklistFilterApp2.groovy"
+        "file": "SessionBlacklistFilter.groovy",
+        "args": {
+          "clientEndpoint": "/openid/app2",
+          "sessionCacheKey": "oidc_sid_app2",
+          "canonicalOrigin": "http://whoami-a.sso.local",
+          "canonicalOriginEnvVar": "CANONICAL_ORIGIN_APP2"
+        }
       }
     },
     {

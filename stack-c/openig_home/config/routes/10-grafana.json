@@ -68,7 +68,9 @@
         "file": "SessionBlacklistFilter.groovy",
         "args": {
           "clientEndpoint": "/openid/app5",
-          "sessionCacheKey": "oidc_sid_app5"
+          "sessionCacheKey": "oidc_sid_app5",
+          "canonicalOrigin": "http://grafana-c.sso.local:18080",
+          "canonicalOriginEnvVar": "CANONICAL_ORIGIN_APP5"
         }
       }
     },

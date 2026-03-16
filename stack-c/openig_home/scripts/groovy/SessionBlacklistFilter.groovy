@@ -7,89 +7,84 @@ import java.net.InetSocketAddress
 import java.net.Socket
 import java.util.Base64
 
-def decodeClaimsFromToken = { String jwt ->
+String configuredClientEndpoint = binding.hasVariable('clientEndpoint') ? (clientEndpoint as String) : null
+configuredClientEndpoint = configuredClientEndpoint?.trim()
+String sessionCacheKey = binding.hasVariable('sessionCacheKey') ? (sessionCacheKey as String)?.trim() : null
+String origin = null
+String configuredCanonicalOriginEnvVar = binding.hasVariable('canonicalOriginEnvVar') ? (canonicalOriginEnvVar as String)?.trim() : null
+if (configuredCanonicalOriginEnvVar) {
+    def envVal = System.getenv(configuredCanonicalOriginEnvVar)
+    if (envVal) {
+        origin = envVal
+    }
+}
+if (!origin && binding.hasVariable('canonicalOrigin')) {
+    origin = (canonicalOrigin as String)?.trim()
+}
+
+def decodeSidFromToken = { String jwt ->
     String[] tokenParts = jwt.split('\\.')
     if (tokenParts.length < 2) {
         return null
     }
     String payloadJson = new String(Base64.getUrlDecoder().decode(tokenParts[1]), 'UTF-8')
-    new JsonSlurper().parseText(payloadJson)
-}
-
-def decodeSidFromToken = { String jwt ->
-    def payload = decodeClaimsFromToken(jwt)
+    def payload = new JsonSlurper().parseText(payloadJson)
     (payload?.sid ?: payload?.sub) as String
 }
 
 def readRespLine = { InputStream input ->
     ByteArrayOutputStream buffer = new ByteArrayOutputStream()
-    int previous = -1
     while (true) {
         int current = input.read()
         if (current == -1) {
+            throw new IOException('Unexpected end of stream while reading Redis response line')
+        }
+        if (current == '\r' as char) {
+            int lineFeed = input.read()
+            if (lineFeed == -1) {
+                throw new IOException('Unexpected end of stream while reading Redis response line')
+            }
+            if (lineFeed != '\n' as char) {
+                throw new IOException('Invalid Redis response line ending')
+            }
             break
         }
-        if (previous == '\r' as char && current == '\n' as char) {
-            break
-        }
-        if (previous != -1) {
-            buffer.write(previous)
-        }
-        previous = current
+        buffer.write(current)
     }
     new String(buffer.toByteArray(), 'UTF-8')
 }
 
 try {
-    def cfg = (binding.hasVariable('args') && args instanceof Map) ? (args as Map) : [:]
-    String configuredClientEndpoint = cfg.clientEndpoint as String
-    String sessionCacheKey = (cfg.sessionCacheKey as String)?.trim()
-
-    String hostHeader = request.headers.getFirst('Host') as String
-    String hostWithoutPort = hostHeader?.split(':')?.getAt(0)
-    String hostWithPort = hostHeader?.contains(':') ? hostHeader : (hostWithoutPort ? "${hostWithoutPort}:80" : null)
-    String openigPublicUrl = System.getenv('OPENIG_PUBLIC_URL') ?: (hostWithPort ? "http://${hostWithPort}" : (hostWithoutPort ? "http://${hostWithoutPort}" : 'http://openigc.sso.local'))
-
-    List<String> endpoints = []
-    if (configuredClientEndpoint?.trim()) {
-        endpoints.add(configuredClientEndpoint.trim())
+    if (!configuredClientEndpoint) {
+        throw new IllegalStateException('SessionBlacklistFilter requires clientEndpoint arg')
     }
-    if (!endpoints.contains('/openid/app5')) {
-        endpoints.add('/openid/app5')
-    }
-    if (!endpoints.contains('/openid/app6')) {
-        endpoints.add('/openid/app6')
-    }
-
     if (!sessionCacheKey) {
-        if (configuredClientEndpoint == '/openid/app6' || (hostWithoutPort ?: '').contains('phpmyadmin')) {
-            sessionCacheKey = 'oidc_sid_app6'
-        } else {
-            sessionCacheKey = 'oidc_sid_app5'
-        }
+        throw new IllegalStateException('SessionBlacklistFilter requires sessionCacheKey arg')
     }
-
-    List<String> oauth2SessionKeys = []
-    for (String endpoint : endpoints.unique()) {
-        if (hostWithPort) {
-            oauth2SessionKeys.add("oauth2:http://${hostWithPort}${endpoint}")
-        }
-        if (hostWithoutPort) {
-            oauth2SessionKeys.add("oauth2:http://${hostWithoutPort}${endpoint}")
-        }
-        oauth2SessionKeys.add("oauth2:${openigPublicUrl}${endpoint}")
-    }
-
-    String idToken = null
-    for (String oauth2SessionKey : oauth2SessionKeys.unique()) {
-        idToken = session[oauth2SessionKey]?.get('atr')?.get('id_token') as String
-        if (idToken?.trim()) {
-            break
-        }
+    if (!origin) {
+        throw new IllegalStateException('SessionBlacklistFilter requires canonicalOrigin or canonicalOriginEnvVar')
     }
 
     String sid = session[sessionCacheKey] as String
     if (!sid?.trim()) {
+        String publicUrl = System.getenv('OPENIG_PUBLIC_URL') ?: 'http://openiga.sso.local:80'
+        String hostHeader = request.headers.getFirst('Host') as String
+        String hostWithoutPort = hostHeader?.split(':')?.getAt(0)
+        String hostWithPort = hostHeader?.contains(':') ? hostHeader : (hostWithoutPort ? hostWithoutPort + ':80' : null)
+
+        def sessionKeys = [
+            hostWithPort ? 'oauth2:http://' + hostWithPort + configuredClientEndpoint : null,
+            hostWithoutPort ? 'oauth2:http://' + hostWithoutPort + configuredClientEndpoint : null,
+            'oauth2:' + publicUrl + configuredClientEndpoint
+        ].findAll { it != null }.unique()
+
+        String idToken = null
+        for (def key : sessionKeys) {
+            idToken = session[key]?.get('atr')?.get('id_token') as String
+            if (idToken?.trim()) {
+                break
+            }
+        }
         if (!idToken?.trim()) {
             return next.handle(context, request)
         }
@@ -102,7 +97,7 @@ try {
         session[sessionCacheKey] = sid
     }
 
-    String redisHost = System.getenv('REDIS_HOST') ?: 'redis-c'
+    String redisHost = System.getenv('REDIS_HOST') ?: 'redis-a'
     int redisPort = 6379
     String key = "blacklist:${sid}"
     int keySize = key.getBytes('UTF-8').length
@@ -110,8 +105,8 @@ try {
 
     boolean blacklisted = false
     new Socket().withCloseable { socket ->
-        socket.connect(new InetSocketAddress(redisHost, redisPort), 200)  // 200ms connect timeout
-        socket.setSoTimeout(500)  // 500ms read timeout
+        socket.connect(new InetSocketAddress(redisHost, redisPort), 200)
+        socket.setSoTimeout(500)
         socket.outputStream.write(command.getBytes('UTF-8'))
         socket.outputStream.flush()
 
@@ -127,17 +122,9 @@ try {
 
     if (blacklisted) {
         session.clear()
-
         String originalPath = request.uri.path ?: '/'
         String originalQuery = request.uri.query ? '?' + request.uri.query : ''
-        String CANONICAL_ORIGIN
-        if (configuredClientEndpoint == '/openid/app6' || sessionCacheKey == 'oidc_sid_app6') {
-            CANONICAL_ORIGIN = System.getenv('CANONICAL_ORIGIN_APP6') ?: 'http://phpmyadmin-c.sso.local:18080'
-        } else {
-            CANONICAL_ORIGIN = System.getenv('CANONICAL_ORIGIN_APP5') ?: 'http://grafana-c.sso.local:18080'
-        }
-        String redirectUrl = CANONICAL_ORIGIN + originalPath + originalQuery
-
+        String redirectUrl = origin + originalPath + originalQuery
         Response response = new Response(Status.FOUND)
         response.headers.put('Location', [redirectUrl as String])
         return newResultPromise(response)

@@ -73,7 +73,13 @@
       "type": "ScriptableFilter",
       "config": {
         "type": "application/x-groovy",
-        "file": "SessionBlacklistFilter.groovy"
+        "file": "SessionBlacklistFilter.groovy",
+        "args": {
+          "clientEndpoint": "/openid/app1",
+          "sessionCacheKey": "oidc_sid",
+          "canonicalOrigin": "http://wp-a.sso.local",
+          "canonicalOriginEnvVar": "CANONICAL_ORIGIN_APP1"
+        }
       }
     },
     {

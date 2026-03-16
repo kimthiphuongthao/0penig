@@ -1,0 +1,7 @@
+{
+  "tool_name": "Bash",
+  "tool_input_preview": "{\"command\":\"ADMIN_A=$(cat /Volumes/OS/claude/openig/sso-lab/stack-a/vault/keys/.vault-keys.admin) && docker exec -e VAULT_ADDR=http://127.0.0.1:8200 -e VAULT_TOKEN=\\\"$ADMIN_A\\\" sso-vault vault read -f...",
+  "error": "Exit code 1\n(eval):1: no such file or directory: stack-a/vault/file/openig-role-id",
+  "timestamp": "2026-03-16T08:19:15.115Z",
+  "retry_count": 1
+}

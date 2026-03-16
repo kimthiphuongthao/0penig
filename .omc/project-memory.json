@@ -1,0 +1,426 @@
+{
+  "version": "1.0.0",
+  "lastScanned": 1773589406704,
+  "projectRoot": "/Volumes/OS/claude/openig/sso-lab",
+  "techStack": {
+    "languages": [],
+    "frameworks": [],
+    "packageManager": null,
+    "runtime": null
+  },
+  "build": {
+    "buildCommand": null,
+    "testCommand": null,
+    "lintCommand": null,
+    "devCommand": null,
+    "scripts": {}
+  },
+  "conventions": {
+    "namingStyle": null,
+    "importStyle": null,
+    "testPattern": null,
+    "fileOrganization": null
+  },
+  "structure": {
+    "isMonorepo": false,
+    "workspaces": [],
+    "mainDirectories": [
+      "docs"
+    ],
+    "gitBranches": null
+  },
+  "customNotes": [],
+  "directoryMap": {
+    "docs": {
+      "path": "docs",
+      "purpose": "Documentation",
+      "fileCount": 1,
+      "lastAccessed": 1773589406693,
+      "keyFiles": [
+        "progress.md"
+      ]
+    },
+    "keycloak": {
+      "path": "keycloak",
+      "purpose": null,
+      "fileCount": 2,
+      "lastAccessed": 1773589406693,
+      "keyFiles": [
+        "docker-compose.yml",
+        "realm-export.json"
+      ]
+    },
+    "obsidian-skills": {
+      "path": "obsidian-skills",
+      "purpose": null,
+      "fileCount": 2,
+      "lastAccessed": 1773589406693,
+      "keyFiles": [
+        "LICENSE",
+        "README.md"
+      ]
+    },
+    "stack-a": {
+      "path": "stack-a",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1773589406694,
+      "keyFiles": [
+        "docker-compose.yml"
+      ]
+    },
+    "stack-b": {
+      "path": "stack-b",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1773589406694,
+      "keyFiles": [
+        "docker-compose.yml"
+      ]
+    },
+    "stack-c": {
+      "path": "stack-c",
+      "purpose": null,
+      "fileCount": 1,
+      "lastAccessed": 1773589406694,
+      "keyFiles": [
+        "docker-compose.yml"
+      ]
+    },
+    "stack-a/docs": {
+      "path": "stack-a/docs",
+      "purpose": "Documentation",
+      "fileCount": 0,
+      "lastAccessed": 1773589406694,
+      "keyFiles": []
+    },
+    "stack-a/tests": {
+      "path": "stack-a/tests",
+      "purpose": "Test files",
+      "fileCount": 1,
+      "lastAccessed": 1773589406695,
+      "keyFiles": [
+        "test-sso.sh"
+      ]
+    },
+    "stack-b/docs": {
+      "path": "stack-b/docs",
+      "purpose": "Documentation",
+      "fileCount": 1,
+      "lastAccessed": 1773589406695,
+      "keyFiles": [
+        "redmine-integration-journal.md"
+      ]
+    },
+    "stack-c/docs": {
+      "path": "stack-c/docs",
+      "purpose": "Documentation",
+      "fileCount": 0,
+      "lastAccessed": 1773589406695,
+      "keyFiles": []
+    }
+  },
+  "hotPaths": [
+    {
+      "path": "",
+      "accessCount": 157,
+      "lastAccessed": 1773656386191,
+      "type": "directory"
+    },
+    {
+      "path": "stack-c/openig_home/scripts/groovy/VaultCredentialFilter.groovy",
+      "accessCount": 58,
+      "lastAccessed": 1773655582052,
+      "type": "file"
+    },
+    {
+      "path": "docs/fix-phase/checklist.md",
+      "accessCount": 40,
+      "lastAccessed": 1773652910201,
+      "type": "file"
+    },
+    {
+      "path": "CLAUDE.md",
+      "accessCount": 37,
+      "lastAccessed": 1773656727851,
+      "type": "directory"
+    },
+    {
+      "path": "stack-c/docker-compose.yml",
+      "accessCount": 33,
+      "lastAccessed": 1773654578619,
+      "type": "directory"
+    },
+    {
+      "path": "stack-b/openig_home/scripts/groovy/VaultCredentialFilterJellyfin.groovy",
+      "accessCount": 32,
+      "lastAccessed": 1773654207013,
+      "type": "file"
+    },
+    {
+      "path": "stack-b/openig_home/scripts/groovy/VaultCredentialFilterRedmine.groovy",
+      "accessCount": 31,
+      "lastAccessed": 1773654232465,
+      "type": "file"
+    },
+    {
+      "path": "stack-c/openig_home/config/routes/11-phpmyadmin.json",
+      "accessCount": 30,
+      "lastAccessed": 1773656326188,
+      "type": "file"
+    },
+    {
+      "path": ".claude/rules/gotchas.md",
+      "accessCount": 28,
+      "lastAccessed": 1773656783697,
+      "type": "file"
+    },
+    {
+      "path": "stack-c/openig_home/scripts/groovy/SessionBlacklistFilter.groovy",
+      "accessCount": 27,
+      "lastAccessed": 1773656327477,
+      "type": "file"
+    },
+    {
+      "path": "stack-b/openig_home/config/routes/02-redmine.json",
+      "accessCount": 26,
+      "lastAccessed": 1773655842748,
+      "type": "file"
+    },
+    {
+      "path": "stack-b/openig_home/scripts/groovy/SloHandlerRedmine.groovy",
+      "accessCount": 24,
+      "lastAccessed": 1773656335772,
+      "type": "file"
+    },
+    {
+      "path": "stack-a/openig_home/scripts/groovy/VaultCredentialFilter.groovy",
+      "accessCount": 23,
+      "lastAccessed": 1773655581791,
+      "type": "file"
+    },
+    {
+      "path": "stack-c/openig_home/scripts/groovy/SloHandlerGrafana.groovy",
+      "accessCount": 23,
+      "lastAccessed": 1773656337156,
+      "type": "file"
+    },
+    {
+      "path": "stack-b/nginx/nginx.conf",
+      "accessCount": 22,
+      "lastAccessed": 1773654273853,
+      "type": "file"
+    },
+    {
+      "path": "stack-a/openig_home/scripts/groovy/SloHandler.groovy",
+      "accessCount": 22,
+      "lastAccessed": 1773656328015,
+      "type": "file"
+    },
+    {
+      "path": "stack-b/docker-compose.yml",
+      "accessCount": 21,
+      "lastAccessed": 1773656413136,
+      "type": "file"
+    },
+    {
+      "path": "stack-c/openig_home/config/routes/10-grafana.json",
+      "accessCount": 19,
+      "lastAccessed": 1773655855573,
+      "type": "file"
+    },
+    {
+      "path": "stack-b/openig_home/scripts/groovy/SloHandlerJellyfin.groovy",
+      "accessCount": 19,
+      "lastAccessed": 1773655896438,
+      "type": "file"
+    },
+    {
+      "path": "stack-b/openig_home/scripts/groovy/SessionBlacklistFilter.groovy",
+      "accessCount": 19,
+      "lastAccessed": 1773656326606,
+      "type": "file"
+    },
+    {
+      "path": "stack-c/openig_home/scripts/groovy/SloHandlerPhpMyAdmin.groovy",
+      "accessCount": 19,
+      "lastAccessed": 1773656337414,
+      "type": "file"
+    },
+    {
+      "path": "stack-a/openig_home/scripts/groovy/CredentialInjector.groovy",
+      "accessCount": 18,
+      "lastAccessed": 1773654338280,
+      "type": "file"
+    },
+    {
+      "path": "stack-b/openig_home/scripts/groovy/SessionBlacklistFilterApp4.groovy",
+      "accessCount": 17,
+      "lastAccessed": 1773655883776,
+      "type": "file"
+    },
+    {
+      "path": "stack-b/openig_home/scripts/groovy/SessionBlacklistFilterApp3.groovy",
+      "accessCount": 16,
+      "lastAccessed": 1773655883404,
+      "type": "file"
+    },
+    {
+      "path": "stack-b/openig_home/config/routes/00-backchannel-logout-app4.json",
+      "accessCount": 16,
+      "lastAccessed": 1773656422940,
+      "type": "file"
+    },
+    {
+      "path": "stack-c",
+      "accessCount": 15,
+      "lastAccessed": 1773656359323,
+      "type": "directory"
+    },
+    {
+      "path": "stack-a/openig_home/config/routes/01-wordpress.json",
+      "accessCount": 15,
+      "lastAccessed": 1773656930344,
+      "type": "file"
+    },
+    {
+      "path": "stack-a/nginx/nginx.conf",
+      "accessCount": 14,
+      "lastAccessed": 1773654269272,
+      "type": "file"
+    },
+    {
+      "path": "stack-b/openig_home/config/routes/01-jellyfin.json",
+      "accessCount": 14,
+      "lastAccessed": 1773655843176,
+      "type": "file"
+    },
+    {
+      "path": "stack-b/openig_home/config/routes/00-backchannel-logout-app3.json",
+      "accessCount": 14,
+      "lastAccessed": 1773656376490,
+      "type": "file"
+    },
+    {
+      "path": ".claude/rules/architecture.md",
+      "accessCount": 14,
+      "lastAccessed": 1773656657237,
+      "type": "file"
+    },
+    {
+      "path": "stack-b/openig_home/scripts/groovy/JellyfinTokenInjector.groovy",
+      "accessCount": 13,
+      "lastAccessed": 1773654349655,
+      "type": "file"
+    },
+    {
+      "path": "docs/deliverables/legacy-app-team-checklist.md",
+      "accessCount": 13,
+      "lastAccessed": 1773655545275,
+      "type": "file"
+    },
+    {
+      "path": "stack-b/openig_home/config/config.json",
+      "accessCount": 12,
+      "lastAccessed": 1773654184848,
+      "type": "file"
+    },
+    {
+      "path": "stack-a/openig_home/config/routes/02-app2.json",
+      "accessCount": 12,
+      "lastAccessed": 1773655840960,
+      "type": "file"
+    },
+    {
+      "path": "stack-b/openig_home/scripts/groovy/RedmineCredentialInjector.groovy",
+      "accessCount": 11,
+      "lastAccessed": 1773654459962,
+      "type": "file"
+    },
+    {
+      "path": "stack-b/openig_home/config/routes",
+      "accessCount": 11,
+      "lastAccessed": 1773656386685,
+      "type": "directory"
+    },
+    {
+      "path": "stack-b/openig_home/config/routes/00-redmine-logout.json",
+      "accessCount": 10,
+      "lastAccessed": 1773655857099,
+      "type": "file"
+    },
+    {
+      "path": "stack-b/openig_home/config/routes/00-jellyfin-logout.json",
+      "accessCount": 10,
+      "lastAccessed": 1773655858131,
+      "type": "file"
+    },
+    {
+      "path": "stack-c/openig_home/config/routes/00-grafana-logout.json",
+      "accessCount": 9,
+      "lastAccessed": 1773655858470,
+      "type": "file"
+    },
+    {
+      "path": "stack-a/openig_home/config/routes/00-wp-logout.json",
+      "accessCount": 8,
+      "lastAccessed": 1773655842258,
+      "type": "file"
+    },
+    {
+      "path": "stack-b",
+      "accessCount": 8,
+      "lastAccessed": 1773656388659,
+      "type": "directory"
+    },
+    {
+      "path": "stack-b/openig_home/scripts/groovy",
+      "accessCount": 7,
+      "lastAccessed": 1773636030458,
+      "type": "directory"
+    },
+    {
+      "path": "stack-c/openig_home/config/routes",
+      "accessCount": 7,
+      "lastAccessed": 1773643766074,
+      "type": "directory"
+    },
+    {
+      "path": "stack-a/openig_home/config/routes",
+      "accessCount": 7,
+      "lastAccessed": 1773656377351,
+      "type": "directory"
+    },
+    {
+      "path": ".claude/rules/restart.md",
+      "accessCount": 6,
+      "lastAccessed": 1773650022654,
+      "type": "file"
+    },
+    {
+      "path": "stack-c/openig_home",
+      "accessCount": 2,
+      "lastAccessed": 1773627234166,
+      "type": "directory"
+    },
+    {
+      "path": "stack-b/openig_home",
+      "accessCount": 2,
+      "lastAccessed": 1773643202292,
+      "type": "directory"
+    },
+    {
+      "path": "stack-b/nginx",
+      "accessCount": 1,
+      "lastAccessed": 1773589834473,
+      "type": "directory"
+    },
+    {
+      "path": "stack-b/openig_home/config/routes/01-dotnet.json",
+      "accessCount": 1,
+      "lastAccessed": 1773591488613,
+      "type": "file"
+    }
+  ],
+  "userDirectives": []
+}
