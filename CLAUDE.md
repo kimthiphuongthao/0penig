@@ -45,13 +45,19 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] Stack B Jellyfin SLO re-login: `post_logout_redirect_uri` → `/web/index.html`, spinner remaining (app permission, not SSO)
 - [x] Docs reorganize: `docs/` → `deliverables/`, `testing/`, `reference/`, `historical/` (8 deleted, 22 moved)
 - [x] Docs update: sso-workflow-security H8 IMPLEMENTED (Tier 3→2), integration guide +Stack C, audit scores, gateway pattern B F5 RESOLVED
+- [x] FIX-10: WONT_FIX — PhpMyAdminCookieFilter Token mismatch (phpMyAdmin CSRF incompatible)
+- [x] FIX-11: WONT_FIX — Token injection pattern constraint (SPA requires localStorage)
+- [x] FIX-12: sid/sub consistency verified — no mismatch across all stacks
+- [x] FIX-13: SloHandler id_token_hint log redaction (Stack A)
+- [x] FIX-14+15: Unsafe method reauth 409 + WordPress adapter fail-closed (Stack A)
+- [x] Entrypoint cp -r stale config fix — rm -rf before cp (all 3 stacks)
 - [x] **Legacy App Team Checklist**: `docs/deliverables/legacy-app-team-checklist.md` — file tối thượng, 3-reviewer QA (Critic+Gemini+Codex)
 
 ### Pending
 - [ ] Workaround: admin "Logout all sessions" chưa trigger backchannel logout
 
 ### Phase tiếp theo
-- [ ] **Fix phase**: implement fixes theo `.omc/plans/fix-phase-openig-gaps.md` (15 fixes, Batch 0→7) — tracking: `docs/fix-phase/checklist.md`
+- [x] **Fix phase COMPLETE**: 15 fixes (11 implemented, 2 WONT_FIX, 2 verified-no-action) — tracking: `docs/fix-phase/checklist.md`
 - [ ] Phase 3: Vault Production Hardening — xem `docs/reference/vault-hardening-gaps.md`
 - [ ] Post-Stack C docs: OpenIG built-in filter selection guide
 - [ ] Redis persistence (appendonly yes) — đảm bảo SLO blacklist survive restart
