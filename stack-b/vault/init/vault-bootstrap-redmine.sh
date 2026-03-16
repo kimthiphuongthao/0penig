@@ -5,8 +5,8 @@ export VAULT_TOKEN=vault-root-token
 
 # Update policy to include redmine-creds
 vault policy write openig-readonly - <<EOF
-path "secret/data/dotnet-creds/*" { capabilities = ["read"] }
 path "secret/data/redmine-creds/*" { capabilities = ["read"] }
+path "secret/data/jellyfin-creds/*" { capabilities = ["read"] }
 EOF
 
 # Add Redmine user credentials (keyed by email)
