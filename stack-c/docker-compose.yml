@@ -121,3 +121,4 @@ services:
       - ./vault/data:/vault/data
       - ./vault/file:/vault/file
       - ./vault/init:/vault/init
+      - ./vault/keys:/vault/keys

@@ -185,6 +185,7 @@ services:
       - ./vault/config:/vault/config:ro
       - ./vault/data:/vault/data
       - ./vault/file:/vault/file
+      - ./vault/keys:/vault/keys
     networks:
       - backend-b
     restart: unless-stopped

@@ -2,10 +2,20 @@
 set -euo pipefail
 
 export VAULT_ADDR=http://127.0.0.1:8200
-KEYS_FILE=/vault/data/.vault-keys
+KEYS_FILE=/vault/keys/.vault-keys
 BOOTSTRAP_FLAG=/vault/data/.bootstrap-done
 
 mkdir -p /vault/data /vault/init
+
+# Migrate keys from old location (one-time)
+if [ -f "/vault/data/.vault-keys.unseal" ] && [ ! -f "/vault/keys/.vault-keys.unseal" ]; then
+  mkdir -p /vault/keys
+  cp /vault/data/.vault-keys.unseal /vault/keys/.vault-keys.unseal 2>/dev/null || true
+  cp /vault/data/.vault-keys.root /vault/keys/.vault-keys.root 2>/dev/null || true
+  cp /vault/data/.vault-keys.admin /vault/keys/.vault-keys.admin 2>/dev/null || true
+  chmod 600 /vault/keys/.vault-keys.* 2>/dev/null || true
+  echo "Migrated vault keys to /vault/keys/"
+fi
 
 for i in $(seq 1 30); do
   code=$(vault status >/dev/null 2>&1; echo $?)
@@ -34,7 +44,15 @@ if [ "$SEALED" = "true" ]; then
   vault operator unseal "$(cat "${KEYS_FILE}.unseal")"
 fi
 
-export VAULT_TOKEN="$(cat "${KEYS_FILE}.root")"
+# Authenticate — prefer admin token, fallback to root
+if [ -f "${KEYS_FILE}.admin" ]; then
+  export VAULT_TOKEN="$(cat "${KEYS_FILE}.admin")"
+elif [ -f "${KEYS_FILE}.root" ]; then
+  export VAULT_TOKEN="$(cat "${KEYS_FILE}.root")"
+else
+  echo "ERROR: No admin or root token found at ${KEYS_FILE}"
+  exit 1
+fi
 
 # Enable audit logging (idempotent — skip if already enabled)
 if ! vault audit list 2>/dev/null | grep -q "file/"; then
@@ -62,6 +80,35 @@ POLICY
   echo "Bootstrap complete."
 else
   echo "Already bootstrapped."
+fi
+
+# Admin token management (idempotent — skip if admin token already exists)
+if [ ! -f "${KEYS_FILE}.admin" ]; then
+  vault policy write vault-admin - <<'ADMIN_POLICY'
+path "auth/approle/role/*" { capabilities = ["read", "update"] }
+path "auth/approle/role/+/role-id" { capabilities = ["read"] }
+path "auth/approle/role/+/secret-id" { capabilities = ["create", "update"] }
+path "secret/config" { capabilities = ["read", "update"] }
+path "sys/audit" { capabilities = ["read", "sudo"] }
+path "sys/audit/*" { capabilities = ["create", "read", "update", "delete", "sudo"] }
+path "sys/health" { capabilities = ["read"] }
+path "sys/mounts" { capabilities = ["read"] }
+path "sys/mounts/*" { capabilities = ["read"] }
+ADMIN_POLICY
+
+  ADMIN_TOKEN=$(vault token create -orphan -policy=vault-admin -period=8760h -field=token)
+  if [ -z "$ADMIN_TOKEN" ]; then
+    echo "WARNING: Failed to create admin token. Root token NOT revoked."
+  else
+    echo "$ADMIN_TOKEN" > "${KEYS_FILE}.admin"
+    chmod 600 "${KEYS_FILE}.admin"
+    vault token revoke -self
+    export VAULT_TOKEN="$ADMIN_TOKEN"
+    rm -f "${KEYS_FILE}.root"
+    echo "Root token revoked. Admin token created."
+  fi
+else
+  echo "Admin token already exists."
 fi
 
 # Post-bootstrap hardening (idempotent, runs every bootstrap call)
