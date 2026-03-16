@@ -8,33 +8,34 @@
 
 ## Current State vs Production Requirements
 
-| # | Criterion | Current State | Severity | Type | Production Fix |
-|---|---|---|---|---|---|
-| 1 | Root token revocation | Root token not revoked after bootstrap | CRITICAL | Real Risk | Revoke root token immediately after bootstrap |
-| 2 | Unseal key storage | stored on same filesystem as Vault data | HIGH | Real Risk | Separate unseal key from Vault data filesystem (or use auto-unseal) |
-| 3 | AppRole hardening | missing: secret_id_num_uses, secret_id_ttl, CIDR binding | HIGH | Real Risk | Harden AppRole: secret_id_num_uses=1, secret_id_ttl short, CIDR binding |
-| 4 | Audit logging | Not enabled | HIGH | Real Risk | Enable audit logging (at least one durable audit device) |
-| 5 | Storage backend | File storage (no HA, no hot backup) | HIGH | Lab Convenience | Migrate storage to Raft integrated storage for HA |
-| 6 | TLS security | TLS disabled (tls_disable=true) | MEDIUM | Real Risk | Enable TLS (if network isolation is not guaranteed) |
-| 7 | KV v2 versions | max_versions not limited (default 10) | MEDIUM | Lab Convenience | Limit KV v2 max_versions to 3-5 |
-| 8 | Operational config | api_addr not set in vault.hcl | LOW | Operational Gap | Set api_addr |
-| 9 | Memory locking | disable_mlock not set | LOW | Operational Gap | Set disable_mlock |
+| # | Criterion | Current State | Severity | Status |
+|---|---|---|---|---|
+| 1 | Root token revocation | Root token revoked after bootstrap. Orphan admin token (vault-admin policy) used for operations. Break-glass via `vault operator generate-root`. | CRITICAL | **RESOLVED** (commit d4920a9) |
+| 2 | Unseal key storage | Unseal keys stored at `/vault/keys/` (separate volume from `/vault/data/`). Migration block handles existing installations. | HIGH | **RESOLVED** (commit d4920a9) |
+| 3 | AppRole hardening | `secret_id_ttl=72h` enforced via post-bootstrap hardening. CIDR binding deferred — Docker network CIDRs auto-assigned, not stable. Production: use K8s pod CIDR or fixed Docker subnets. | HIGH | **PARTIAL** — TTL done, CIDR deferred |
+| 4 | Audit logging | File audit device enabled at `/vault/file/audit.log` (idempotent, runs every bootstrap). | HIGH | **RESOLVED** (commit 494405b) |
+| 5 | Storage backend | File storage (no HA). Acceptable for single-node lab. Production: migrate to Raft integrated storage. | HIGH | Lab Convenience — deferred |
+| 6 | TLS security | TLS disabled (`tls_disable=true`). Internal Docker network provides isolation. Production: enable mTLS. | MEDIUM | Deferred to Phase 7b |
+| 7 | KV v2 versions | `max_versions=5` set via `vault write secret/config` in post-bootstrap hardening. | MEDIUM | **RESOLVED** (commit ca8d0f8) |
+| 8 | api_addr | `api_addr = "http://127.0.0.1:8200"` set in vault.hcl. | LOW | **RESOLVED** (commit ca8d0f8) |
+| 9 | disable_mlock | `disable_mlock = false` explicitly set in vault.hcl. Container has `IPC_LOCK` capability. | LOW | **RESOLVED** (commit ca8d0f8) |
 
-## Priority Fix Order (for production-grade)
-1. Revoke root token immediately after bootstrap
-2. Separate unseal key from Vault data filesystem (or use auto-unseal with KMS/HSM)
-3. Harden AppRole: secret_id_num_uses=1, secret_id_ttl short, CIDR binding
-4. Enable audit logging (at least one durable audit device)
-5. Enable TLS (if network isolation is not guaranteed)
-6. Migrate storage to Raft integrated storage for HA
-7. Limit KV v2 max_versions to 3-5
-8. Set api_addr and disable_mlock
+## Admin Token Architecture
+- Policy: `vault-admin` — least-privilege (AppRole management, audit, health, KV config)
+- Token type: orphan, periodic (8760h), renewable
+- Storage: `/vault/keys/.vault-keys.admin` (chmod 600)
+- Root recovery: `vault operator generate-root` using unseal key (break-glass procedure)
 
-## Phase: Production Hardening (Deferred)
-These items are tracked as pending work after lab validation is complete. See main plan file.
+## Remaining Production Gaps
+1. **AppRole CIDR binding** — requires fixed Docker subnets or K8s pod CIDR
+2. **TLS** — enable mTLS when network isolation not guaranteed (Phase 7b)
+3. **Raft storage** — migrate from file to Raft for HA (production only)
+4. **Audit redundancy** — add second audit device (syslog/socket) for production SPOF prevention
+5. **Response wrapping** — wrap SecretID delivery for defense-in-depth
+6. **Admin token auto-renewal** — periodic token needs renewal within 8760h period
 
 ## References
-- https://developer.hashicorp.com/vault/docs/concepts/seal
+- https://developer.hashicorp.com/vault/docs/concepts/production-hardening
 - https://developer.hashicorp.com/vault/docs/auth/approle
 - https://developer.hashicorp.com/vault/docs/audit
 - https://developer.hashicorp.com/vault/docs/configuration/storage
