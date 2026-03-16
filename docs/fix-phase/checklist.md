@@ -57,7 +57,7 @@
 | ID | Task | Stack | Status | Notes |
 |----|------|-------|--------|-------|
 | 4a | Remove Vault token + downstream session material khỏi JwtSession → server-side store | B | [x] | ✅ Done 2026-03-16. Vault tokens → fresh fetch per request. Commit 76b648a |
-| 4b | Jellyfin access token — localStorage → httpOnly Secure cookie | B | [ ] | B F8 |
+| 4b | Jellyfin access token — localStorage → httpOnly Secure cookie | B | [!] | WONT_FIX — Token injection pattern constraint: SPA requires localStorage for client-side API calls. Gateway injects Authorization header for proxied requests. httpOnly cookie = JS inaccessible. Document as pattern limitation. |
 | 4c | Remove vault_token + phpmyadmin_username/password khỏi JwtSession → server-side store | C | [x] | ✅ Done 2026-03-16. Vault tokens (76b648a) + phpMyAdmin creds + grafana_username (c0c491d). attributes EL + globals Vault token cache. Code reviewed. Commit c0c491d |
 
 ---
