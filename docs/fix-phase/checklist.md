@@ -23,7 +23,7 @@
 | 1b | SessionBlacklistFilter + variants — catch block fail-open → fail-closed (503/redirect login) | A, B, C | [x] | ✅ Done 2026-03-15. Return 500 on Redis error (fail-closed). Session preserved for recovery. Tested A+B+C. Commit 278a29c |
 | 1c | Redis socket timeouts — connectTimeout=200ms, soTimeout=500ms (BackchannelLogoutHandler + SessionBlacklistFilter) | A, B, C | [x] | ✅ Done 2026-03-15. connect=200ms, read=500ms via InetSocketAddress. 9 files across 3 stacks. Commit 278a29c |
 | 1d | BackchannelLogoutHandler — catch Exception → 500 (không phải 400) cho infra faults | A, B, C | [x] | ✅ Done 2026-03-15. All 3 stacks (A also had same pattern). Tested Redis down → 500. Commit 9b770cd |
-| 1e | Verify sid/sub consistency — BackchannelLogoutHandler write vs SessionBlacklistFilter* read | B | [ ] | B F11 — 1/4 reviewers, investigate first |
+| 1e | Verify sid/sub consistency — BackchannelLogoutHandler write vs SessionBlacklistFilter* read | B | [x] | ✅ Verified 2026-03-16. All write+read paths use identical `payload?.sid ?: payload?.sub` fallback logic + `blacklist:${sid}` key format. No mismatch across A/B/C. |
 
 ---
 
@@ -96,7 +96,7 @@
 
 | Group | Total | Done | In Progress | Pending |
 |-------|-------|------|-------------|---------|
-| 1 — Revocation | 5 | 4 | 0 | 1 |
+| 1 — Revocation | 5 | 5 | 0 | 0 |
 | 2 — Secrets | 4 | 4 | 0 | 0 |
 | 3 — Transport/Origin | 4 | 1 | 0 | 3 |
 | 4 — Session Storage | 3 | 2 | 0 | 1 |
