@@ -37,9 +37,9 @@ Corroborating config was checked in `openig_home/config/` to confirm session and
 
 ### Critical
 
-1. `CredentialInjector.groovy` stores WordPress session cookies in `session['wp_session_cookies']`.
-2. `VaultCredentialFilter.groovy` stores Vault client tokens in `session['vault_token']`.
-3. Because [[OpenIG]] uses `JwtSession`, both values are leaving the proxy boundary and being embedded in end-user session state.
+1. `CredentialInjector.groovy` stores WordPress session cookies in `session['wp_session_cookies']` (required for form injection pattern).
+2. ~~`VaultCredentialFilter.groovy` stores Vault client tokens in `session['vault_token']`.~~ **RESOLVED (FIX-09, commit b198e83)**: Vault token now cached in server-side `globals` (ConcurrentHashMap), not JwtSession.
+3. ~~Because [[OpenIG]] uses `JwtSession`, both values are leaving the proxy boundary and being embedded in end-user session state.~~ **Partially resolved**: Vault token no longer in cookie. WP session cookies remain (required for injection pattern).
 
 ### High
 

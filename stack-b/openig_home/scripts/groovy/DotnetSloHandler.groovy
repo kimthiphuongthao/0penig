@@ -1,3 +1,6 @@
+// DEAD CODE — dotnet routes removed (00-dotnet-logout.json deleted).
+// This file is NOT wired into any active route. Kept for reference only.
+
 import org.forgerock.http.protocol.Response
 import org.forgerock.http.protocol.Status
 import static org.forgerock.util.promise.Promises.newResultPromise

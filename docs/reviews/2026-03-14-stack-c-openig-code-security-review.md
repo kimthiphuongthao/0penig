@@ -95,10 +95,10 @@ The strongest implementation in Stack C is still the backchannel logout token va
   - `stack-c/openig_home/scripts/groovy/VaultCredentialFilter.groovy:78-80`
   - `stack-c/openig_home/scripts/groovy/VaultCredentialFilter.groovy:122-125`
   - `stack-c/openig_home/scripts/groovy/VaultCredentialFilter.groovy:156-157`
-- Issue: Stack C writes `vault_token`, `vault_token_expiry`, `phpmyadmin_username`, and `phpmyadmin_password` into the OpenIG session, and that session is implemented as the browser cookie `IG_SSO`.
-- Impact: theft of the session cookie, or compromise of the committed `sharedSecret`, exposes not only identity state but also Vault session material and downstream app credentials.
-- Reusable-pattern implication: HTTP Basic Auth injection should not require browser-carried copies of privileged backend credentials.
-- Minimal fix: keep Vault and downstream credentials in a server-side store keyed by an opaque session reference; do not serialize them into the client-facing JWT session.
+- Issue: ~~Stack C writes `vault_token`, `vault_token_expiry`, `phpmyadmin_username`, and `phpmyadmin_password` into the OpenIG session~~ **RESOLVED (FIX-09, commits 76b648a + c0c491d)**: Vault token → server-side `globals` cache; phpMyAdmin creds → transient `attributes` (per-request only, never in cookie). `HttpBasicAuthFilter` supports `${attributes.key}` EL (confirmed from OpenIG source).
+- Impact: ~~theft of the session cookie exposes Vault session material and downstream app credentials~~ **Mitigated**: only OAuth2 tokens (required for OIDC) remain in JwtSession cookie.
+- Reusable-pattern implication: HTTP Basic Auth injection now uses transient `attributes` — no browser-carried copies of privileged backend credentials.
+- ~~Minimal fix: keep Vault and downstream credentials in a server-side store~~ **Implemented**: `globals` (ConcurrentHashMap) for Vault token; `attributes` (per-request) for credentials.
 
 ### F6. The phpMyAdmin cookie-reconciliation control exists in code but is not wired into the route chain
 

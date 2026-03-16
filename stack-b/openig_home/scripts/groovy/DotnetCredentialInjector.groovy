@@ -1,3 +1,7 @@
+// DEAD CODE — dotnet routes removed (01-dotnet.json, 00-dotnet-logout.json deleted).
+// This file is NOT wired into any active route. Kept for reference only.
+// WARNING: still uses session['vault_b_token'] pattern — do NOT re-wire without migrating to globals.
+
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import org.forgerock.http.protocol.Response

@@ -31,7 +31,7 @@ Context: produced primary review evidence for [[OpenIG]] Stack C and then consol
 
 > [!warning] Stack C-specific evidence
 > Stack C adds two important adapter-pattern findings:
-> 1. `vault_token` and phpMyAdmin credentials are stored in the browser-bound `JwtSession`
+> 1. ~~`vault_token` and phpMyAdmin credentials are stored in the browser-bound `JwtSession`~~ **RESOLVED (FIX-09, commits 76b648a + c0c491d)**: Vault token → `globals` cache; phpMyAdmin creds → transient `attributes`
 > 2. `PhpMyAdminCookieFilter.groovy` exists to expire stale downstream cookies but is not wired into `11-phpmyadmin.json`
 
 > [!success] Confirmed strong area
