@@ -70,12 +70,12 @@ try {
     // Only Vault AppRole token is cached in globals (expensive login call); credentials fetched fresh every request
     long now = (long)(System.currentTimeMillis() / 1000)
 
-    // Vault token: use globals cache (5 min TTL) or fresh AppRole login
-    def cachedToken = globals['vault_token']
-    String vaultToken
-    if (cachedToken && cachedToken.expiry > now) {
-        vaultToken = cachedToken.token
-    } else {
+    // Vault token: atomic cache refresh (thread-safe via ConcurrentHashMap.compute)
+    def tokenEntry = globals.compute('vault_token') { key, existing ->
+        if (existing != null && existing.expiry > now) {
+            return existing
+        }
+
         if (!vaultRoleIdFile?.trim()) {
             throw new IllegalStateException('VAULT_ROLE_ID_FILE is not set')
         }
@@ -110,13 +110,14 @@ try {
 
         def loginJson = new JsonSlurper().parseText(loginBody)
         String newVaultToken = loginJson?.auth?.client_token as String
+        long leaseDuration = (loginJson?.auth?.lease_duration ?: 300) as long
         if (!newVaultToken?.trim()) {
             throw new IllegalStateException('Vault auth.client_token is missing in response')
         }
 
-        globals['vault_token'] = [token: newVaultToken, expiry: now + 300]
-        vaultToken = newVaultToken
+        return [token: newVaultToken, expiry: now + leaseDuration]
     }
+    String vaultToken = tokenEntry.token
 
     String encodedUsername = URLEncoder.encode(username, 'UTF-8').replace('+', '%20')
     HttpURLConnection credsConnection = (HttpURLConnection) new URL("${vaultAddr}/v1/secret/data/phpmyadmin/${encodedUsername}").openConnection()

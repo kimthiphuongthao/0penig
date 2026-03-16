@@ -1,6 +1,6 @@
 {
   "name": "00-backchannel-logout-app1",
-  "condition": "${matches(request.uri.path, '^/openid/app1/backchannel_logout') and request.method == 'POST'}",
+  "condition": "${matches(request.uri.path, '^/openid/app1/backchannel_logout$') and request.method == 'POST'}",
   "handler": {
     "type": "ScriptableHandler",
     "config": {

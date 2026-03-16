@@ -20,7 +20,7 @@
             "name": "JwtSession",
             "type": "JwtSession",
             "config": {
-                "cookieName": "IG_SSO",
+                "cookieName": "IG_SSO_C",
                 "sessionTimeout": "8 hours",
                 "sharedSecret": "__JWT_SHARED_SECRET__",
                 "keystore": "JwtKeyStore",

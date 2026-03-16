@@ -116,7 +116,13 @@ try {
         socket.outputStream.flush()
 
         String firstLine = readRespLine(socket.inputStream)
-        blacklisted = firstLine != '$-1'
+        if (firstLine.startsWith('$')) {
+            blacklisted = firstLine != '$-1'
+        } else if (firstLine.startsWith('-')) {
+            throw new IOException("Redis error: ${firstLine}")
+        } else {
+            throw new IOException("Unexpected Redis response: ${firstLine}")
+        }
     }
 
     if (blacklisted) {

@@ -96,10 +96,20 @@ if (wpSessionCookies == null || wpSessionCookies.isEmpty()) {
                     session['wp_session_cookies'] = wpSessionCookies
                     logger.info("[CredentialInjector] WP login OK for '" + wpUsername + "', cached " + cookiePairs.size() + " cookies")
                 } else {
-                    logger.warn("[CredentialInjector] WP login 302 but empty Set-Cookie headers")
+                    logger.error("[CredentialInjector] WP login 302 but empty Set-Cookie headers — fail-closed")
+                    conn.disconnect()
+                    def failResp = new Response(Status.BAD_GATEWAY)
+                    failResp.headers.put('Content-Type', ['text/html'])
+                    failResp.entity.setString("<html><body><h2>WordPress login succeeded but returned no session cookies. Please retry.</h2></body></html>")
+                    return failResp
                 }
             } else {
-                logger.warn("[CredentialInjector] WP login 302 but no Set-Cookie headers returned")
+                logger.error("[CredentialInjector] WP login 302 but no Set-Cookie headers — fail-closed")
+                conn.disconnect()
+                def failResp = new Response(Status.BAD_GATEWAY)
+                failResp.headers.put('Content-Type', ['text/html'])
+                failResp.entity.setString("<html><body><h2>WordPress login succeeded but returned no session cookies. Please retry.</h2></body></html>")
+                return failResp
             }
         } else {
             // FIX-15: fail-closed — do not proxy unauthenticated if WP login fails

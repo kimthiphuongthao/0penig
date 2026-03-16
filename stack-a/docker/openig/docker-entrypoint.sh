@@ -5,6 +5,15 @@
 
 set -e
 
+# Validate required env vars before proceeding
+for var in JWT_SHARED_SECRET KEYSTORE_PASSWORD; do
+  eval val=\$$var
+  if [ -z "$val" ]; then
+    echo "FATAL: required env var $var is not set. Aborting." >&2
+    exit 1
+  fi
+done
+
 SRC=/opt/openig
 DST=/tmp/openig
 
@@ -16,7 +25,6 @@ cp -r "$SRC" "$DST"
 sed -i \
   -e "s|__JWT_SHARED_SECRET__|${JWT_SHARED_SECRET}|g" \
   -e "s|__KEYSTORE_PASSWORD__|${KEYSTORE_PASSWORD}|g" \
-  -e "s|__OIDC_CLIENT_SECRET__|${OIDC_CLIENT_SECRET}|g" \
   "$DST/config/config.json"
 
 # Point OpenIG at the processed copy

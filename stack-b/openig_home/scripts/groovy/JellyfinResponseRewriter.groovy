@@ -11,7 +11,13 @@ def logError = { message, error ->
 }
 
 def escapeForJs = { value ->
-    ((value ?: '') as String).replace("'", "\\'").replace('"', '\\"')
+    ((value ?: '') as String)
+        .replace('\\', '\\\\')
+        .replace("'", "\\'")
+        .replace('"', '\\"')
+        .replace('<', '\\x3c')
+        .replace('>', '\\x3e')
+        .replace('/', '\\/')
 }
 
 try {

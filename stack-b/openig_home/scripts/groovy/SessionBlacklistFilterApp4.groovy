@@ -86,7 +86,13 @@ try {
         socket.outputStream.flush()
 
         String firstLine = readRespLine(socket.inputStream)
-        blacklisted = firstLine != '$-1'
+        if (firstLine.startsWith('$')) {
+            blacklisted = firstLine != '$-1'
+        } else if (firstLine.startsWith('-')) {
+            throw new IOException("Redis error: ${firstLine}")
+        } else {
+            throw new IOException("Unexpected Redis response: ${firstLine}")
+        }
     }
 
     if (blacklisted) {
@@ -94,7 +100,8 @@ try {
         Response response = new Response(Status.FOUND)
         String CANONICAL_ORIGIN = System.getenv('CANONICAL_ORIGIN_APP4') ?: 'http://jellyfin-b.sso.local:9080'
         String originalPath = request.uri.path ?: '/'
-        response.headers.put('Location', [(CANONICAL_ORIGIN + originalPath) as String])
+        String originalQuery = request.uri.query ? '?' + request.uri.query : ''
+        response.headers.put('Location', [(CANONICAL_ORIGIN + originalPath + originalQuery) as String])
         return newResultPromise(response)
     }
 

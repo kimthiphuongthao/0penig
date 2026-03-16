@@ -38,6 +38,8 @@ services:
       VAULT_ADDR: "http://vault-c:8200"
       VAULT_ROLE_ID_FILE: "/opt/openig/vault/role_id"
       VAULT_SECRET_ID_FILE: "/opt/openig/vault/secret_id"
+      CANONICAL_ORIGIN_APP5: "http://grafana-c.sso.local:18080"
+      CANONICAL_ORIGIN_APP6: "http://phpmyadmin-c.sso.local:18080"
 
   openig-c2:
     image: openidentityplatform/openig
@@ -60,6 +62,8 @@ services:
       VAULT_ADDR: "http://vault-c:8200"
       VAULT_ROLE_ID_FILE: "/opt/openig/vault/role_id"
       VAULT_SECRET_ID_FILE: "/opt/openig/vault/secret_id"
+      CANONICAL_ORIGIN_APP5: "http://grafana-c.sso.local:18080"
+      CANONICAL_ORIGIN_APP6: "http://phpmyadmin-c.sso.local:18080"
 
   grafana:
     image: grafana/grafana:latest

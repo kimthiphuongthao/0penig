@@ -70,14 +70,6 @@
         "type": "application/x-groovy",
         "file": "RedmineCredentialInjector.groovy"
       }
-    },
-    {
-      "name": "PathStripperApp4",
-      "type": "ScriptableFilter",
-      "config": {
-        "type": "application/x-groovy",
-        "source": "def p = request.uri.path ?: '/'; if (p.startsWith('/app4')) { request.uri.path = p.substring(5) ?: '/' }; return next.handle(context, request)"
-      }
     }
   ],
   "handler": {

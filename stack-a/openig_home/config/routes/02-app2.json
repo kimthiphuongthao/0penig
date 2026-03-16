@@ -84,14 +84,6 @@
       }
     },
     {
-      "name": "App2PathStripper",
-      "type": "ScriptableFilter",
-      "config": {
-        "type": "application/x-groovy",
-        "source": "def path = request.uri.path ?: '/'\nif (path.startsWith('/app2')) {\n    def newPath = path.substring(5)\n    if (newPath.isEmpty()) {\n        newPath = '/'\n    } else if (!newPath.startsWith('/')) {\n        newPath = '/' + newPath\n    }\n    request.uri.path = newPath\n}\nreturn next.handle(context, request)"
-      }
-    },
-    {
       "name": "App2Proxy",
       "type": "ClientHandler",
       "config": {

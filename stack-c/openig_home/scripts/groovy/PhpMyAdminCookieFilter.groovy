@@ -1,3 +1,6 @@
+// NOT WIRED — phpMyAdmin CSRF token mismatch makes this filter unusable (FIX-10 WONT_FIX).
+// Do NOT add to any route chain. User switch handled by cacheHeader:false + attributes (FIX-09).
+
 import groovy.json.JsonSlurper
 
 import java.util.Base64

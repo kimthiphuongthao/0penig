@@ -71,13 +71,22 @@ def fetchJwks = { String jwksUri ->
         conn.connectTimeout = 5000
         conn.readTimeout = 5000
 
+        int httpStatus = conn.responseCode
         String responseBody = readResponseBody(conn)
+        if (httpStatus < 200 || httpStatus >= 300) {
+            logger.error('[BackchannelLogoutHandler] JWKS fetch returned HTTP {}', httpStatus)
+            return null
+        }
         if (!responseBody) {
             logger.error('[BackchannelLogoutHandler] JWKS response body is empty')
             return null
         }
 
         def jwks = new JsonSlurper().parseText(responseBody)
+        if (!jwks?.keys) {
+            logger.error('[BackchannelLogoutHandler] JWKS response missing keys array')
+            return null
+        }
         cachedJwks = jwks
         jwksCacheExpiry = now + JWKS_CACHE_TTL_SECONDS
         logger.info('[BackchannelLogoutHandler] JWKS fetched successfully, keys: {}', jwks.keys?.size())

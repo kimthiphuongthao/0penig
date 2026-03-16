@@ -5,6 +5,15 @@
 
 set -e
 
+# Validate required env vars before proceeding
+for var in JWT_SHARED_SECRET KEYSTORE_PASSWORD; do
+  eval val=\$$var
+  if [ -z "$val" ]; then
+    echo "FATAL: required env var $var is not set. Aborting." >&2
+    exit 1
+  fi
+done
+
 SRC=/opt/openig
 DST=/tmp/openig
 

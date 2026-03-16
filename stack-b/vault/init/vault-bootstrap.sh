@@ -38,16 +38,14 @@ if [ ! -f "$BOOTSTRAP_FLAG" ]; then
   vault secrets enable -path=secret kv-v2
   vault auth enable approle
   vault policy write openig-readonly-b - <<'POLICY'
-path "secret/data/dotnet-creds/*" { capabilities = ["read"] }
 path "secret/data/redmine-creds/*" { capabilities = ["read"] }
+path "secret/data/jellyfin-creds/*" { capabilities = ["read"] }
 POLICY
   vault write auth/approle/role/openig-role-b token_ttl=1h token_max_ttl=4h policies=openig-readonly-b
   mkdir -p /vault/file
   vault read -field=role_id auth/approle/role/openig-role-b/role-id > /vault/file/openig-role-id
   vault write -f -field=secret_id auth/approle/role/openig-role-b/secret-id > /vault/file/openig-secret-id
   chmod 600 /vault/file/openig-role-id /vault/file/openig-secret-id
-  vault kv put secret/dotnet-creds/alice username=legacy_alice password='Tr0ub4dor&3'
-  vault kv put secret/dotnet-creds/bob username=legacy_bob password='correct-horse-battery'
   vault kv put 'secret/redmine-creds/alice@lab.local' login=alice password="Nvt2vrmNrbjcG4aF9XhBj0aMAa7!"
   vault kv put 'secret/redmine-creds/bob@lab.local' login=bob password="5RUgSmgwA70jttqhkL4TketBb8@"
   touch "$BOOTSTRAP_FLAG"

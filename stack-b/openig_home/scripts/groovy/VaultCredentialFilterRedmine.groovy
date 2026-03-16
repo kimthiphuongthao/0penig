@@ -33,8 +33,14 @@ try {
     }
     email = email.trim()
 
-    // FIX-09: no session caching — fetch fresh from Vault every request
-    if (vaultRoleIdFile == null || vaultRoleIdFile.trim().isEmpty()) {
+    // FIX-09+review: Vault token cached in globals with atomic refresh (thread-safe)
+    long nowEpochSeconds = (long)(System.currentTimeMillis() / 1000)
+    def tokenEntry = globals.compute('vault_token') { key, existing ->
+        if (existing != null && existing.expiry > nowEpochSeconds) {
+            return existing
+        }
+
+        if (vaultRoleIdFile == null || vaultRoleIdFile.trim().isEmpty()) {
             throw new IllegalStateException('VAULT_ROLE_ID_FILE is not set')
         }
         if (vaultSecretIdFile == null || vaultSecretIdFile.trim().isEmpty()) {
@@ -75,7 +81,9 @@ try {
             throw new IllegalStateException('Vault auth.client_token is missing in response')
         }
 
-    def vaultToken = newVaultToken
+        return [token: newVaultToken, expiry: nowEpochSeconds + leaseDuration]
+    }
+    def vaultToken = tokenEntry.token
 
     def encodedEmail = URLEncoder.encode(email, 'UTF-8').replace('+', '%20')
     def credsConnection = (HttpURLConnection) new URL("${vaultAddr}/v1/secret/data/redmine-creds/${encodedEmail}").openConnection()
@@ -89,7 +97,12 @@ try {
     def credsBody = readResponseBody(credsConnection)
     credsConnection.disconnect()
     if (credsStatus == 403) {
-        throw new IllegalStateException('Vault token rejected for Redmine lookup (HTTP 403)')
+        // Token rejected — invalidate globals cache, will re-login on next request
+        globals.remove('vault_token')
+        def r = new Response(Status.INTERNAL_SERVER_ERROR)
+        r.headers.put('Content-Type', ['text/html'])
+        r.entity.setString('<html><body><h2>Vault token expired. Please retry.</h2></body></html>')
+        return r
     }
     if (credsStatus < 200 || credsStatus >= 300) {
         throw new IllegalStateException("Vault credential lookup failed with HTTP ${credsStatus}")

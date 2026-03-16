@@ -33,12 +33,13 @@ try {
     }
     username = username.trim()
 
-    // FIX-09: Vault token cached in globals (per-instance ConcurrentHashMap, NOT in JwtSession cookie)
+    // FIX-09+review: Vault token cached in globals with atomic refresh (thread-safe)
     long nowEpochSeconds = (long)(System.currentTimeMillis() / 1000)
-    def cachedToken = globals['vault_token']
-    def vaultToken = null
+    def tokenEntry = globals.compute('vault_token') { key, existing ->
+        if (existing != null && existing.expiry > nowEpochSeconds) {
+            return existing  // still valid, no login needed
+        }
 
-    if (cachedToken == null || cachedToken.expiry <= nowEpochSeconds) {
         if (vaultRoleIdFile == null || vaultRoleIdFile.trim().isEmpty()) {
             throw new IllegalStateException('VAULT_ROLE_ID_FILE is not set')
         }
@@ -68,6 +69,7 @@ try {
 
         def loginStatus = loginConnection.responseCode
         def loginBody = readResponseBody(loginConnection)
+        loginConnection.disconnect()
         if (loginStatus < 200 || loginStatus >= 300) {
             throw new IllegalStateException("Vault AppRole login failed with HTTP ${loginStatus}")
         }
@@ -79,13 +81,9 @@ try {
             throw new IllegalStateException('Vault auth.client_token is missing in response')
         }
 
-        globals['vault_token'] = [token: newVaultToken, expiry: nowEpochSeconds + leaseDuration]
-        vaultToken = newVaultToken
-
-        loginConnection.disconnect()
-    } else {
-        vaultToken = cachedToken.token
+        return [token: newVaultToken, expiry: nowEpochSeconds + leaseDuration]
     }
+    def vaultToken = tokenEntry.token
 
     def encodedUsername = URLEncoder.encode(username, 'UTF-8').replace('+', '%20')
     def credsConnection = (HttpURLConnection) new URL("${vaultAddr}/v1/secret/data/wp-creds/${encodedUsername}").openConnection()
