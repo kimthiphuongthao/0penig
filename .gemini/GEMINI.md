@@ -33,7 +33,7 @@ sso-lab/
 │   ├── docker-compose.yml
 │   ├── nginx/nginx.conf
 │   ├── openig_home/
-│   │   ├── config/config.json   ← JwtSession, cookie IG_SSO
+│   │   ├── config/config.json   ← JwtSession, cookie IG_SSO (A), IG_SSO_B (B), IG_SSO_C (C)
 │   │   ├── config/routes/       ← OpenIG route definitions
 │   │   └── scripts/groovy/      ← Groovy filter scripts
 │   └── vault/
