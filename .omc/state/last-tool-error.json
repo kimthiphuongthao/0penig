@@ -1,7 +1,0 @@
-{
-  "tool_name": "WebFetch",
-  "tool_input_preview": "{\"url\":\"https://developer.hashicorp.com/vault/tutorials/kubernetes/vault-agent-sidecar-injection\",\"prompt\":\"Extract: Vault Agent Injector annotations, sidecar injection, external secrets operator, Kub...",
-  "error": "Request failed with status code 404",
-  "timestamp": "2026-03-16T10:57:38.119Z",
-  "retry_count": 1
-}

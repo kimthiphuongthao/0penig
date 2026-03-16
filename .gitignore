@@ -24,3 +24,22 @@ vault/file/
 **/vault/init/role_id
 **/vault/init/secret_id
 **/vault/data/
+
+# Vault keys (sensitive — unseal keys + admin tokens)
+**/vault/keys/
+
+# OMC / tool state (ephemeral)
+.omc/
+.omx/
+stack-a/.omc/
+stack-b/.omc/
+stack-c/.omc/
+
+# Claude worktrees and embedded repos
+.claude/worktrees/
+obsidian-skills/
+
+# Misc generated files
+-b
+redis-analysis-prompt.md
+sso-lab-presentation.html
