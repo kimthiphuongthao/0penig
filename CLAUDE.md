@@ -52,6 +52,7 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] FIX-14+15: Unsafe method reauth 409 + WordPress adapter fail-closed (Stack A)
 - [x] Entrypoint cp -r stale config fix — rm -rf before cp (all 3 stacks)
 - [x] **Legacy App Team Checklist**: `docs/deliverables/legacy-app-team-checklist.md` — file tối thượng, 3-reviewer QA (Critic+Gemini+Codex)
+- [x] **Code review + security review round 2**: 25 fixes (3 rounds, 6 subagent + 2 Codex). Cookie IG_SSO_C, atomic globals.compute(), RESP parsing, admin PRODUCTION, nginx hardening, dead code cleanup, Vault policy fix, etc.
 
 ### Pending
 - [ ] Workaround: admin "Logout all sessions" chưa trigger backchannel logout
