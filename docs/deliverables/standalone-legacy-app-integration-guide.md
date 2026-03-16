@@ -294,7 +294,7 @@ Stack C dùng chuỗi (Header Injection):
 
 1. `OidcFilterApp5` (`OAuth2ClientFilter`, `clientEndpoint: /openid/app5`, client `openig-client-c-app5`)
 2. `SessionBlacklistFilterApp5`
-3. `GrafanaUserHeader` (`HeaderFilter` — remove + add `X-WEBAUTH-USER` từ `session['grafana_username']`)
+3. `GrafanaUserHeader` (`HeaderFilter` — remove + add `X-WEBAUTH-USER` từ `attributes.openid['user_info']['preferred_username']`, transient per-request)
 
 Không cần `VaultCredentialFilter` vì Grafana dùng auth proxy — username từ `preferred_username` trong OIDC được inject qua header. Grafana được cấu hình `GF_AUTH_PROXY_ENABLED=true`, `GF_AUTH_PROXY_HEADER_NAME=X-WEBAUTH-USER`.
 
@@ -311,7 +311,7 @@ Stack C dùng chuỗi (HTTP Basic Auth Injection):
 1. `OidcFilterApp6` (`OAuth2ClientFilter`, `clientEndpoint: /openid/app6`, client `openig-client-c-app6`)
 2. `SessionBlacklistFilterApp6`
 3. `VaultCredentialFilter` (đọc credential từ Vault path `secret/data/phpmyadmin/{username}`)
-4. `PhpMyAdminBasicAuth` (`HttpBasicAuthFilter` — inject `Authorization: Basic` từ `session['phpmyadmin_username']`/`session['phpmyadmin_password']`; `cacheHeader: false` để support user switch)
+4. `PhpMyAdminBasicAuth` (`HttpBasicAuthFilter` — inject `Authorization: Basic` từ `attributes.phpmyadmin_username`/`attributes.phpmyadmin_password`; `cacheHeader: false` để support user switch. Credentials set by VaultCredentialFilter in transient attributes, not persisted to session)
 
 phpMyAdmin được cấu hình `auth_type = 'http'` (via `config.user.inc.php` mount), nhận Basic Auth từ OpenIG. Nginx strip `Authorization` header từ client trước khi forward:
 
@@ -381,8 +381,8 @@ Trong stack hiện tại:
 Grafana dùng proxy authentication — không cần Vault credential injection:
 
 1. OpenIG xác thực user qua OIDC với Keycloak.
-2. `preferred_username` từ OIDC được ghi vào `session['grafana_username']`.
-3. `HeaderFilter` (`GrafanaUserHeader`) inject `X-WEBAUTH-USER: {username}` vào mọi request.
+2. `OAuth2ClientFilter` populate `attributes.openid` (transient per-request) với OIDC claims bao gồm `preferred_username`.
+3. `HeaderFilter` (`GrafanaUserHeader`) inject `X-WEBAUTH-USER: {preferred_username}` từ `attributes.openid['user_info']['preferred_username']` vào mọi request.
 4. Grafana auto-provision user từ header nếu chưa tồn tại (`GF_AUTH_PROXY_AUTO_SIGN_UP=true`).
 
 ## 9) Cross-stack SLO bằng Redis Blacklist (quan trọng nhất)

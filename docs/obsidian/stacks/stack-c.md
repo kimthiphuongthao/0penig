@@ -32,7 +32,7 @@ Related: [[OpenIG]] [[Keycloak]] [[Vault]] [[Stack C]]
   - OIDC clients: `openig-client-c-app5`, `openig-client-c-app6`.
 - App 5 (Grafana):
   - OpenIG route `10-grafana.json`.
-  - User identity is injected with header `X-WEBAUTH-USER` from `session['grafana_username']`.
+  - User identity is injected with header `X-WEBAUTH-USER` from `attributes.openid['user_info']['preferred_username']` (transient per-request, not stored in session).
 - App 6 (phpMyAdmin):
   - OpenIG route `11-phpmyadmin.json`.
   - Credentials are fetched from [[Vault]] via `VaultCredentialFilter.groovy`.

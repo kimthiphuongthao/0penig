@@ -58,7 +58,7 @@
 |----|------|-------|--------|-------|
 | 4a | Remove Vault token + downstream session material khỏi JwtSession → server-side store | B | [x] | ✅ Done 2026-03-16. Vault tokens → fresh fetch per request. Commit 76b648a |
 | 4b | Jellyfin access token — localStorage → httpOnly Secure cookie | B | [ ] | B F8 |
-| 4c | Remove vault_token + phpmyadmin_username/password khỏi JwtSession → server-side store | C | [~] | Vault tokens removed (76b648a). phpMyAdmin creds still in session — pending: direct Auth header injection to replace HttpBasicAuthFilter |
+| 4c | Remove vault_token + phpmyadmin_username/password khỏi JwtSession → server-side store | C | [x] | ✅ Done 2026-03-16. Vault tokens (76b648a) + phpMyAdmin creds + grafana_username (c0c491d). attributes EL + globals Vault token cache. Code reviewed. Commit c0c491d |
 
 ---
 
@@ -99,11 +99,11 @@
 | 1 — Revocation | 5 | 4 | 0 | 1 |
 | 2 — Secrets | 4 | 4 | 0 | 0 |
 | 3 — Transport/Origin | 4 | 1 | 0 | 3 |
-| 4 — Session Storage | 3 | 1 | 1 | 1 |
+| 4 — Session Storage | 3 | 2 | 0 | 1 |
 | 5 — Logout/Observability | 2 | 0 | 0 | 2 |
 | 6 — Adapter Contract | 3 | 0 | 0 | 3 |
 | 7 — Unsafe Method | 1 | 0 | 0 | 1 |
-| **Total** | **22** | **10** | **1** | **11** |
+| **Total** | **22** | **11** | **0** | **11** |
 
 ---
 
@@ -122,3 +122,4 @@
 | 2026-03-15 | 4a+4c | FIX-09: remove sensitive material from JwtSession | REVERTED — Executor regressions (phpMyAdmin, Redmine route, cookie invalidation) | 817ab0b |
 | 2026-03-16 | — | Stack B clientEndpoint collision fix + Jellyfin SLO re-login | PASS — Redmine /openid/app3, dotnet removed, Jellyfin post_logout /web/index.html | 6727f5a |
 | 2026-03-16 | 4a+4c | FIX-09 re-impl: Vault tokens removed from JwtSession (B+C) | PASS — fresh Vault login per request. phpMyAdmin creds stay (EL limitation). MariaDB password synced | 76b648a |
+| 2026-03-16 | 4c | FIX-09 complete: phpMyAdmin creds + grafana_username → attributes EL | PASS — attributes transient per-request, globals Vault token cache. Code reviewed. SSO+SLO tested | c0c491d |
