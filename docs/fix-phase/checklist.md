@@ -77,7 +77,7 @@
 
 | ID | Task | Stack | Status | Notes |
 |----|------|-------|--------|-------|
-| 6a | Wire PhpMyAdminCookieFilter vào route chain 11-phpmyadmin.json | C | [ ] | C F6 — verify không gây Token mismatch trước khi wire |
+| 6a | Wire PhpMyAdminCookieFilter vào route chain 11-phpmyadmin.json | C | [!] | WONT_FIX — Token mismatch confirmed (phpMyAdmin CSRF protection incompatible with cookie manipulation). User switch handled by `cacheHeader: false` + fresh attributes per request (FIX-09). |
 | 6b | CredentialInjector.groovy — validate synthetic login failure → fail closed (không proxy unauthenticated) | A | [ ] | A §6 Subagent-only |
 | 6c | Validate adapter cleanup hooks wired đúng vào route chain | A | [ ] | A §6 Codex-only |
 
