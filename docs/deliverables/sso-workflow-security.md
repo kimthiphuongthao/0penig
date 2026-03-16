@@ -159,9 +159,9 @@ SLO path
 | Implementation status | `IMPLEMENTED` |
 | Code evidence | Per-request `sid` recovery and Redis GET in `stack-c/openig_home/scripts/groovy/SessionBlacklistFilter.groovy:109-151`; ~~fail-open path~~ **RESOLVED** (FIX-03, commit 278a29c): now returns 500 on Redis error in `stack-c/openig_home/scripts/groovy/SessionBlacklistFilter.groovy:152-154` |
 | Architecture assessment | `CONCERN` |
-| Security risk | Blacklist enforcement exists, but Redis failure logs a warning and still passes the request through. In practice, a Redis outage disables gateway-side SLO enforcement for protected apps. |
+| Security risk | ~~Blacklist enforcement exists, but Redis failure logs a warning and still passes the request through~~ **RESOLVED (FIX-03, commit 278a29c)**: Redis failure now returns 500 (fail-closed). Session preserved for automatic recovery when Redis returns. |
 | Standards reference | OWASP ASVS fail-safe defaults principle; OWASP Session Management Cheat Sheet |
-| Recommended action | Make blacklist enforcement route-configurable and fail-closed for protected applications, with an explicit degraded-mode response instead of silent passthrough. |
+| Recommended action | ~~Make blacklist enforcement fail-closed~~ **IMPLEMENTED** (FIX-03). Remaining: make degraded-mode response configurable per-route if needed. |
 
 ## 3. Critical Gaps
 
@@ -191,7 +191,7 @@ SLO path
 | Dependency failure | SSO effect | SLO effect | Evidence |
 |--------------------|-----------|-----------|----------|
 | Vault unavailable | OIDC auth can still complete, but Vault-backed app session establishment fails with gateway `500` HTML pages; already-cached credentials may continue to work temporarily | No direct effect on blacklist, but user can be authenticated at IdP and still blocked from app access | `stack-c/openig_home/scripts/groovy/VaultCredentialFilter.groovy:111-165`; `stack-c/openig_home/config/routes/11-phpmyadmin.json:48-58` |
-| Redis unavailable | Initial SSO still works | Backchannel logout writes fail with `400`, and per-request blacklist checks fail open, so global logout propagation is effectively disabled | `stack-a/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:327-329`, `stack-b/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:334-336`, `stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:326-328`; `stack-c/openig_home/scripts/groovy/SessionBlacklistFilter.groovy:152-154` |
+| Redis unavailable | Initial SSO still works | ~~Backchannel logout writes fail with `400`, and per-request blacklist checks fail open~~ **RESOLVED (FIX-03+05)**: backchannel returns 500 (FIX-05, Keycloak may retry), blacklist checks fail-closed with 500 (FIX-03). Global logout propagation disabled during outage but sessions blocked until Redis recovers. | `stack-a/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:327-329`, `stack-b/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:334-336`, `stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy:326-328`; `stack-c/openig_home/scripts/groovy/SessionBlacklistFilter.groovy:152-154` |
 | Keycloak unavailable | OIDC login falls into static `500` error pages for reviewed routes | Browser logout redirects to an unavailable end-session endpoint; existing local sessions continue until cleared or expired | `stack-a/openig_home/config/routes/01-wordpress.json:48-58`; `stack-c/openig_home/config/routes/11-phpmyadmin.json:48-58`; `stack-a/openig_home/scripts/groovy/SloHandler.groovy:24-35` |
 
 ### Orphan session scenarios

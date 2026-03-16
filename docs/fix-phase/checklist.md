@@ -94,16 +94,16 @@
 
 ## Progress Summary
 
-| Group | Total | Done | In Progress | Pending |
-|-------|-------|------|-------------|---------|
+| Group | Total | Done | WONT_FIX | Pending (deferred) |
+|-------|-------|------|----------|-------------------|
 | 1 — Revocation | 5 | 5 | 0 | 0 |
 | 2 — Secrets | 4 | 4 | 0 | 0 |
-| 3 — Transport/Origin | 4 | 1 | 0 | 3 |
-| 4 — Session Storage | 3 | 2 | 0 | 1 |
+| 3 — Transport/Origin | 4 | 1 | 0 | 3 (deferred to Vault Hardening) |
+| 4 — Session Storage | 3 | 2 | 1 | 0 |
 | 5 — Logout/Observability | 2 | 2 | 0 | 0 |
-| 6 — Adapter Contract | 3 | 2 | 0 | 1 |
+| 6 — Adapter Contract | 3 | 2 | 1 | 0 |
 | 7 — Unsafe Method | 1 | 1 | 0 | 0 |
-| **Total** | **22** | **11** | **0** | **11** |
+| **Total** | **22** | **17** | **2** | **3** |
 
 ---
 
@@ -123,3 +123,10 @@
 | 2026-03-16 | — | Stack B clientEndpoint collision fix + Jellyfin SLO re-login | PASS — Redmine /openid/app3, dotnet removed, Jellyfin post_logout /web/index.html | 6727f5a |
 | 2026-03-16 | 4a+4c | FIX-09 re-impl: Vault tokens removed from JwtSession (B+C) | PASS — fresh Vault login per request. phpMyAdmin creds stay (EL limitation). MariaDB password synced | 76b648a |
 | 2026-03-16 | 4c | FIX-09 complete: phpMyAdmin creds + grafana_username → attributes EL | PASS — attributes transient per-request, globals Vault token cache. Code reviewed. SSO+SLO tested | c0c491d |
+| 2026-03-16 | 4c | FIX-09 Stack A: vault_token → globals cache + stale docs fixed | PASS — all 3 stacks now use globals for Vault token. Zero session['vault_token'] writes | b198e83 |
+| 2026-03-16 | 6a | FIX-10: PhpMyAdminCookieFilter wiring attempt | WONT_FIX — Token mismatch confirmed (phpMyAdmin CSRF incompatible with cookie manipulation) | 3086568 |
+| 2026-03-16 | 4b | FIX-11: Jellyfin localStorage → httpOnly cookie | WONT_FIX — Token injection pattern constraint (SPA requires localStorage) | d4d7ecc |
+| 2026-03-16 | 1e | FIX-12: sid/sub consistency audit | PASS — all write+read paths use identical `sid ?: sub` fallback + `blacklist:${sid}` key | 9086aaf |
+| 2026-03-16 | 5b | FIX-13: SloHandler id_token_hint log redaction (Stack A) | PASS — logs PRESENT/ABSENT only, no JWT in output. Verified in live logs | a9d2947 |
+| 2026-03-16 | 6b+6c+7a | FIX-14+15: unsafe method reauth 409 + WordPress fail-closed 502 | PASS — POST expired→409, WP login non-302→502. Normal flow verified no regression | 9cdb3fd |
+| 2026-03-16 | — | Entrypoint cp -r stale config fix: rm -rf before cp (all 3 stacks) | PASS — rebuilt images, zero "Failed to initialise" errors on restart | 8e616a7 |
