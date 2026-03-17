@@ -44,6 +44,7 @@
 **File:** `stack-a/SessionBlacklistFilterApp2.groovy:46-51`
 **Issue:** Uses manual character replacement + `Base64.decoder` instead of `Base64.getUrlDecoder().decode()` used everywhere else.
 **Fix:** Align with standard pattern.
+**Status:** RESOLVED 2026-03-16 in Pattern Consolidation Step 2 (`a76e194`, `832bbae`) — `SessionBlacklistFilterApp2.groovy` was deleted and replaced by the shared parameterized template.
 
 ### H-3: JWKS cache TTL unit inconsistency
 **Files:** Stack A/B use seconds (600), Stack C uses milliseconds (600000L)
@@ -55,6 +56,7 @@
 **File:** `stack-a/SessionBlacklistFilterApp2.groovy:94-141`
 **Issue:** Uses manual `try/finally` instead of `withCloseable`. Different `readLine`/`readFully` implementation from all other files.
 **Fix:** Refactor to use `withCloseable` and shared `readRespLine` pattern.
+**Status:** RESOLVED 2026-03-16 in Pattern Consolidation Step 2 (`a76e194`, `832bbae`) — `SessionBlacklistFilterApp2.groovy` was deleted and replaced by the shared parameterized template.
 
 ---
 

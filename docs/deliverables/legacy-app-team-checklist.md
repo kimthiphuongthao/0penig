@@ -278,6 +278,8 @@ App của bạn có thể chạy ở subdomain riêng không?
 | 6 | Test chung: SSO login, session, logout, cross-app SLO | Cả hai team | 1–2 ngày |
 | 7 | Go-live: chuyển DNS, verify production | Cả hai team | 1 ngày |
 
+> **Template workflow note:** Với app tích hợp mới theo pattern chuẩn, gateway team chỉ copy và cấu hình các template tham số hóa `SessionBlacklistFilter`, `BackchannelLogoutHandler`, và `SloHandler` bằng cách set `args` trong route JSON. Không cần sửa code Groovy cho các integration tiêu chuẩn.
+
 **Lưu ý Bước 4 — Credentials:**
 - **Bước này CHỈ áp dụng cho app dùng Form login, Token API, hoặc HTTP Basic Auth.** Nếu app của bạn dùng Header-based auth (Auth Proxy mode), không cần reset mật khẩu — gateway inject username trực tiếp từ hệ thống SSO.
 - App team chạy script reset mật khẩu cho toàn bộ user cần tích hợp SSO.

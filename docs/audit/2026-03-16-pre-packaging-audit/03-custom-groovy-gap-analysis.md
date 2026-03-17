@@ -21,10 +21,10 @@ Of 24 Groovy files across 3 stacks, **none can be fully replaced by OpenIG 6.0.2
 | BackchannelLogoutHandler.groovy | B | Same, audience list [openig-client-b, openig-client-b-app4] | **KEEP** | Same — only audience/redis host differ |
 | BackchannelLogoutHandler.groovy | C | Same, audience list [openig-client-c-app5, openig-client-c-app6] | **KEEP** | Same — millis vs seconds variance at audit time, resolved in Step 3 (`4d8f065`) |
 | SessionBlacklistFilter.groovy | A | Check Redis blacklist, fail-closed 500 | **KEEP** | No built-in session revocation |
-| SessionBlacklistFilterApp2.groovy | A | Same for WhoAmI (app2) | **KEEP** | Different session key |
+| SessionBlacklistFilterApp2.groovy | A | Same for WhoAmI (app2) | **KEEP** | Historical audit verdict only — **RESOLVED/DELETED** by Pattern Consolidation Step 2 (`a76e194`, `832bbae`); replaced by the parameterized `SessionBlacklistFilter.groovy` template |
 | SessionBlacklistFilter.groovy | B | Same for Stack B (app3+app4) | **KEEP** | Different redis host |
-| SessionBlacklistFilterApp3.groovy | B | Same for Redmine | **KEEP** | App-specific session key |
-| SessionBlacklistFilterApp4.groovy | B | Same for Jellyfin | **KEEP** | App-specific session key |
+| SessionBlacklistFilterApp3.groovy | B | Same for Redmine | **KEEP** | Historical audit verdict only — **RESOLVED/DELETED** by Pattern Consolidation Step 2 (`a76e194`, `832bbae`); replaced by the parameterized `SessionBlacklistFilter.groovy` template |
+| SessionBlacklistFilterApp4.groovy | B | Same for Jellyfin | **KEEP** | Historical audit verdict only — **RESOLVED/DELETED** by Pattern Consolidation Step 2 (`a76e194`, `832bbae`); replaced by the parameterized `SessionBlacklistFilter.groovy` template |
 | SessionBlacklistFilter.groovy | C | Parameterized via `args` (app5+app6) | **KEEP** | Best implementation — uses args |
 | VaultCredentialFilter.groovy | A | Vault AppRole → WordPress creds | **KEEP** | No built-in Vault client |
 | VaultCredentialFilterRedmine.groovy | B | Vault AppRole → Redmine creds | **KEEP** | Same Vault pattern |

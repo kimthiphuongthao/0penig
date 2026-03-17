@@ -6,7 +6,7 @@
 **Goal:** Reduce 24 Groovy files (7 distinct patterns) to parameterized templates, fix CRITICAL+HIGH defects, update deliverables.
 **Revision:** R1 (Critic REVISE feedback applied — 5 mandatory fixes + 4 nice-to-haves)
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-5 are complete. Step 5 quick wins were finished via `5ae657e`, `aaf66d5`, and `f86c7eb`; Step 6 (deliverable/document sync) is the only remaining plan item.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. Step 5 quick wins were finished via `5ae657e`, `aaf66d5`, and `f86c7eb`; Step 6 deliverables were completed in `421b369`, and the post-audit cleanup removed leftover `SloHandlerRedmine/Grafana/PhpMyAdmin` files that were no longer referenced by any route.
 
 ---
 
@@ -189,7 +189,7 @@ Correct binding pattern for OpenIG 6 args:
 - Completed via commit `4d8f065`.
 - Step 3 scope tested successfully across all 3 stacks.
 - Implemented: `BackchannelLogoutHandler` 3 -> 1, `globals.compute()` JWKS cache (C-1 fix), TTL standardized to seconds (H-6 fix), route `args` binding.
-- **Next:** Step 5 quick wins, then Step 6 deliverable docs update.
+  - **Next:** Post-audit cleanup tracking and packaging follow-up only.
 
 **Objective:** Replace 3 BackchannelLogoutHandler copies with 1 parameterized template that also fixes the CRITICAL JWKS cache race condition and the HIGH TTL unit inconsistency.
 
@@ -236,7 +236,7 @@ Stack B's `def expectedAudience` signature handles all cases: String aud vs Stri
 
 **Acceptance criteria:**
 - [x] Only 1 `BackchannelLogoutHandler.groovy` per stack (3 total, identical template)
-- [ ] Uses Stack B's polymorphic `validateClaims(payload, def expectedAudience)` — handles String AND List audience
+- [x] Uses Stack B's polymorphic `validateClaims(payload, def expectedAudience)` — handles String AND List audience
 - [x] JWKS cache uses `globals.compute()` — no `@Field static volatile`
 - [x] TTL consistently in seconds across all stacks
 - [x] Backchannel logout test: logout from app in each stack, verify Redis blacklist written
@@ -257,7 +257,7 @@ Stack B's `def expectedAudience` signature handles all cases: String aud vs Stri
 - Completed via commit `3b8a6d8`.
 - Step 4 scope tested successfully across all 3 stacks.
 - Implemented: `SloHandler` 5 -> 2, try-catch hardening (H-1 fix), route `args` binding, `11-phpmyadmin.json` failureHandler update.
-- **Next:** Step 5 quick wins, then Step 6 deliverable docs update.
+  - **Next:** Post-audit cleanup tracking and packaging follow-up only.
 
 **Objective:** Replace 5 SloHandler copies with 2 templates: a standard SloHandler and a Jellyfin-specific one. Fix missing try-catch in 3 files.
 
@@ -266,9 +266,11 @@ Stack B's `def expectedAudience` signature handles all cases: String aud vs Stri
 |------|-------|---------------|--------------------|---------------|
 | `SloHandler.groovy` | A | NO | None — simplest version | `00-wp-logout.json` |
 | `SloHandlerRedmine.groovy` | B | YES | None — has correct error handling | `00-redmine-logout.json` |
-| `SloHandlerJellyfin.groovy` | B | YES | Jellyfin `/Sessions/Logout` API call | `00-jellyfin-logout.json` |
-| `SloHandlerGrafana.groovy` | C | NO | None | `00-grafana-logout.json` |
-| `SloHandlerPhpMyAdmin.groovy` | C | NO | None | `00-phpmyadmin-logout.json` **AND** `11-phpmyadmin.json` (line 94, failureHandler inline ref) |
+  | `SloHandlerJellyfin.groovy` | B | YES | Jellyfin `/Sessions/Logout` API call | `00-jellyfin-logout.json` |
+  | `SloHandlerGrafana.groovy` | C | NO | None | `00-grafana-logout.json` |
+  | `SloHandlerPhpMyAdmin.groovy` | C | NO | None | `00-phpmyadmin-logout.json` **AND** `11-phpmyadmin.json` (line 94, failureHandler inline ref) |
+
+**Post-audit cleanup note (2026-03-17):** `SloHandlerRedmine.groovy`, `SloHandlerGrafana.groovy`, and `SloHandlerPhpMyAdmin.groovy` remained on disk after the route migration even though no route referenced them anymore. They were deleted in the post-audit cleanup pass after reference verification.
 
 **CRITICAL: `11-phpmyadmin.json` inline SloHandler reference.**
 The phpMyAdmin route (`11-phpmyadmin.json`) has an inline `ScriptableHandler` in the `PhpMyAdminBasicAuth` `failureHandler` block that references `"file": "SloHandlerPhpMyAdmin.groovy"` (line 94). This is the 401-triggered SLO path (when phpMyAdmin returns 401, the failureHandler triggers SLO). After consolidation, this file reference MUST be updated to `SloHandler.groovy` with appropriate `args`, or phpMyAdmin 401-triggered SLO will be BROKEN.
@@ -323,7 +325,7 @@ The phpMyAdmin route (`11-phpmyadmin.json`) has an inline `ScriptableHandler` in
 - [ ] WhoAmI (app2) has no logout UI — verify session invalidated via cross-stack SLO when WordPress logout triggers backchannel (WhoAmI shares the same Keycloak client `openig-client` as WordPress; backchannel logout blacklists the sid, which is checked by WhoAmI's SessionBlacklistFilter)
 - [x] phpMyAdmin 401-triggered SLO works (inline failureHandler in `11-phpmyadmin.json` correctly uses consolidated `SloHandler.groovy` with `args`)
 - [x] id_token_hint present in redirect URL when session has id_token
-- [ ] Missing id_token graceful fallback (no crash, still redirects)
+- [x] Missing id_token graceful fallback (no crash, still redirects)
 
 **Risk:** MEDIUM — SloHandler is simpler than BackchannelLogoutHandler, but touches all 6 logout routes plus 1 inline handler ref. Same mitigation: one stack at a time. Commit Step 3 before starting Step 4.
 
@@ -376,20 +378,20 @@ The phpMyAdmin route (`11-phpmyadmin.json`) has an inline `ScriptableHandler` in
    - No structural changes needed — the checklist is app-team facing
 
 **Acceptance criteria:**
-- [ ] `legacy-auth-patterns-definitive.md` has decision tree for template selection
-- [ ] `standard-gateway-pattern.md` references parameterized templates
-- [ ] `legacy-app-team-checklist.md` integration process reflects template workflow
-- [ ] No stale file references in any deliverable
+- [x] `legacy-auth-patterns-definitive.md` has decision tree for template selection
+- [x] `standard-gateway-pattern.md` references parameterized templates
+- [x] `legacy-app-team-checklist.md` integration process reflects template workflow
+- [x] No stale file references in any deliverable
 
 **Risk:** LOW — documentation changes only.
 
-**Status:** PENDING
+**Status: ✅ DONE** (2026-03-17) — deliverable docs were updated in commit `421b369`, and Section 6 of `legacy-app-team-checklist.md` was refreshed in the post-audit cleanup pass.
 
 ---
 
 ## Success Criteria (overall)
 
-1. **Line count reduction:** 18 consolidatable files -> 5-6 template files (1 SessionBlacklistFilter + 1 BackchannelLogoutHandler + 1 SloHandler + 1 SloHandlerJellyfin + VaultCredentialFilter unchanged). ~1200+ lines saved.
+1. **Line count reduction:** 18 consolidatable files -> 9 per-stack template copies across the 3 shared pattern families (`SessionBlacklistFilter`, `BackchannelLogoutHandler`, `SloHandler`) parameterized via route `args`, with `SloHandlerJellyfin.groovy` kept separate for its app-specific logout API.
 2. **Bug fixes:** C-1 (JWKS race) FIXED, H-1 (SloHandler try-catch) FIXED, H-6 (TTL units) FIXED.
 3. **SSO/SLO:** All 28 test cases pass after consolidation.
 4. **Template reusability:** Any new app can be integrated by copying a template and setting `args` in route JSON.

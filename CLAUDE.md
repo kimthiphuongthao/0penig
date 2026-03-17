@@ -66,7 +66,7 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] Phase 3: Vault Production Hardening — 6/9 RESOLVED, 1 PARTIAL (CIDR), 2 deferred (TLS, Raft)
 - [x] Post-Stack C docs: OpenIG built-in filter selection guide — covered by audit
 - [x] Pattern Consolidation Steps 1-5 complete - Step 5 quick wins (H-2 .gitignore, H-3 Redmine port, H-9 nginx buffers, M-2 CANONICAL_ORIGIN A+B, M-14 dead code) are done and validated
-- [ ] Pattern Consolidation Step 6: Update deliverable documents. Plan: `.omc/plans/pattern-consolidation.md`
+- [x] Pattern Consolidation Step 6: Update deliverable documents. Plan: `.omc/plans/pattern-consolidation.md`
 - [x] Redis persistence (appendonly yes) — đảm bảo SLO blacklist survive restart
 - [x] Vault audit logging
 - [ ] Đóng gói: OVA / Docker Compose bundle — single-command deploy
