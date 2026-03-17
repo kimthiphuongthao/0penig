@@ -39,6 +39,12 @@ codex exec --skip-git-repo-check --full-auto \
 Notes:
 - `--full-auto` + `--sandbox` KHÔNG conflict — chạy được, nhưng `--sandbox` bị override (luôn là workspace-write)
 - `--search` KHÔNG phải flag hợp lệ của `codex exec` → exit code 2. Dùng Gemini cho web search thay thế.
+- `-a never` / `--ask-for-approval never` KHÔNG phải flag hợp lệ → exit code 2
+- **Khi cần git commit** (`.git/` bị block bởi workspace-write): dùng `--dangerously-bypass-approvals-and-sandbox` thay vì `--full-auto`:
+  ```bash
+  codex exec --skip-git-repo-check --dangerously-bypass-approvals-and-sandbox \
+    -m gpt-5.4 -c model_reasoning_effort="xhigh" -C <workdir> "git commit task..." 2>/dev/null
+  ```
 
 ## Codex — Trigger Skills
 
