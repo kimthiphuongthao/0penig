@@ -63,6 +63,8 @@ Stack B (Redmine + Jellyfin, 2-node HA) shares all core issues found in Stack A,
 - SessionBlacklistFilterApp3.groovy — same pattern
 - SessionBlacklistFilterApp4.groovy — same pattern
 
+**[UPDATED 2026-03-17]** Status as of Pattern Consolidation Steps 2-4: `SessionBlacklistFilterApp3.groovy` and `SessionBlacklistFilterApp4.groovy` are historical references only. Step 2 deleted both duplicate variants and consolidated Stack B revocation checks into the shared parameterized `SessionBlacklistFilter.groovy`. The fail-open finding itself remains open unless fixed separately.
+
 **Recommendation:** On Redis error, fail-closed: return 503 or redirect to login. Log error with sufficient detail for alerting.
 
 ---
@@ -120,6 +122,8 @@ Stack B (Redmine + Jellyfin, 2-node HA) shares all core issues found in Stack A,
 - SessionBlacklistFilterApp3.groovy — constructs redirect from inbound host
 - RedmineCredentialInjector.groovy — uses inbound host
 
+**[UPDATED 2026-03-17]** Status as of Pattern Consolidation Steps 2-4: the `SessionBlacklistFilterApp3.groovy` and `SessionBlacklistFilterApp4.groovy` mentions in this finding are historical references to the pre-Step-2 layout. Stack B now uses the shared parameterized `SessionBlacklistFilter.groovy`; the Host-derived redirect concern remains open.
+
 **Recommendation:** Pin redirect base URLs as static configuration constants. Never build redirect targets from inbound request headers.
 
 ---
@@ -146,6 +150,8 @@ Stack B (Redmine + Jellyfin, 2-node HA) shares all core issues found in Stack A,
 **Evidence:**
 - All blacklist filter files — new Socket() with no timeout set
 - BackchannelLogoutHandler.groovy — Redis connection without timeout
+
+**[UPDATED 2026-03-17]** Status as of Pattern Consolidation Steps 2-4: `SessionBlacklistFilterApp3.groovy` and `SessionBlacklistFilterApp4.groovy` were deleted in Step 2 during the shared `SessionBlacklistFilter.groovy` consolidation. The timeout concern still applies to the consolidated implementation until fixed.
 
 **Recommendation:** Set socket.connect(timeout) and socket.setSoTimeout(readTimeout) explicitly (e.g., 200ms connect, 500ms read). Add circuit-breaker logic if Redis is unavailable.
 

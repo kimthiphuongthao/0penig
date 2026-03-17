@@ -34,6 +34,8 @@
 - Issue: Stack A/B use SECONDS, Stack C uses MILLISECONDS
 - Fix: Standardize to seconds across all stacks
 
+**[UPDATED 2026-03-17]** Status as of Pattern Consolidation Steps 2-4: RESOLVED in Step 3. `BackchannelLogoutHandler.groovy` was consolidated from 3 copies to 1 parameterized template, the JWKS cache race condition (`C-1`) was resolved via `globals.compute()`, and the JWKS TTL unit mismatch (`H-6`) was standardized to seconds in commit `4d8f065`.
+
 ### 4. Redis Fail-Open on Connection Failure [CODE]
 - Location: SessionBlacklistFilter.groovy (all stacks)
 - Issue: If Redis down → blacklisted sessions bypass security
@@ -51,6 +53,8 @@
 | 10 | Missing id_token_hint Stack A | SloHandler.groovy:24 | Keycloak logout rejection |
 | 11 | Stack B missing JwtKeyStore | stack-b/config.json | Unsigned session cookies |
 
+**[UPDATED 2026-03-17]** Status as of Pattern Consolidation Steps 2-4: item `#9` is no longer an open duplication concern. Step 2 deleted `SessionBlacklistFilterApp2.groovy`, `SessionBlacklistFilterApp3.groovy`, and `SessionBlacklistFilterApp4.groovy` and consolidated the variant logic into one parameterized `SessionBlacklistFilter.groovy`. The table above is preserved as a historical snapshot from 2025-03-13.
+
 ## Remediation Plan
 
 ### Phase 1: Emergency (Today)
@@ -62,6 +66,8 @@
 - Add Redis fail-closed with circuit breaker
 - Standardize JWKS cache TTL (seconds)
 - Add multi-audience support Stacks A/B
+
+**[UPDATED 2026-03-17]** Status as of Pattern Consolidation Steps 2-4: the `SessionBlacklistFilter` consolidation item was completed in Step 2, and the JWKS cache TTL standardization item was completed in Step 3 (`4d8f065`). The remaining Phase 2 items above are still historical recommendations from the original report.
 
 ### Phase 3: Security Hardening (Next Week)
 - Enable requireHttps: true + TLS termination

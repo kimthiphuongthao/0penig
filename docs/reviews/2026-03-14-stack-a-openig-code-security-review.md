@@ -22,6 +22,8 @@ Four review outputs were consolidated and deduplicated. The strongest agreement 
 - Request-time revocation enforcement in `SessionBlacklistFilter.groovy` and `SessionBlacklistFilterApp2.groovy`
 - Supporting credential/session paths (`VaultCredentialFilter.groovy`, `CredentialInjector.groovy`) where they affect session continuity and revocation behavior
 
+**[UPDATED 2026-03-17]** Status as of Pattern Consolidation Steps 2-4: the `SessionBlacklistFilterApp2.groovy` reference above is historical only. Step 2 deleted that app-specific variant and consolidated Stack A revocation checks into the shared parameterized `SessionBlacklistFilter.groovy`.
+
 ## 4) Confirmed Strengths
 
 - Backchannel logout JWT validation is consistently noted as strong in subagent reviews: RS256 pinning, JWKS signature verification, and claims checks (`iss`/`aud`/`events`/`iat`/`exp`) in `/Volumes/OS/claude/openig/sso-lab/stack-a/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy`.
@@ -57,6 +59,8 @@ Four review outputs were consolidated and deduplicated. The strongest agreement 
 - Issue: request path continues when revocation check cannot be completed.
 - Impact: revoked sessions can continue during Redis/network faults.
 - Minimal fix: fail closed for authenticated sessions (clear local session + reauth/deny) when blacklist status is indeterminate.
+
+**[UPDATED 2026-03-17]** Status as of Pattern Consolidation Steps 2-4: the `SessionBlacklistFilterApp2.groovy` file references in this finding are historical evidence from the 2026-03-14 review. Step 2 deleted that duplicate variant and moved the app2 logic into the shared parameterized `SessionBlacklistFilter.groovy`. The fail-open finding itself remains open unless addressed separately.
 
 ### F3. Revocation TTL shorter than OpenIG session lifetime
 
@@ -97,6 +101,8 @@ Four review outputs were consolidated and deduplicated. The strongest agreement 
 - Issue: redirect/public URL construction uses request `Host`.
 - Impact: potential open-redirect/domain confusion if boundary host validation is weak.
 - Minimal fix: build redirect origins from pinned allowlisted public URL config.
+
+**[UPDATED 2026-03-17]** Status as of Pattern Consolidation Steps 2-4: the `SessionBlacklistFilterApp2.groovy` references above are historical only. Step 2 removed that duplicate file as part of the shared `SessionBlacklistFilter.groovy` consolidation; the Host-derived redirect finding remains open.
 
 ## 6) Cross-Review Comparison
 

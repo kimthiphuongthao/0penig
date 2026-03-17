@@ -26,6 +26,8 @@ The strongest implementation in Stack C is still the backchannel logout token va
 - `stack-c/openig_home/config/routes/10-grafana.json`
 - `stack-c/openig_home/config/routes/11-phpmyadmin.json`
 
+**[UPDATED 2026-03-17]** Status as of Pattern Consolidation Steps 2-4: the `SloHandlerGrafana.groovy` and `SloHandlerPhpMyAdmin.groovy` entries above are historical review targets from 2026-03-14. Step 4 consolidated the active Stack C logout logic into the parameterized `SloHandler.groovy` template, resolved the missing try-catch finding (`H-1`), and updated the phpMyAdmin `failureHandler` in commit `3b8a6d8`.
+
 ## 3) Confirmed Strengths
 
 - Backchannel logout validation is materially stronger than the rest of the stack. `BackchannelLogoutHandler.groovy` validates the JWT structure, requires `alg=RS256`, resolves the signing key by `kid`, verifies the RSA signature, and checks `iss`, `aud`, `events`, `iat`, and `exp` before accepting a logout token (`BackchannelLogoutHandler.groovy:145-215`, `BackchannelLogoutHandler.groovy:221-289`).
@@ -86,6 +88,8 @@ The strongest implementation in Stack C is still the backchannel logout token va
 - Impact: OIDC codes/tokens, `id_token_hint`, Vault tokens, phpMyAdmin credentials, and the browser session cookie can all traverse the lab over plaintext links.
 - Reusable-pattern implication: a standard gateway pattern must define TLS as part of the mechanism, not as an optional deployment detail.
 - Minimal fix: require HTTPS end-to-end, pin secure public URLs in config, and treat HTTP-only lab wiring as non-reference scaffolding.
+
+**[UPDATED 2026-03-17]** Status as of Pattern Consolidation Steps 2-4: the `SloHandlerGrafana.groovy` and `SloHandlerPhpMyAdmin.groovy` evidence lines above are historical references only. Step 4 consolidated those Stack C handlers into the shared parameterized `SloHandler.groovy` template and resolved the missing try-catch issue (`H-1`), but the plaintext-HTTP finding remains open.
 
 ### F5. Vault token and downstream phpMyAdmin credentials are stored in the browser-bound `JwtSession`
 
