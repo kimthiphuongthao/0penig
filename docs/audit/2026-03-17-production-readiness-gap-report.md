@@ -57,11 +57,11 @@ These items block production-reference status because they either leave an activ
 - Fix approach: Align Stack A and Stack C with the Stack B route pattern by sourcing browser-facing and internal Keycloak endpoints from `KEYCLOAK_BROWSER_URL` and `KEYCLOAK_INTERNAL_URL` route args or environment-backed expressions.
 - Effort: MEDIUM
 
-### L-5: PhpMyAdminCookieFilter.groovy dead code
+### L-5: PhpMyAdminCookieFilter.groovy dead code [RESOLVED]
 - Files: `stack-c/openig_home/scripts/groovy/PhpMyAdminCookieFilter.groovy`
-- Finding: The script is no longer referenced by any live route. The compatibility issue with phpMyAdmin CSRF was already accepted as a WONT_FIX lab decision, but the unused file was never removed.
-- Impact: Dead code keeps a misleading control in the repo and makes Stack C look more complex than the actual runtime chain.
-- Fix approach: Delete the file and keep the WONT_FIX decision documented in the report and integration docs.
+- Finding: RESOLVED — the unused script was deleted in the L-5 fix, and no live route references remain.
+- Impact: The misleading dead-code control is no longer shipped in Stack C.
+- Fix approach: Completed. Keep the WONT_FIX phpMyAdmin CSRF decision documented in the report and integration docs.
 - Effort: LOW
 
 ## Should Fix (Production quality)
@@ -195,4 +195,3 @@ These items remain acceptable only as explicitly documented lab constraints. The
 | Pattern | `SessionBlacklistFilter` 6 copies -> 1 template | Three per-stack parameterized copies via args (commits `a76e194`, `832bbae`) |
 | Pattern | `BackchannelLogoutHandler` 3 copies -> 1 template | Three per-stack parameterized copies via args (commit `4d8f065`) |
 | Pattern | `SloHandler` 5 copies -> 2 templates | Standard + Jellyfin-specific (commit `3b8a6d8`) |
-

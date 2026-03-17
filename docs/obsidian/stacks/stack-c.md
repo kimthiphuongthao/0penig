@@ -22,6 +22,7 @@ Related: [[OpenIG]] [[Keycloak]] [[Vault]] [[Stack C]]
 
 > [!success]
 > SSO/SLO WORKING for app5 (Grafana) and app6 (phpMyAdmin). Post-audit cleanup confirmed the old `SloHandlerGrafana.groovy` and `SloHandlerPhpMyAdmin.groovy` files were leftover artifacts from Step 4 and have been deleted.
+> Phase 2 STEP-01 (L-5): `PhpMyAdminCookieFilter.groovy` dead code also deleted — file was never wired into any route; no runtime impact.
 
 ## Architecture
 
