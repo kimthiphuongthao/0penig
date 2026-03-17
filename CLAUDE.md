@@ -64,7 +64,7 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] **Fix phase COMPLETE**: 15 fixes (11 implemented, 2 WONT_FIX, 2 verified-no-action) — tracking: `docs/fix-phase/checklist.md`
 - [x] Phase 3: Vault Production Hardening — 6/9 RESOLVED, 1 PARTIAL (CIDR), 2 deferred (TLS, Raft)
 - [x] Post-Stack C docs: OpenIG built-in filter selection guide — covered by audit
-- [ ] Pattern Consolidation Step 5: Quick-win fixes (H-2, H-3, H-9, M-2, M-14). Plan: `.omc/plans/pattern-consolidation.md`
+- [x] Pattern Consolidation Step 5: Quick-win fixes (H-2 .gitignore, H-3 Redmine port, H-9 nginx buffers, M-2 CANONICAL_ORIGIN A+B, M-14 dead code) — commits aaf66d5, f86c7eb
 - [ ] Pattern Consolidation Step 6: Update deliverable documents. Plan: `.omc/plans/pattern-consolidation.md`
 - [x] Redis persistence (appendonly yes) — đảm bảo SLO blacklist survive restart
 - [x] Vault audit logging

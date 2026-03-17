@@ -20,13 +20,13 @@
 |---|---------|--------|-------|--------|
 | H-1 | SloHandler missing try-catch (3 files) | Code+Security+Architecture | SloHandler.groovy (A), SloHandlerGrafana.groovy (C), SloHandlerPhpMyAdmin.groovy (C) | RESOLVED 2026-03-17 in Step 4 (`3b8a6d8`) |
 | H-2 | `vault/keys/` not in .gitignore | Security | .gitignore | TRIVIAL — 1 line |
-| H-3 | Redmine port 3000 exposed — bypasses SSO | Security | stack-b/docker-compose.yml | TRIVIAL — remove ports mapping |
+| H-3 | Redmine port 3000 exposed — bypasses SSO | Security | stack-b/docker-compose.yml | RESOLVED 2026-03-17 in Step 5 (`f86c7eb`) |
 | H-4 | Redis without authentication (all stacks) | Security | 3x docker-compose.yml + 9 Groovy files | MEDIUM — add requirepass + AUTH commands |
 | H-5 | Secrets in docker-compose.yml committed to git | Security | 3x docker-compose.yml | MEDIUM — .env file + .gitignore |
 | H-6 | JWKS TTL unit inconsistency (Stack C millis vs A/B seconds) | Code Review | 3x BackchannelLogoutHandler.groovy | RESOLVED 2026-03-17 in Step 3 (`4d8f065`) |
 | H-7 | Stack C docker-compose missing platform/user/restart/healthchecks | Architecture | stack-c/docker-compose.yml | LOW — copy patterns from A/B |
 | H-8 | SessionBlacklistFilterApp2 divergent Base64 implementation | Code Review | SessionBlacklistFilterApp2.groovy | LOW — align with other files |
-| H-9 | Stack C nginx missing proxy_buffer_size 128k | Architecture | stack-c/nginx/nginx.conf | TRIVIAL — add 2 lines |
+| H-9 | Stack C nginx missing proxy_buffer_size 128k | Architecture | stack-c/nginx/nginx.conf | RESOLVED 2026-03-17 in Step 5 (`f86c7eb`) |
 
 ---
 
@@ -35,7 +35,7 @@
 | # | Finding | Source | Effort |
 |---|---------|--------|--------|
 | M-1 | Hardcoded Keycloak URLs in BackchannelLogoutHandler (3 files) | Architecture | LOW — System.getenv() |
-| M-2 | Missing CANONICAL_ORIGIN_* env vars in A/B docker-compose | Architecture | TRIVIAL |
+| M-2 | Missing CANONICAL_ORIGIN_* env vars in A/B docker-compose | Architecture | RESOLVED 2026-03-17 in Step 5 (`f86c7eb`) |
 | M-3 | No security response headers on nginx (all stacks) | Security | LOW — add_header directives |
 | M-4 | JwtSession cookies lack SameSite flag | Security | LOW — nginx proxy_cookie_flags |
 | M-5 | Weak OIDC client secrets Stack C ("secret-c") | Security | TRIVIAL — generate random |
@@ -47,7 +47,7 @@
 | M-11 | readRespLine doesn't throw on EOF | Code Review | LOW |
 | M-12 | base64UrlDecode unnecessary manual padding | Code Review | LOW |
 | M-13 | Externalize Keycloak URLs in Stack A+C routes (match B pattern) | Architecture | MEDIUM |
-| M-14 | App1ResponseRewriter.groovy dead code (0 bytes) | Code+Analyst | TRIVIAL — delete |
+| M-14 | App1ResponseRewriter.groovy dead code (0 bytes) | Code+Analyst | RESOLVED 2026-03-17 in Step 5 (`f86c7eb`) |
 
 ---
 
