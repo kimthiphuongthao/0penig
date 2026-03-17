@@ -5,7 +5,13 @@
     "type": "ScriptableHandler",
     "config": {
       "type": "application/x-groovy",
-      "file": "SloHandler.groovy"
+      "file": "SloHandler.groovy",
+      "args": {
+        "clientEndpoint": "/openid/app1",
+        "clientId": "openig-client",
+        "canonicalOrigin": "http://wp-a.sso.local",
+        "postLogoutPath": "/"
+      }
     }
   }
 }

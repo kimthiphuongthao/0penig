@@ -5,7 +5,13 @@
     "type": "ScriptableHandler",
     "config": {
       "type": "application/x-groovy",
-      "file": "SloHandlerRedmine.groovy"
+      "file": "SloHandler.groovy",
+      "args": {
+        "clientEndpoint": "/openid/app3",
+        "clientId": "openig-client-b",
+        "canonicalOrigin": "http://redmine-b.sso.local:9080",
+        "postLogoutPath": "/"
+      }
     }
   }
 }

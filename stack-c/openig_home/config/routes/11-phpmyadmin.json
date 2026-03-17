@@ -93,7 +93,13 @@
           "type": "ScriptableHandler",
           "config": {
             "type": "application/x-groovy",
-            "file": "SloHandlerPhpMyAdmin.groovy"
+            "file": "SloHandler.groovy",
+            "args": {
+              "clientEndpoint": "/openid/app6",
+              "clientId": "openig-client-c-app6",
+              "canonicalOrigin": "http://phpmyadmin-c.sso.local:18080",
+              "postLogoutPath": "/"
+            }
           }
         }
       }

@@ -5,7 +5,13 @@
     "type": "ScriptableHandler",
     "config": {
       "type": "application/x-groovy",
-      "file": "SloHandlerGrafana.groovy"
+      "file": "SloHandler.groovy",
+      "args": {
+        "clientEndpoint": "/openid/app5",
+        "clientId": "openig-client-c-app5",
+        "canonicalOrigin": "http://grafana-c.sso.local:18080",
+        "postLogoutPath": "/"
+      }
     }
   }
 }
