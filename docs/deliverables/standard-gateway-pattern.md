@@ -79,6 +79,8 @@ Why: The reviewed stacks show the same two failure modes repeatedly: revocation 
 
 How to implement in OpenIG: `BackchannelLogoutHandler` must validate logout tokens before writing `blacklist:<sid>` to Redis with TTL aligned to session lifetime, and `SessionBlacklistFilter` must read that same `sid` key on every authenticated request. The logout token validator MUST check `alg=RS256`, resolve the signing key from JWKS by `kid`, and validate `iss`, `aud`, `events`, `iat`, and `exp` before writing revocation state. Derived from: Stack A `§4`; Stack B "Confirmed Strengths"; Stack C `§3`.
 
+> **Implementation (2026-03-17):** SessionBlacklistFilter.groovy — parameterized template, configured via route args: clientEndpoint, sessionCacheKey, canonicalOrigin.
+
 ### 2. Secret Externalization
 [Derived from: A F1, B F1, C F1]
 
@@ -134,6 +136,8 @@ What it is: Each login mechanism adapter MUST define its required filter-chain c
 Why: Stack C shows a safeguard filter that exists in code but is absent from the route chain. Stack B shows that an SLO handler can drift away from the active OAuth2 namespace and silently stop working. Stack A's additional review notes show that helper-side login/retry logic can degrade into unsafe behavior when the route contract does not enforce it. Derived from: Stack C `§4 F6`; Stack B `F5`; Stack A `§6` Codex-only additions and Subagent-only findings.
 
 How to implement in OpenIG: Treat route JSON and Groovy scripts as one adapter unit: the route must declare every required cleanup and identity filter explicitly, and logout handlers must validate that the expected OIDC namespace and token are present before redirecting to Keycloak. Presence of a script in `scripts/` is not evidence that the control is active. Derived from: Stack C `§4 F6`; Stack B `F5`; Stack A `§6`.
+
+> **Implementation (2026-03-17):** SloHandler.groovy — parameterized template, configured via route args: clientEndpoint, clientId, canonicalOrigin, postLogoutPath. App-specific variant: SloHandlerJellyfin.groovy for apps requiring pre-logout API calls.
 
 ## Recommended Controls (SHOULD)
 
@@ -258,3 +262,9 @@ Derived from: Cross-Stack Summary "Recommended Standard Pattern" and "Next Steps
 ### Observability
 
 - [ ] Logout logs contain only timestamp, opaque session identifier, logout type, and result; they do not log token-bearing URLs or token values.
+
+## Parameterized Template Architecture (2026-03-17)
+
+All gateway Groovy scripts now use a parameterized template architecture (Pattern Consolidation Steps 1-5). Each stack has its own copy of each template; configuration is per-route via JSON args binding.
+
+See docs/deliverables/legacy-auth-patterns-definitive.md section "Template-Based Integration" for full template catalogue and args reference.

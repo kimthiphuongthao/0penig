@@ -39,6 +39,8 @@ Bạn **không cần** quan tâm đến những phần sau — gateway team xử
 - Hệ thống đảm bảo logout có hiệu lực: khi người dùng logout ở 1 app, các app khác sẽ yêu cầu đăng nhập lại ở lần truy cập tiếp theo
 - Toàn bộ cấu hình và logic xử lý nội bộ của gateway
 
+> **Gateway Integration Model (2026-03-17):** Gateway team configures parameterized Groovy templates via route JSON args — no Groovy code changes needed for standard integrations. App team provides: (1) app URL + login mechanism type, (2) Keycloak client ID (or request gateway team to create), (3) post-logout redirect URL.
+
 **Action item cho bạn:** Không có. Phần này chỉ để bạn biết gateway team đang làm gì.
 
 ---

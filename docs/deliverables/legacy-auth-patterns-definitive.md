@@ -326,6 +326,41 @@ Score per control: `0 = missing`, `1 = partial`, `2 = adequate`
 
 ---
 
+## Template-Based Integration
+
+As of 2026-03-17 (Pattern Consolidation Steps 1-5), all gateway Groovy scripts follow a parameterized template architecture. New app integrations should copy these templates and configure via route JSON args.
+
+### Available Templates (per stack)
+
+| Template | File | Args | Purpose |
+|----------|------|------|---------|
+| SessionBlacklistFilter | SessionBlacklistFilter.groovy | clientEndpoint, sessionCacheKey, canonicalOrigin | Check Redis blacklist on every request; redirect to re-auth if blacklisted |
+| BackchannelLogoutHandler | BackchannelLogoutHandler.groovy | audiences (List), redisHost, jwksUri, issuer | Receive Keycloak backchannel logout POST; validate JWT; write sid to Redis blacklist |
+| SloHandler | SloHandler.groovy | clientEndpoint, clientId, canonicalOrigin, postLogoutPath | Intercept logout request; redirect to Keycloak end_session with id_token_hint |
+| SloHandlerJellyfin | SloHandlerJellyfin.groovy | (hardcoded — Jellyfin-specific) | Same as SloHandler + calls Jellyfin /Sessions/Logout API before redirect |
+
+### Template Selection Decision Tree
+
+1. Does the app need SSO session revocation check on every request? -> Add SessionBlacklistFilter to route chain
+2. Does Keycloak need to notify this app on global logout? -> Register backchannel logout URL + add BackchannelLogoutHandler route
+3. Does the app have a logout URL to intercept? -> Add SloHandler route (or SloHandlerJellyfin for Jellyfin-specific API)
+4. Does the app use a dedicated Keycloak client? -> Set matching clientId arg in SloHandler + BackchannelLogoutHandler audiences
+
+### Args Binding Pattern (OpenIG 6.0.2)
+
+Each key in route JSON args block becomes a top-level Groovy variable.
+Example route JSON:
+  "type": "ScriptableFilter",
+  "config": {
+    "file": "SessionBlacklistFilter.groovy",
+    "args": { "clientEndpoint": "/openid/app1", "sessionCacheKey": "oidc_sid" }
+  }
+
+Access in Groovy: binding.hasVariable('clientEndpoint') ? (clientEndpoint as String) : '/openid/default'
+WARNING: Do NOT use args.clientEndpoint or (args as Map).clientEndpoint — these do NOT work in OpenIG 6.0.2.
+
+---
+
 ## Sources (Primary)
 
 - RFC 9110: HTTP Semantics - https://www.rfc-editor.org/rfc/rfc9110
