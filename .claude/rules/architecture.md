@@ -45,6 +45,12 @@ Keycloak shared: `http://auth.sso.local:8080`, realm `sso-realm`.
 - Tất cả logic redirect/logout/session re-entry PHẢI dùng pinned origin từ env var này, không dùng inbound `Host`
 - Stack B Redmine không còn public host port `3000`; browser chỉ truy cập qua `http://redmine-b.sso.local:9080`
 
+## Runtime secret + image pattern
+- Secret runtime của từng stack nằm trong file `.env` cục bộ (gitignored); chỉ commit `.env.example`
+- Giá trị Base64 phải được copy nguyên vẹn. Dấu `=` cuối chuỗi là dữ liệu hợp lệ, không phải ký tự thừa
+- Tất cả OpenIG containers PHẢI pin `openidentityplatform/openig:6.0.1`
+- KHÔNG dùng `openidentityplatform/openig:latest` vì `latest=6.0.2` chuyển sang Tomcat 11 và làm OpenIG 6 không khởi động được
+
 ## Cookie session
 - Stack A: `IG_SSO`, `cookieDomain: ".sso.local"`
 - Stack B: `IG_SSO_B`, `cookieDomain: ".sso.local"`

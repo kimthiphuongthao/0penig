@@ -1,6 +1,6 @@
 # Tại sao cần Redis để thực hiện SLO?
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-5 are complete. Step 5 verification confirmed Redis blacklist writes for all 5 OIDC clients, and Step 6 is the current document-sync pass.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. Step 5 verification confirmed Redis blacklist writes for all 5 OIDC clients.
 
 > Câu hỏi: Tôi chưa hiểu rõ hết vì sao lại cần đến Redis, tại sao dùng thêm Redis thì lại SLO được?
 

@@ -4,6 +4,8 @@
 **Stacks reviewed:** A (WordPress+WhoAmI), B (Redmine+Jellyfin HA), C (Grafana+phpMyAdmin)
 **Purpose:** Identify universal pattern-level findings vs stack-specific findings to inform a standard, reusable OpenIG gateway pattern
 
+> Update 2026-03-17: This file remains the 2026-03-14 historical cross-review summary. Since then, STEP-01 deleted `PhpMyAdminCookieFilter.groovy` (`20d523f`), STEP-02 rotated Stack C OIDC secrets (`37672ed`), and STEP-03 moved compose secrets into gitignored `.env` files while pinning OpenIG to `6.0.1` (`b738577`). Use `docs/audit/2026-03-17-production-readiness-gap-report.md` and `docs/fix-tracking/master-backlog.md` for the current open-item list.
+
 ---
 
 ## Universal Findings (present in ALL 3 stacks)

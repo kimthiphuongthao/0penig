@@ -1,11 +1,11 @@
 # Pre-Packaging Comprehensive Audit — Executive Summary
 
 **Date:** 2026-03-16
-**Scope:** SSO Lab — OpenIG 6.0.2 + Keycloak 24 + Vault + Redis (3 stacks)
+**Scope:** SSO Lab — OpenIG 6.0.x (runtime pinned to `6.0.1`; upstream capability audit against 6.0.2 source) + Keycloak 24 + Vault + Redis (3 stacks)
 **Branch:** `feat/subdomain-test`
 **Agents used:** 6 specialized agents (2x document-specialist, 1x analyst, 1x architect, 1x code-reviewer, 1x security-reviewer)
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-5 are now complete. SessionBlacklistFilter `6 -> 1` (Steps 1+2, `a76e194`, `832bbae`), BackchannelLogoutHandler `3 -> 1` (Step 3, `4d8f065`), SloHandler `5 -> 2` (Step 4, `3b8a6d8`), and the Step 5 quick wins (`5ae657e`, `aaf66d5`, `f86c7eb`) are done. Step 5 resolved H-2 (`vault/keys/` gitignore), H-3 (Redmine port 3000 removed), H-9 (Stack C proxy buffers), M-2 (Stack A/B `CANONICAL_ORIGIN_APP*`), and M-14 (dead-code deletion). Step 6 is the current document-sync pass.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. Since this audit snapshot, STEP-01 deleted `PhpMyAdminCookieFilter.groovy` (`20d523f`), STEP-02 rotated Stack C OIDC secrets (`37672ed`), and STEP-03 externalized compose secrets to gitignored `.env` files while pinning OpenIG to `6.0.1` (`b738577`). This document remains a historical audit summary.
 
 ---
 

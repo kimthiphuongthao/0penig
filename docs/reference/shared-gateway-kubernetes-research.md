@@ -54,8 +54,8 @@ spec:
   template:
     spec:
       containers:
-      - name: openig
-        image: openidentityplatform/openig:latest
+        - name: openig
+          image: openidentityplatform/openig:6.0.1
         ports:
         - containerPort: 8080
         volumeMounts:

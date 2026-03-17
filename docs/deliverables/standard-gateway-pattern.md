@@ -5,7 +5,7 @@
 **Derived from:** Code and security review of 3 integration stacks (WordPress, Redmine+Jellyfin, Grafana+phpMyAdmin)
 **Scope:** OpenIG 6 + Keycloak + Vault + Redis
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-5 are complete. The lab implementation now also matches more of this pattern operationally: Redmine no longer exposes host port `3000`, Stack C nginx carries the same proxy buffer settings as A/B, and all 3 stacks declare app-specific `CANONICAL_ORIGIN_APP*` env vars. Step 6 is the current document-sync pass.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. The lab implementation now also matches more of this pattern operationally: Redmine no longer exposes host port `3000`, Stack C nginx carries the same proxy buffer settings as A/B, all 3 stacks declare app-specific `CANONICAL_ORIGIN_APP*` env vars, Stack C OIDC secrets were rotated, and compose secrets now live in gitignored `.env` files while OpenIG stays pinned to `6.0.1`.
 
 ---
 
@@ -239,6 +239,7 @@ Derived from: Cross-Stack Summary "Recommended Standard Pattern" and "Next Steps
 - [ ] `JwtSession.sharedSecret`, OIDC `clientSecret`, and keystore passwords come from Vault or environment at runtime and do not appear in config, routes, or Groovy.
 - [ ] Any Vault-backed secret retrieval is cached with bounded TTL and refreshed before expiry without writing the fetched secret into `JwtSession`.
 - [ ] OIDC client secrets use strong random values only. Minimum baseline: 32+ random bytes encoded as Base64. Trivially guessable values such as `secret-c` are a P1 security issue. Generate with `openssl rand -base64 32`.
+- [ ] When copying Base64 secrets into `.env`, Keycloak, or another secret store, preserve the full value including any trailing `=` padding. Do not trim or re-wrap generated secrets.
 
 ### Session and revocation
 

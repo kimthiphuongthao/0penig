@@ -35,6 +35,8 @@ docker exec stack-c-vault-c-1 sh /tmp/vault-bootstrap.sh
 
 *Lưu ý: Jellyfin yêu cầu set password thủ công `AliceJelly2026` / `BobJelly2026` trong lần chạy đầu tiên.*
 
+*Lưu ý Stack C (2026-03-17): trước khi test Grafana, verify `OIDC_CLIENT_SECRET_APP5` giống hệt nhau giữa `stack-c/.env`, Keycloak client `openig-client-c-app5`, và env thực tế của các container OpenIG. Dấu `=` cuối chuỗi Base64 là bắt buộc nếu secret được sinh ra như vậy.*
+
 ---
 
 ## 🧪 3. Stack A SSO Test — WordPress + WhoAmI

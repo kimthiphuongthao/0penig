@@ -74,9 +74,14 @@
 - [x] Pattern Consolidation Steps 1-6: COMPLETE
 - [x] Post-audit fixes: Stack A `BackchannelLogoutHandler` consolidated (`f85a3f2`), 3 leftover `SloHandler*` files deleted
 - [x] `.memory` symlink setup cho Codex write access (`15174f6`)
-- [x] Production readiness audit: `36 RESOLVED`, `6 PARTIAL`, `39 STILL OPEN`
+- [x] Production readiness audit: `38 RESOLVED`, `6 PARTIAL`, `37 STILL OPEN`
 - [x] Gap report written: `docs/audit/2026-03-17-production-readiness-gap-report.md` (`26e8e69`)
 - [x] 64-file maintenance inventory completed
-- [ ] Next: tạo `docs/fix-tracking/master-backlog.md` + Phase 2 Security Hardening plan
+- [x] STEP-01 (L-5): xóa `PhpMyAdminCookieFilter.groovy` dead code (`20d523f`)
+- [x] STEP-02 (M-5/S-9): rotate Stack C OIDC client secrets sang giá trị mạnh 44 ký tự (`37672ed`)
+- [x] STEP-03 (H-5/S-3): externalize secret sang `.env` + pin toàn bộ OpenIG images về `openidentityplatform/openig:6.0.1` (`b738577`)
+- [x] End-of-session doc audit sync: roadmap, audit docs, test docs, rules, và state notes đã phản ánh STEP-01/02/03
+- [ ] Current blocker: Grafana SSO re-validation pending — `OIDC_CLIENT_SECRET_APP5` cần được verify end-to-end, bao gồm trailing `=` padding
+- [ ] Next: xử lý Grafana SSO blocker rồi tiếp tục P1 backlog (`H-4/S-2`, `H-7/A-1`, `A-6/A-7/M-13/S-17`)
 
 ---

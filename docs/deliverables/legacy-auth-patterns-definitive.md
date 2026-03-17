@@ -3,7 +3,7 @@
 **Purpose:** Tài liệu reference để đối chiếu với hiện trạng triển khai và tìm gaps
 **Sources:** Claude (Exa MCP) + Codex (web search) + Gemini (deep research)
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-5 are complete; the live lab now uses consolidated SessionBlacklistFilter / BackchannelLogoutHandler / SloHandler templates, and Step 5 quick wins are resolved. Step 6 is the document-sync phase.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. The live lab now uses consolidated SessionBlacklistFilter / BackchannelLogoutHandler / SloHandler templates; STEP-02 rotated Stack C OIDC secrets; STEP-03 moved compose secrets into gitignored `.env` files and pinned OpenIG to `6.0.1`.
 
 ---
 
@@ -328,7 +328,9 @@ Score per control: `0 = missing`, `1 = partial`, `2 = adequate`
 
 ## Template-Based Integration
 
-As of 2026-03-17 (Pattern Consolidation Steps 1-5), all gateway Groovy scripts follow a parameterized template architecture. New app integrations should copy these templates and configure via route JSON args.
+As of 2026-03-17 (Pattern Consolidation Steps 1-6), all gateway Groovy scripts follow a parameterized template architecture. New app integrations should copy these templates and configure via route JSON args.
+
+Runtime note: pin OpenIG images to `openidentityplatform/openig:6.0.1`. Do not use the mutable `latest` tag, because `latest=6.0.2` moved to a Tomcat 11 build that breaks OpenIG 6 startup.
 
 ### Available Templates (per stack)
 
@@ -346,7 +348,7 @@ As of 2026-03-17 (Pattern Consolidation Steps 1-5), all gateway Groovy scripts f
 3. Does the app have a logout URL to intercept? -> Add SloHandler route (or SloHandlerJellyfin for Jellyfin-specific API)
 4. Does the app use a dedicated Keycloak client? -> Set matching clientId arg in SloHandler + BackchannelLogoutHandler audiences
 
-### Args Binding Pattern (OpenIG 6.0.2)
+### Args Binding Pattern (OpenIG 6.0.x runtime pinned to 6.0.1)
 
 Each key in route JSON args block becomes a top-level Groovy variable.
 Example route JSON:
@@ -357,7 +359,7 @@ Example route JSON:
   }
 
 Access in Groovy: binding.hasVariable('clientEndpoint') ? (clientEndpoint as String) : '/openid/default'
-WARNING: Do NOT use args.clientEndpoint or (args as Map).clientEndpoint — these do NOT work in OpenIG 6.0.2.
+WARNING: Do NOT use args.clientEndpoint or (args as Map).clientEndpoint — these do NOT work in the OpenIG 6.0.x runtime used here.
 
 ---
 

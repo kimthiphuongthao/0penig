@@ -91,6 +91,8 @@ Mục tiêu: dùng checklist này để khảo sát kỹ thuật **trước khi*
 - [ ] App không hỗ trợ subpath natively
 - [ ] Container image có thể customize (Dockerfile/entrypoint/config mount):
 - [ ] Không thể customize image (ràng buộc vendor/platform):
+- [ ] Gateway image tags sẽ được pin explicit version (không dùng `:latest`)
+- [ ] Nếu dùng Base64 secrets trong `.env` / secret store, team vận hành có quy trình copy giữ nguyên trailing `=` padding
 
 Ghi chú triển khai:
 - Public host/port chuẩn hóa:

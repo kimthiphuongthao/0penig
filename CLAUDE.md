@@ -60,6 +60,9 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] Pattern Consolidation Step 4: SloHandler 5→2, try-catch fix (H-1), phpMyAdmin inline failureHandler update (`3b8a6d8`)
 - [x] Pattern Consolidation Step 5: Quick-win fixes complete - H-2 `.gitignore` for `vault/keys/` (`5ae657e`), H-3 Redmine port 3000 removed, H-9 Stack C proxy buffers aligned, M-2 `CANONICAL_ORIGIN_APP*` added to Stack A/B docker-compose, M-14 dead code deleted; validation PASS for all 5 backchannel clients, all 5 logout redirects, phpMyAdmin inline failureHandler (`aaf66d5`, `f86c7eb`)
 - [x] Vault keys purged from git history and branch force-pushed after cleanup
+- [x] STEP-01 (L-5): deleted `PhpMyAdminCookieFilter.groovy` dead code (`20d523f`)
+- [x] STEP-02 (M-5/S-9): rotated Stack C OIDC client secrets to strong values (`37672ed`)
+- [x] STEP-03 (H-5/S-3): externalized secrets to gitignored `.env` files and pinned all OpenIG images to `openidentityplatform/openig:6.0.1` (`b738577`)
 
 ### Phase tiếp theo
 - [x] **Fix phase COMPLETE**: 15 fixes (11 implemented, 2 WONT_FIX, 2 verified-no-action) — tracking: `docs/fix-phase/checklist.md`
@@ -70,6 +73,7 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] Pattern Consolidation Step 6: Update deliverable documents. Plan: `.omc/plans/pattern-consolidation.md`
 - [x] Redis persistence (appendonly yes) — đảm bảo SLO blacklist survive restart
 - [x] Vault audit logging
+- [ ] Stack C Grafana SSO re-validation/fix — current session finding: `OIDC_CLIENT_SECRET_APP5` must match exactly across `.env`, Keycloak, and running containers; trailing `=` padding is significant
 - [ ] Đóng gói: OVA / Docker Compose bundle — single-command deploy
 - [ ] Slide + tài liệu báo cáo phương án giải pháp
 

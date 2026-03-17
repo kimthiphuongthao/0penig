@@ -7,6 +7,13 @@ Scope: Evidence consolidation for Stack A OpenIG login/logout/session/revocation
 
 Four review outputs were consolidated and deduplicated. The strongest agreement is on three HIGH-risk areas: committed session/crypto secrets, fail-open revocation checks, and revocation TTL shorter than session lifetime. MEDIUM-risk consensus exists for logout token leakage in logs; Host-header redirect construction is supported by two security-focused reviews. Additional Codex-only and subagent-only items are kept separate for follow-up validation.
 
+**[UPDATED 2026-03-17]** Current repo state beyond this historical review:
+- F1 resolved in STEP-03 (`b738577`) — secrets moved to `.env` / runtime injection.
+- F2 resolved in FIX-03 (`278a29c`) — blacklist checks now fail closed with `500` on Redis errors.
+- F3 resolved in live state (`9cbf71a`) — blacklist TTL is now aligned with `JwtSession.sessionTimeout: "30 minutes"`.
+- F4 resolved in FIX-13 (`a9d2947`) — `id_token_hint` is redacted from logs.
+- F5 resolved in FIX-08 (`7fc73ba`) plus Step 5 env rollout (`aaf66d5`) — redirects now use pinned `CANONICAL_ORIGIN_APP*`.
+
 ## 2) Review Sources
 
 - Subagent security review: `/private/tmp/claude-501/-Volumes-OS-claude/3ccda1f9-83b3-4928-8a34-5aa3310485e6/tasks/aa0225745b287c59d.output`

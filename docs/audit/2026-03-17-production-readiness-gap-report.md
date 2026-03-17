@@ -10,6 +10,8 @@ This report captures the 2026-03-17 production-readiness gap assessment for SSO 
 
 Resolved work now covers 38 findings and materially improved the gateway baseline. The resolved work includes the JWKS cache race, `SloHandler` try-catch hardening, TTL unit standardization, consolidation of `SessionBlacklistFilter` / `BackchannelLogoutHandler` / `SloHandler`, `vault/keys/` repo hygiene, Redmine direct-port exposure removal, Stack C nginx buffer alignment, `CANONICAL_ORIGIN_*` environment variables, dead-code cleanup, Stack C OIDC client secret rotation, and STEP-03 secret externalization plus OpenIG image pinning.
 
+Operational follow-up outside the scorecard: Stack C Grafana SSO is currently blocked pending APP5 secret re-validation. Generated Base64 secrets must remain byte-for-byte identical across `.env`, Keycloak, and the running containers; losing the trailing `=` padding creates an `invalid_client` failure.
+
 The remaining 37 open findings are concentrated in three categories that matter for a reusable reference solution:
 
 - Security: Redis revocation state is unauthenticated, and security headers and cookie flags are incomplete.
@@ -186,12 +188,12 @@ These items remain acceptable only as explicitly documented lab constraints. The
 | H-1 | `SloHandler` missing try-catch | Consolidated `SloHandler` template (commit `3b8a6d8`) |
 | H-2 | `vault/keys/` not in `.gitignore` | Added `**/vault/keys/` (commit `5ae657e`) |
 | H-3 | Redmine port `3000` exposed | Removed `3000:3000` mapping (commit `f86c7eb`) |
-| H-5/S-3 | Secrets externalized from compose files | `.env` files are gitignored, `.env.example` files are committed, and all three stacks pin `openidentityplatform/openig:6.0.1` (commit `TBD`) |
+| H-5/S-3 | Secrets externalized from compose files | `.env` files are gitignored, `.env.example` files are committed, and all three stacks pin `openidentityplatform/openig:6.0.1` (commit `b738577`) |
 | H-6 | JWKS TTL unit inconsistency | Standardized to seconds (commit `4d8f065`) |
 | H-8 | `SessionBlacklistFilterApp2` divergent Base64 | File deleted in consolidation (commit `832bbae`) |
 | H-9 | Stack C nginx proxy buffer missing | Added `proxy_buffer_size 128k` (commit `f86c7eb`) |
 | M-2 | `CANONICAL_ORIGIN_*` env vars missing A/B | Added to docker-compose A+B (commit `aaf66d5`) |
-| M-5/S-9 | Stack C weak OIDC client secrets | Rotated `OIDC_CLIENT_SECRET_APP5` and `OIDC_CLIENT_SECRET_APP6` to strong 44-character values and updated Keycloak clients to match (commit `TBD`) |
+| M-5/S-9 | Stack C weak OIDC client secrets | Rotated `OIDC_CLIENT_SECRET_APP5` and `OIDC_CLIENT_SECRET_APP6` to strong 44-character values and updated Keycloak clients to match (commit `37672ed`) |
 | M-4 | Stack A `SloHandler` hardcoded Keycloak URL | Parameterized via `KEYCLOAK_BROWSER_URL` env (commit `3b8a6d8`) |
 | M-14 | `App1ResponseRewriter.groovy` dead code | Deleted (commit `f86c7eb`) |
 | Pattern | `SessionBlacklistFilter` 6 copies -> 1 template | Three per-stack parameterized copies via args (commits `a76e194`, `832bbae`) |

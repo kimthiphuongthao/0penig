@@ -4,7 +4,7 @@
 **Source:** https://github.com/OpenIdentityPlatform/OpenIG (master, tag 6.0.2)
 **Date:** 2026-03-16
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-5 are complete. Step 5 did not change the built-in capability verdict; it resolved config/deployment quick wins and Step 6 is the current document-sync pass.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. STEP-02 rotated Stack C OIDC secrets, and STEP-03 pinned the lab runtime to `openidentityplatform/openig:6.0.1`. The built-in capability verdict below remains an upstream 6.0.2 source audit and is retained as a historical reference.
 
 ---
 

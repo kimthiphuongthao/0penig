@@ -1,6 +1,6 @@
 # Hướng dẫn tích hợp Legacy App vào hệ thống SSO (OpenIG + Keycloak)
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-5 are complete. Step 5 normalized Stack A/B `CANONICAL_ORIGIN_APP*`, removed the old Redmine direct-host bypass, aligned Stack C nginx proxy buffers, and deleted dead code. Step 6 is the current document-sync pass.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. Step 5 normalized Stack A/B `CANONICAL_ORIGIN_APP*`, removed the old Redmine direct-host bypass, aligned Stack C nginx proxy buffers, and deleted dead code. STEP-02 rotated Stack C OIDC secrets; STEP-03 moved compose secrets into gitignored `.env` files and pinned OpenIG to `6.0.1`.
 
 Tài liệu này dành cho team ứng dụng legacy cần tích hợp vào kiến trúc SSO hiện tại. Nội dung bám sát cấu hình đang chạy ở 3 stack (`stack-a`, `stack-b`, `stack-c`), tập trung vào các điểm thường gây lỗi khi triển khai thực tế.
 
@@ -276,7 +276,7 @@ Thứ tự này không được đảo:
 Stack B dùng chuỗi:
 
 1. `OAuth2ClientFilter` (`clientEndpoint: /openid/app4`, client `openig-client-b-app4`)
-2. `SessionBlacklistFilterApp4`
+2. `SessionBlacklistFilter.groovy` (parameterized via route `args` cho app4)
 3. `VaultCredentialFilterJellyfin`
 4. `JellyfinTokenInjectorFilter`
 5. `JellyfinResponseRewriterFilter`
@@ -288,7 +288,7 @@ Ghi chú: Jellyfin hiện đã được đồng bộ hoàn toàn về `/openid/a
 Stack B dùng chuỗi:
 
 1. `OAuth2ClientFilter` (`clientEndpoint: /openid/app3`, client `openig-client-b`)
-2. `SessionBlacklistFilterApp3`
+2. `SessionBlacklistFilter.groovy` (parameterized via route `args` cho app3)
 3. `VaultCredentialFilterRedmine`
 4. `RedmineCredentialInjectorFilter`
 
@@ -297,10 +297,12 @@ Stack B dùng chuỗi:
 Stack C dùng chuỗi (Header Injection):
 
 1. `OidcFilterApp5` (`OAuth2ClientFilter`, `clientEndpoint: /openid/app5`, client `openig-client-c-app5`)
-2. `SessionBlacklistFilterApp5`
+2. `SessionBlacklistFilter.groovy` (parameterized via route `args` cho app5)
 3. `GrafanaUserHeader` (`HeaderFilter` — remove + add `X-WEBAUTH-USER` từ `attributes.openid['user_info']['preferred_username']`, transient per-request)
 
 Không cần `VaultCredentialFilter` vì Grafana dùng auth proxy — username từ `preferred_username` trong OIDC được inject qua header. Grafana được cấu hình `GF_AUTH_PROXY_ENABLED=true`, `GF_AUTH_PROXY_HEADER_NAME=X-WEBAUTH-USER`.
+
+Lưu ý vận hành 2026-03-17: nếu Grafana trả `invalid_client` sau khi rotate secret, kiểm tra `OIDC_CLIENT_SECRET_APP5` khớp tuyệt đối giữa `stack-c/.env`, Keycloak client `openig-client-c-app5`, và env thực tế của các container OpenIG. Giá trị Base64 phải giữ nguyên cả dấu `=` cuối chuỗi.
 
 Nginx phải strip `X-WEBAUTH-USER` từ client trước khi forward:
 
@@ -313,7 +315,7 @@ proxy_set_header X-WEBAUTH-USER "";
 Stack C dùng chuỗi (HTTP Basic Auth Injection):
 
 1. `OidcFilterApp6` (`OAuth2ClientFilter`, `clientEndpoint: /openid/app6`, client `openig-client-c-app6`)
-2. `SessionBlacklistFilterApp6`
+2. `SessionBlacklistFilter.groovy` (parameterized via route `args` cho app6)
 3. `VaultCredentialFilter` (đọc credential từ Vault path `secret/data/phpmyadmin/{username}`)
 4. `PhpMyAdminBasicAuth` (`HttpBasicAuthFilter` — inject `Authorization: Basic` từ `attributes.phpmyadmin_username`/`attributes.phpmyadmin_password`; `cacheHeader: false` để support user switch. Credentials set by VaultCredentialFilter in transient attributes, not persisted to session)
 
@@ -323,7 +325,7 @@ phpMyAdmin được cấu hình `auth_type = 'http'` (via `config.user.inc.php` 
 proxy_set_header Authorization "";
 ```
 
-SLO: phpMyAdmin `auth_type=http` logout gửi 401 → `HttpBasicAuthFilter` `failureHandler` trigger → `SloHandlerPhpMyAdmin.groovy` redirect `/openid/app6/logout` → Keycloak `end_session`. Đây là by design.
+SLO: phpMyAdmin `auth_type=http` logout gửi 401 → `HttpBasicAuthFilter` `failureHandler` trigger → `SloHandler.groovy` redirect `/openid/app6/logout` → Keycloak `end_session`. Đây là by design.
 
 ## 7) Route priority (lexicographic)
 
@@ -439,15 +441,17 @@ upstream openig_pool {
 }
 ```
 
-Stack B (`nginx/nginx.conf`) đang dùng `hash $cookie_JSESSIONID consistent`:
+Stack B (`nginx/nginx.conf`) hiện cũng dùng `ip_hash`:
 
 ```nginx
 upstream openig_b_pool {
-    hash $cookie_JSESSIONID consistent;
+    ip_hash;
     server openig-b1:8080 max_fails=3 fail_timeout=10s;
     server openig-b2:8080 max_fails=3 fail_timeout=10s;
 }
 ```
+
+Stack B đã bỏ `hash $cookie_JSESSIONID consistent` vì OpenIG JwtSession không tạo affinity ổn định dựa trên `JSESSIONID` ở giai đoạn đầu OAuth2 flow.
 
 Stack C (`nginx/nginx.conf`) đang dùng `ip_hash`:
 
@@ -569,7 +573,7 @@ OpenIG pattern:
 3. `HttpBasicAuthFilter` inject `Authorization: Basic` header vào mọi request upstream.
 4. `cacheHeader: false` để hỗ trợ user switch (phpMyAdmin kiểm tra lại Basic Auth mỗi request).
 
-SLO pattern: phpMyAdmin logout gửi 401 → trigger `failureHandler` → `SloHandlerPhpMyAdmin.groovy` → Keycloak `end_session`. Đây là cơ chế native của HTTP Basic Auth (browser re-sends 401 để clear credentials).
+SLO pattern: phpMyAdmin logout gửi 401 → trigger `failureHandler` → `SloHandler.groovy` → Keycloak `end_session`. Đây là cơ chế native của HTTP Basic Auth (browser re-sends 401 để clear credentials).
 
 Nginx phải strip `Authorization` header từ client để ngăn client inject credential tự ý:
 
@@ -608,7 +612,7 @@ GF_AUTH_PROXY_AUTO_SIGN_UP=true
 GF_AUTH_DISABLE_LOGIN_FORM=true
 ```
 
-SLO: Grafana không có native logout endpoint xử lý token. Route `00-grafana-logout.json` intercept `GET /logout` → `SloHandlerGrafana.groovy` → Keycloak `end_session`.
+SLO: Grafana không có native logout endpoint xử lý token. Route `00-grafana-logout.json` intercept `GET /logout` → `SloHandler.groovy` → Keycloak `end_session`.
 
 Độ khó: Thấp nhất. Không cần credential injection phức tạp.
 
@@ -737,7 +741,7 @@ Nguyên nhân:
 
 Fix:
 
-- Thêm route `00-grafana-logout.json` intercept `GET /logout` → `SloHandlerGrafana.groovy` → Keycloak `end_session`.
+- Thêm route `00-grafana-logout.json` intercept `GET /logout` → `SloHandler.groovy` → Keycloak `end_session`.
 
 ## 16) FAQ
 

@@ -6,13 +6,13 @@
 **Goal:** Reduce 24 Groovy files (7 distinct patterns) to parameterized templates, fix CRITICAL+HIGH defects, update deliverables.
 **Revision:** R1 (Critic REVISE feedback applied — 5 mandatory fixes + 4 nice-to-haves)
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. Step 5 quick wins were finished via `5ae657e`, `aaf66d5`, and `f86c7eb`; Step 6 deliverables were completed in `421b369`, and the post-audit cleanup removed leftover `SloHandlerRedmine/Grafana/PhpMyAdmin` files that were no longer referenced by any route.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. Step 5 quick wins were finished via `5ae657e`, `aaf66d5`, and `f86c7eb`; Step 6 deliverables were completed in `421b369`; STEP-01 deleted `PhpMyAdminCookieFilter.groovy` (`20d523f`); STEP-02 rotated Stack C OIDC secrets (`37672ed`); STEP-03 moved live secrets into gitignored `.env` files and pinned OpenIG to `6.0.1` (`b738577`). Remaining Stack C Grafana secret-mismatch debugging is outside this plan.
 
 ---
 
 ## Context
 
-The SSO Lab at `/Volumes/OS/claude/openig/sso-lab` implements SSO/SLO across 3 stacks using OpenIG 6.0.2 + Keycloak 24 + Vault + Redis. The pre-packaging audit found that 18 of 24 Groovy files contain only 4 distinct logic patterns, copy-pasted with parameter changes. ~78% duplication (~1676 lines reducible).
+The SSO Lab at `/Volumes/OS/claude/openig/sso-lab` implements SSO/SLO across 3 stacks using OpenIG 6.0.x (runtime pinned to `6.0.1` because `latest=6.0.2` moved to Tomcat 11) + Keycloak 24 + Vault + Redis. The pre-packaging audit found that 18 of 24 Groovy files contain only 4 distinct logic patterns, copy-pasted with parameter changes. ~78% duplication (~1676 lines reducible).
 
 The lab's ultimate goal is a REFERENCE SOLUTION — parameterized, reusable templates that any team can copy and configure for their legacy app. Consolidation is prerequisite to that goal.
 
@@ -39,7 +39,7 @@ The lab's ultimate goal is a REFERENCE SOLUTION — parameterized, reusable temp
 ### Must NOT Have
 - No modifications to target applications (WordPress, Redmine, Jellyfin, Grafana, phpMyAdmin)
 - No shared Groovy files across stacks (copy per stack, parameterize per route)
-- No OpenIG 7+ features (must work with 6.0.2)
+- No OpenIG 7+ features (must work with the OpenIG 6.0.x line; runtime pinned to `6.0.1`)
 - No architecture redesign — same HA pattern, same SLO mechanism, same Vault integration
 
 ---
@@ -420,7 +420,9 @@ The phpMyAdmin route (`11-phpmyadmin.json`) has an inline `ScriptableHandler` in
 - **CredentialInjector/RedmineCredentialInjector/JellyfinTokenInjector** — these are app-specific adapters by design, not duplicated patterns.
 - **JellyfinResponseRewriter** — unique, not duplicated.
 - **PhpMyAdminCookieFilter** — WONT_FIX (inactive, phpMyAdmin CSRF incompatible).
-- **Security items C-2, H-4, H-5** — significant effort, separate plan needed (Redis auth, secrets in git, app tokens over HTTP).
+- **Security items C-2 and H-4** — significant effort, separate plan needed (app tokens over HTTP, Redis auth).
+- **H-5** — already resolved in STEP-03 (`b738577`).
+- **M-5** — already resolved in STEP-02 (`37672ed`).
 - **Stack C docker-compose alignment (H-7)** — separate infrastructure task.
 - **Nginx security headers (M-3), cookie flags (M-4)** — separate security hardening phase.
 

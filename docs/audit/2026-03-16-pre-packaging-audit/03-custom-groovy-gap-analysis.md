@@ -3,7 +3,7 @@
 **Agent:** analyst (Opus, READ-ONLY)
 **Date:** 2026-03-16
 
-> Update 2026-03-17: the `ScriptableHandler` `args` prerequisite was confirmed during Step 1; SessionBlacklistFilter consolidation `6 -> 1` is complete (Steps 1+2, `a76e194`, `832bbae`); BackchannelLogoutHandler consolidation `3 -> 1` is complete (Step 3, `4d8f065`); the missing SloHandler try-catch plus SloHandler consolidation `5 -> 2` are complete (Step 4, `3b8a6d8`); and Step 5 deleted `App1ResponseRewriter.groovy` dead code (`aaf66d5`). Step 6 is the current document-sync pass.
+> Update 2026-03-17: the `ScriptableHandler` `args` prerequisite was confirmed during Step 1; SessionBlacklistFilter consolidation `6 -> 1` is complete (Steps 1+2, `a76e194`, `832bbae`); BackchannelLogoutHandler consolidation `3 -> 1` is complete (Step 3, `4d8f065`); the missing SloHandler try-catch plus SloHandler consolidation `5 -> 2` are complete (Step 4, `3b8a6d8`); Step 5 deleted `App1ResponseRewriter.groovy` dead code (`aaf66d5`); and STEP-01 deleted `PhpMyAdminCookieFilter.groovy` (`20d523f`). This document remains a historical gap analysis snapshot.
 
 ---
 

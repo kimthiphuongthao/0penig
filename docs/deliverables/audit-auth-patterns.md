@@ -1,6 +1,9 @@
 # Auth Pattern Audit — SSO Lab
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-5 are complete; this audit remains primarily historical, but Step 5 quick wins are now reflected here. Step 6 is the current document-sync pass.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. This audit remains primarily historical. STEP-01 deleted `PhpMyAdminCookieFilter.groovy`, STEP-02 rotated Stack C OIDC secrets, and STEP-03 moved compose secrets into gitignored `.env` files while pinning OpenIG to `6.0.1`.
+
+> [!warning]
+> Historical snapshot note: several findings below describe the repo state before STEP-01/02/03. Use this file for pattern comparison, not as the latest readiness scoreboard. Current operational blocker outside this audit: Stack C Grafana SSO still needs APP5 secret re-validation after the Base64-padding mismatch investigation.
 
 ## 1. Per-App Inventory
 

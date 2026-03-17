@@ -3,7 +3,7 @@
 **Agent:** document-specialist (Sonnet)
 **Date:** 2026-03-16
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-5 are complete. The OpenIG mapping verdict is unchanged; Step 5 only closed config/deployment quick wins and Step 6 is the current document-sync pass.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. STEP-03 pinned the lab runtime to `openidentityplatform/openig:6.0.1`, but the OpenIG mapping verdict below remains unchanged and is kept as a historical 6.0.2 capability reference.
 
 ---
 

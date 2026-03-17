@@ -1,6 +1,6 @@
 # Vault Security Hardening — Gap Analysis
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-5 are complete. This gap list is unchanged architecturally, but Step 5 resolved the repo-hygiene quick win for `vault/keys/` by adding it to `.gitignore` (`5ae657e`). Step 6 is the document-sync phase.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. This gap list is unchanged architecturally, but Step 5 resolved the repo-hygiene quick win for `vault/keys/` by adding it to `.gitignore` (`5ae657e`).
 
 ## Context
 - Vault stores plaintext credentials of legacy apps (WordPress, Redmine, Jellyfin, phpMyAdmin/MariaDB)

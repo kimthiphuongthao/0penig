@@ -3,7 +3,12 @@
 **Dành cho:** Team phát triển và vận hành ứng dụng legacy cần tích hợp vào hệ thống SSO.
 **Không dành cho:** Gateway team — xem `standalone-legacy-app-integration-guide.md`.
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-5 are complete; Step 6 is the current deliverable-sync pass. Step 5 resolved the remaining quick wins around `vault/keys/` repo hygiene, Redmine direct-host exposure, Stack C nginx proxy buffers, Stack A/B `CANONICAL_ORIGIN_APP*`, and dead-code cleanup.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. STEP-01 deleted `PhpMyAdminCookieFilter.groovy`, STEP-02 rotated Stack C OIDC secrets, and STEP-03 moved compose secrets into gitignored `.env` files while pinning OpenIG to `6.0.1`.
+
+> [!warning]
+> Gateway-team handoff notes:
+> - Pin `openidentityplatform/openig:6.0.1`; do not use `openidentityplatform/openig:latest` because `latest=6.0.2` moved to Tomcat 11 and breaks OpenIG 6 startup.
+> - Treat generated Base64 secrets as opaque values. If a secret ends with `=`, keep it exactly as-is in `.env`, Keycloak, or any secret store. Truncating a 44-character value to 43 characters will break OIDC client authentication.
 
 ---
 

@@ -5,6 +5,8 @@
 **Derived from:** Đánh giá mã nguồn và bảo mật của 3 stack tích hợp (WordPress, Redmine+Jellyfin, Grafana+phpMyAdmin)
 **Scope:** OpenIG 6 + Keycloak + Vault + Redis
 
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. STEP-02 rotated Stack C OIDC secrets, and STEP-03 moved compose secrets into gitignored `.env` files while pinning OpenIG to `6.0.1`.
+
 ---
 
 ## Tổng quan (Overview)
@@ -76,6 +78,8 @@ Nội dung: Tất cả `JwtSession.sharedSecret`, OIDC `clientSecret`, và mật
 Lý do: Cả ba stack đều lộ secret gateway hoặc OIDC trong config quản lý bởi repo, biến lỗi cục bộ thành lỗi gateway có thể tái sử dụng và mở rộng blast radius của việc mất cookie hoặc lộ config. Derived from: Stack A `§5 F1`; Stack B `F1`; Stack C `§4 F1`; Cross-Stack Summary Universal Findings.
 
 Cách triển khai trong OpenIG: Dùng nguồn secret runtime kiểu `VaultCredentialFilter` và inject giá trị thu được vào cấu hình route/filter mà không serialize chúng vào `JwtSession`. Mẫu triển khai suy luận từ adapter dùng Vault đã đánh giá là: lấy secret lúc startup, cache có TTL, và refresh trước khi hết hạn thay vì lưu secret đã lấy vào session gắn với trình duyệt. Derived from: Stack A `§4`; Stack C `§3`; Stack C `§4 F5`.
+
+Quy tắc triển khai: secret ở Compose phải nằm trong file `.env` được gitignore; chỉ commit `.env.example`. Container OpenIG phải pin tag tường minh `openidentityplatform/openig:6.0.1`; không dùng `latest` vì `latest=6.0.2` chuyển sang Tomcat 11 và làm OpenIG 6 không khởi động được.
 
 ### 2. Hợp đồng Revocation (Revocation Contract)
 [Derived from: A F2/F3, B F2/F3, C F2/F3, B F11]
@@ -226,6 +230,7 @@ Derived from: Cross-Stack Summary "Recommended Standard Pattern" and "Next Steps
 
 - [ ] `JwtSession.sharedSecret`, OIDC `clientSecret`, và mật khẩu keystore lấy từ Vault hoặc environment tại runtime và không xuất hiện trong config, route hoặc Groovy.
 - [ ] Mọi truy xuất secret từ Vault đều được cache với TTL có giới hạn và refresh trước khi hết hạn, không ghi secret đã lấy vào `JwtSession`.
+- [ ] Khi copy Base64 secret vào `.env`, Keycloak, hoặc secret store khác, phải giữ nguyên toàn bộ chuỗi bao gồm dấu `=` cuối nếu có.
 
 ### Session và revocation
 

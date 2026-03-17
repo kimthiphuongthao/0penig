@@ -9,6 +9,17 @@
 
 Stack B (Redmine + Jellyfin, 2-node HA) shares all core issues found in Stack A, plus introduces a **critical new Stack-B-specific finding**: Jellyfin logout reads the wrong OIDC session namespace, causing logout to silently fail. Confirmed strengths: BackchannelLogoutHandler JWT validation is robust (RS256, JWKS, full claims checking).
 
+**[UPDATED 2026-03-17]** Current repo state beyond this historical review:
+- F1 resolved in STEP-03 (`b738577`) — compose secrets moved to `.env` / runtime injection.
+- F2 resolved in live state (`9cbf71a`) — blacklist TTL is aligned with the current `JwtSession` timeout.
+- F3 resolved in FIX-03 (`278a29c`) — blacklist checks now fail closed.
+- F5 resolved in FIX-01 (`a3cb6c3`) and preserved through Step 4 (`3b8a6d8`).
+- F7 resolved in FIX-08 (`7fc73ba`) plus Step 5 env rollout (`aaf66d5`) — redirects now use pinned origins.
+- F9 resolved in FIX-03/04 (`278a29c`) — Redis socket connect/read timeouts added.
+- F10 resolved in FIX-05 (`9b770cd`) — internal backchannel failures now return `500`.
+- F11 was verified in FIX-12 (`9086aaf`) — write/read paths now use consistent `sid ?: sub` fallback.
+- F6 is only partially mitigated: Vault tokens were removed from `JwtSession` in FIX-09, but Jellyfin token material remains a documented pattern limitation.
+
 ---
 
 ## Confirmed Strengths

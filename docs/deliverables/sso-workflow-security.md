@@ -1,6 +1,6 @@
 # SSO/SLO Workflow Security Assessment
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-5 are complete. Step 5 removed the remaining open quick wins around `vault/keys/` repo hygiene, Redmine direct-host exposure, Stack C nginx proxy buffers, and Stack A/B `CANONICAL_ORIGIN_APP*`. Step 6 is the current document-sync pass.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. Step 5 removed the remaining quick wins around `vault/keys/` repo hygiene, Redmine direct-host exposure, Stack C nginx proxy buffers, and Stack A/B `CANONICAL_ORIGIN_APP*`; STEP-02 rotated Stack C OIDC secrets; STEP-03 moved compose secrets into gitignored `.env` files and pinned OpenIG to `6.0.1`.
 
 ## 1. Workflow Overview
 

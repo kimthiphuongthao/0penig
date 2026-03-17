@@ -4,7 +4,10 @@
 > **Người thực hiện:** Antigravity AI Agent (chỉ đọc, không can thiệp file project)
 > **Môi trường:** Docker Compose local, macOS host
 
-> Update 2026-03-17: Historical baseline below is retained. Pattern Consolidation Steps 1-5 are now complete, and a supplemental Step 5 verification block is appended at the end of this report.
+> Update 2026-03-17: Historical baseline below is retained. Pattern Consolidation Steps 1-6 are now complete, and a supplemental Step 5 verification block is appended at the end of this report.
+
+> [!warning]
+> Current end-of-session status (2026-03-17): Stack C Grafana SSO is BROKEN / pending fix. The working session finding is an APP5 OIDC secret mismatch caused by losing the trailing `=` padding during secret copy/sync. Historical PASS entries below are preserved for traceability, but they are not the current live verdict for Grafana.
 
 ---
 
@@ -414,3 +417,10 @@ docker exec sso-redis-a redis-cli get "blacklist:<SESSION_ID>"
 - **Phương pháp:** Xác nhận phpMyAdmin logout/401 challenge vẫn đi qua inline `failureHandler` trong route.
 - **Kết quả:** Inline path hoạt động đúng, không có regression sau Step 4/5 consolidation.
 - **Đánh giá:** Stack C logout path vẫn tương thích với `HttpBasicAuthFilter` I/O dispatcher flow.
+
+### TC-STEP5-04 — Grafana SSO re-validation ⚠️ BLOCKED / FIX PENDING
+
+- **Ngày phát hiện:** 2026-03-17 cuối phiên.
+- **Triệu chứng:** Grafana App5 trả lỗi `invalid_client` / `Invalid client credentials`.
+- **Kết luận làm việc:** `OIDC_CLIENT_SECRET_APP5` đã từng bị copy/sync sai do mất dấu `=` cuối chuỗi Base64, làm giá trị 44 ký tự bị rút còn 43 ký tự.
+- **Trạng thái:** Chưa đóng. Cần re-verify cùng một giá trị bí mật trên `stack-c/.env`, Keycloak client `openig-client-c-app5`, và environment thực tế của các container `openig-c1` / `openig-c2`.

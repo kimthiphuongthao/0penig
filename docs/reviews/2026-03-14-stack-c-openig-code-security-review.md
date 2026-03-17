@@ -7,6 +7,17 @@ Scope: Evidence review for Stack C OpenIG gateway mechanisms only: Grafana trust
 
 Stack C carries the same core gateway weaknesses already seen in earlier stacks: committed secrets, revocation entries that expire before the OpenIG session, and fail-open revocation checks when Redis is unavailable. Stack C also adds two pattern-specific risks that matter for a reusable standard: phpMyAdmin credentials and Vault tokens are stored inside the browser-bound `JwtSession`, and the dedicated `PhpMyAdminCookieFilter.groovy` safeguard is not wired into the route chain at all.
 
+**[UPDATED 2026-03-17]** Current repo state beyond this historical review:
+- F1 resolved across STEP-02 (`37672ed`) and STEP-03 (`b738577`) — Stack C OIDC secrets rotated, compose secrets moved to `.env`, and OpenIG pinned to `6.0.1`.
+- F2 resolved in live state (`9cbf71a`) — blacklist TTL now aligns with `JwtSession.sessionTimeout: "30 minutes"`.
+- F3 resolved in FIX-03 (`278a29c`) — blacklist checks now fail closed.
+- F5 resolved in FIX-09 (`76b648a`, `c0c491d`) — Vault tokens moved server-side and phpMyAdmin credentials moved to transient `attributes`.
+- F6 retired in STEP-01 (`20d523f`) — `PhpMyAdminCookieFilter.groovy` was deleted after the WONT_FIX decision.
+- F7 resolved in FIX-03/04 (`278a29c`) — Redis socket timeouts added.
+- F8 resolved in FIX-05 (`9b770cd`) — internal backchannel failures now return `500`.
+- F9 resolved in FIX-08 (`7fc73ba`) plus Step 5 env rollout (`aaf66d5`) — redirects now use pinned origins.
+- F4 remains an explicit lab exception (HTTP transport). Current operational blocker outside this review: Grafana SSO still needs APP5 secret re-validation after the Base64-padding mismatch investigation.
+
 The strongest implementation in Stack C is still the backchannel logout token validator. It performs explicit `alg` pinning, JWKS lookup, RSA signature verification, and `iss`/`aud`/`events`/`iat`/`exp` checks before writing revocation state. The problem is not token validation correctness; it is the surrounding session, transport, and failure-mode design.
 
 ## 2) Mechanisms Reviewed

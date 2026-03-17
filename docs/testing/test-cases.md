@@ -1,7 +1,10 @@
 ## 0. Test Environment
 Thông tin cấu hình môi trường phục vụ việc kiểm thử hệ thống SSO Lab.
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-5 are complete. The Step 5 validation run passed for all 5 backchannel logout clients, all 5 logout-capable apps, and the phpMyAdmin inline `failureHandler` path.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. The Step 5 validation run passed for all 5 backchannel logout clients, all 5 logout-capable apps, and the phpMyAdmin inline `failureHandler` path.
+
+> [!warning]
+> Current end-of-session blocker (2026-03-17): Stack C Grafana SSO is pending re-test after the APP5 OIDC secret sync issue. `OIDC_CLIENT_SECRET_APP5` must match exactly across `stack-c/.env`, Keycloak, and the running OpenIG containers; generated Base64 values can legitimately end with `=` and must stay 44 characters, not 43.
 
 ### URLs truy cập từ Browser (Host Machine)
 Cần cấu hình file `/etc/hosts` trên máy host trỏ các domain sau về `127.0.0.1`.
@@ -111,6 +114,8 @@ Kiểm chứng tính bảo mật của gateway.
 
 ## 9. Stack C — App5 Grafana (Header-based Auth)
 Kiểm chứng cơ chế xác thực dựa trên trusted headers.
+
+**Precondition (2026-03-17):** verify `OIDC_CLIENT_SECRET_APP5` is identical in `.env`, Keycloak, and the running Stack C OpenIG containers before executing TC-901 through TC-903.
 
 | ID | Tên | Stack | Mô tả | Expected Result | Lý giải |
 |:---|:---|:---|:---|:---|:---|

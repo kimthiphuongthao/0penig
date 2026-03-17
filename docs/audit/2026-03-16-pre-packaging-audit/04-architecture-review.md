@@ -3,7 +3,7 @@
 **Agent:** architect (Opus, READ-ONLY)
 **Date:** 2026-03-16
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-5 are complete. Recommendation 4 was resolved in Step 4 (`3b8a6d8`), and Step 5 resolved Recommendation 2 (`aaf66d5`) plus Recommendation 5 (`aaf66d5`) while also removing the old Redmine direct-host exposure. Step 6 is the current document-sync pass.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. Recommendation 4 was resolved in Step 4 (`3b8a6d8`), Step 5 resolved Recommendation 2 (`aaf66d5`) plus Recommendation 5 (`aaf66d5`), and STEP-03 externalized compose secrets while pinning every OpenIG stack to `6.0.1` (`b738577`). This document remains a historical architecture audit snapshot.
 
 ---
 

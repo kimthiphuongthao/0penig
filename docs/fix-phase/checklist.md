@@ -5,7 +5,7 @@
 > **`.omc/plans/fix-phase-openig-gaps.md`**
 > Maintain this file for progress tracking (Status column + Fix Log). Do not use as implementation guide.
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-5 are complete. Step 5 resolved the remaining quick wins tracked against the audit set: H-2 (`vault/keys/` gitignore), H-3 (Redmine port 3000 removed), H-9 (Stack C proxy buffers), M-2 (Stack A/B `CANONICAL_ORIGIN_APP*`), and M-14 (dead-code deletion). Step 6 is the document-sync phase.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. Step 5 resolved the remaining quick wins tracked against the audit set: H-2 (`vault/keys/` gitignore), H-3 (Redmine port 3000 removed), H-9 (Stack C proxy buffers), M-2 (Stack A/B `CANONICAL_ORIGIN_APP*`), and M-14 (dead-code deletion). Remaining production-readiness work now lives in `docs/fix-tracking/master-backlog.md`.
 
 
 

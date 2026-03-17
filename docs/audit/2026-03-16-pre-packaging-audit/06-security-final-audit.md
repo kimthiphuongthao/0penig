@@ -5,7 +5,7 @@
 **Scope:** All OpenIG gateway code, nginx, docker-compose, Vault across 3 stacks
 **Risk Level:** MEDIUM
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-5 are complete. HIGH finding S-6 was resolved in Step 4 (`3b8a6d8`), and Step 5 resolved S-4 (`5ae657e`), S-5 (`aaf66d5`), S-15 (`aaf66d5`), and S-16 (`aaf66d5`). Historical severity counts below remain the original audit snapshot. Step 6 is the current document-sync pass.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. HIGH finding S-6 was resolved in Step 4 (`3b8a6d8`), Step 5 resolved S-4 (`5ae657e`), S-5 (`aaf66d5`), S-15 (`aaf66d5`), and S-16 (`aaf66d5`), STEP-02 resolved S-9 (`37672ed`), and STEP-03 resolved S-3 (`b738577`). Historical severity counts below remain the original audit snapshot.
 
 ---
 
@@ -42,6 +42,7 @@
 **Category:** A02
 **Files:** All 3 docker-compose.yml — JWT_SHARED_SECRET, OIDC_CLIENT_SECRET, KEYSTORE_PASSWORD
 **Fix:** Use `.env` file (gitignored).
+**Status:** RESOLVED 2026-03-17 in STEP-03 (`b738577`).
 
 ### S-4: vault/keys/ Not in .gitignore
 **Category:** A02
@@ -71,7 +72,7 @@
 |---|---------|----------|
 | S-7 | No security response headers on nginx (X-Frame-Options, CSP, etc.) | A05 |
 | S-8 | JwtSession cookies lack Secure/SameSite flags | A07 |
-| S-9 | Weak OIDC client secrets Stack C ("secret-c") | A07 |
+| S-9 | Weak OIDC client secrets Stack C ("secret-c") — RESOLVED in STEP-02 (`37672ed`) | A07 |
 | S-10 | OpenIG containers run as root (Stacks A/B) | A05 |
 | S-11 | Vault TLS disabled + UI enabled | A02 |
 | S-12 | Vault UI enabled (accessible from Docker network) | A05 |
@@ -110,7 +111,7 @@
 ## Security Checklist
 
 - [x] No hardcoded secrets in Groovy scripts or route files (FIX-06)
-- [ ] Secrets in docker-compose.yml committed to git
+- [x] Secrets in docker-compose.yml moved to gitignored `.env` files via STEP-03 (`b738577`)
 - [x] `vault/keys/` gitignored via Step 5 (`5ae657e`)
 - [x] Backchannel logout JWT fully validated (RS256, iss, aud, exp, iat, events, sid)
 - [x] Redis RESP commands use parameterized key sizes

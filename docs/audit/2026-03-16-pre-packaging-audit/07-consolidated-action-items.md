@@ -24,7 +24,7 @@
 | H-2 | `vault/keys/` not in .gitignore | Security | .gitignore | RESOLVED 2026-03-17 by commit `5ae657e` (`vault/keys/` ignored) |
 | H-3 | Redmine port 3000 exposed — bypasses SSO | Security | stack-b/docker-compose.yml | RESOLVED 2026-03-17 by commit `f86c7eb` (Redmine port `3000` removed) |
 | H-4 | Redis without authentication (all stacks) | Security | 3x docker-compose.yml + 9 Groovy files | MEDIUM — add requirepass + AUTH commands |
-| H-5 | Secrets in docker-compose.yml committed to git | Security | 3x docker-compose.yml | MEDIUM — .env file + .gitignore |
+| H-5 | Secrets in docker-compose.yml committed to git | Security | 3x docker-compose.yml | RESOLVED 2026-03-17 by STEP-03 (`b738577`) — moved to gitignored `.env` files, committed `.env.example`, and pinned OpenIG to `6.0.1` |
 | H-6 | JWKS TTL unit inconsistency (Stack C millis vs A/B seconds) | Code Review | 3x BackchannelLogoutHandler.groovy | RESOLVED 2026-03-17 by commit `4d8f065` (TTL standardized to seconds) |
 | H-7 | Stack C docker-compose missing platform/user/restart/healthchecks | Architecture | stack-c/docker-compose.yml | LOW — copy patterns from A/B |
 | H-8 | SessionBlacklistFilterApp2 divergent Base64 implementation | Code Review | SessionBlacklistFilterApp2.groovy | RESOLVED 2026-03-17 by commit `832bbae` (SessionBlacklistFilterApp2 deleted) |
@@ -40,7 +40,7 @@
 | M-2 | Missing CANONICAL_ORIGIN_* env vars in A/B docker-compose | Architecture | RESOLVED 2026-03-17 by commit `aaf66d5` (`CANONICAL_ORIGIN_*` env vars A+B) |
 | M-3 | No security response headers on nginx (all stacks) | Security | LOW — add_header directives |
 | M-4 | JwtSession cookies lack SameSite flag | Security | LOW — nginx proxy_cookie_flags |
-| M-5 | Weak OIDC client secrets Stack C ("secret-c") | Security | TRIVIAL — generate random |
+| M-5 | Weak OIDC client secrets Stack C ("secret-c") | Security | RESOLVED 2026-03-17 by STEP-02 (`37672ed`) — rotated to strong 44-character values |
 | M-6 | OpenIG containers run as root (Stacks A/B) | Security | MEDIUM — fix volume permissions |
 | M-7 | Vault TLS disabled + UI enabled | Security | MEDIUM — deferred to TLS phase |
 | M-8 | Hardcoded passwords in vault-bootstrap.sh | Security | MEDIUM — .env sourcing |
