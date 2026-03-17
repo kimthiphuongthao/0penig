@@ -1,62 +1,54 @@
 ---
 title: Current State — SSO Lab
-updated: 2026-03-11
+updated: 2026-03-17
 tags: [state, status]
+status: active
 ---
 
 # Current State
 
-Last updated: **2026-03-11**
+Last updated: **2026-03-17**
 
 ---
 
-## Working ✅
+## Live Status
 
 | Stack | Apps | SSO | SLO |
 |-------|------|-----|-----|
 | **A** | WordPress, WhoAmI | ✅ | ✅ |
-| **B** | Redmine, Jellyfin | ✅ | ⚠️ |
+| **B** | Redmine, Jellyfin | ✅ | ✅ |
 | **C** | Grafana, phpMyAdmin | ✅ | ✅ |
 
----
+> [!success]
+> Pattern Consolidation is COMPLETE across all 6 steps. Post-audit fixes are also applied, including the missed Stack A `BackchannelLogoutHandler.groovy` consolidation in commit `f85a3f2`.
 
-## Partially Working ⚠️
+> [!warning]
+> Production-readiness audit is COMPLETE, but the lab is NOT READY yet: `39 STILL OPEN`, `6 PARTIAL`, `36 RESOLVED`.
 
-| Issue | Stack | Impact |
-|-------|-------|--------|
-| Jellyfin SLO not tested | B | Logout không sync |
-| Nginx stickiness bug | B | Session không consistent |
+## Program State
 
----
+- Pattern Consolidation: COMPLETE
+- Production readiness audit: COMPLETE — NOT READY
+- Gap report: [2026-03-17-production-readiness-gap-report.md](../../audit/2026-03-17-production-readiness-gap-report.md)
+- Next phase: Phase 2 Security Hardening
+- Immediate prerequisite: create `docs/fix-tracking/master-backlog.md` and Phase 2 plan
 
-## Broken ❌
+## Recent Commits
 
-| Issue | Stack | Fix pending |
-|-------|-------|-------------|
-| Cross-stack SLO | All | Redis sync |
-| Jellyfin WebSocket | B | `http://` → `ws://` |
-
----
-
-## Pending Tasks
-
-From [[CLAUDE.md]]:
-
-- [ ] SLO test thủ công: stack-b, stack-c
-- [ ] Cross-stack SLO test
-- [ ] Fix Jellyfin WebSocket
-- [ ] Stack B cookieDomain (LOW)
-
----
+- `f85a3f2` — Stack A `BackchannelLogoutHandler` post-audit consolidation fix
+- `15174f6` — `.memory` symlink setup for Codex write access
+- `26e8e69` — production-readiness gap report
 
 ## Last Verified
 
-**2026-03-11** — Stack A login/logout tested successfully
-
----
+**2026-03-17** — All 3 stacks confirmed WORKING for SSO and SLO after post-audit cleanup
 
 ## Related Notes
 
-- [[Session Notes]] — what was done recently
-- [[Decision Records]] — why architecture choices
+- [[Stack A]]
+- [[Stack B]]
+- [[Stack C]]
+- [[OpenIG]]
+- [[Keycloak]]
+- [[Vault]]
 - [[CLAUDE.md]] — full roadmap

@@ -232,3 +232,45 @@ Tìm file path theo thứ tự:
 4. Sau mỗi action quan trọng (fix xong, investigation xong, decision confirmed, file committed): update `Last action` + `Next step` trong `## Current Task` MEMORY.md ngay — không chờ user nói "tắt máy"
 5. Tắt máy / kết thúc conversation: final update `## Current Task` → commit/push
 6. **Sau mỗi lần fix xong**: yêu cầu Codex chạy restart luôn (không chờ user nhắc), báo "đã restart, bạn test đi"
+
+## Master Backlog + Post-Task Mandatory Checklist
+
+## Master Backlog — nguồn sự thật duy nhất
+
+File: `docs/fix-tracking/master-backlog.md`
+- Chứa TẤT CẢ findings từ audit, mọi phase
+- Mỗi finding: ID | Finding | Priority | Status | Files to change | Files to update after | Commit hash
+- Status: OPEN → IN PROGRESS → DONE
+- Commit hash: bằng chứng đã làm, không thể nhầm
+
+**Atomic commit rule (BẮT BUỘC):**
+Mỗi finding fix = 1 commit duy nhất gồm: code files + master-backlog.md (status DONE) + doc files cần update
+KHÔNG commit code mà không update backlog cùng lúc.
+
+## Post-Task Mandatory Checklist (sau MỖI finding/task)
+
+Thực hiện THEO THỨ TỰ trước khi báo "xong":
+
+1. **Code verified** — restart containers + test pass
+2. **.memory/MEMORY.md** — Current Task: finding ID tiếp theo, last action, next step
+3. **docs/fix-tracking/master-backlog.md** — status → DONE, điền commit hash
+4. **CLAUDE.md** — roadmap nếu milestone/phase hoàn thành
+5. **docs/audit/2026-03-17-production-readiness-gap-report.md** — mark finding RESOLVED
+6. **docs/audit/2026-03-16-pre-packaging-audit/07-consolidated-action-items.md** — update status
+7. Tùy finding type:
+   - Security control mới → docs/deliverables/standard-gateway-pattern.md
+   - Integration process thay đổi → docs/deliverables/legacy-app-team-checklist.md (FILE TỐI THƯỢNG)
+   - Architecture thay đổi → .claude/rules/architecture.md
+   - Gotcha mới/resolved → .claude/rules/gotchas.md
+   - Stack behavior thay đổi → docs/obsidian/stacks/stack-*.md
+   - Auth pattern thay đổi → docs/deliverables/legacy-auth-patterns-definitive.md
+8. **docs/obsidian/03-State/Current State.md** — live state snapshot
+9. **docs/progress.md** — weekly entry
+10. **Atomic commit** — tất cả files trên trong 1 commit
+
+**Start-of-conversation protocol:**
+Khi "tiếp tục công việc":
+1. Đọc .memory/MEMORY.md → lấy finding ID đang làm
+2. Đọc docs/fix-tracking/master-backlog.md → xem status thực tế của finding đó
+3. Nếu status = DONE nhưng MEMORY chưa update → update ngay, KHÔNG re-do
+4. Báo: Task, Status, Last action, Next step — không hỏi thêm

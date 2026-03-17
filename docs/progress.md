@@ -71,6 +71,12 @@
 ### Kết quả
 - [x] Pattern Consolidation Step 5 hoàn tất: H-2 `vault/keys/` trong `.gitignore` (`5ae657e`); H-3 bỏ Redmine host port `3000`; H-9 thêm `proxy_buffer_size 128k` + `proxy_buffers 4 256k` cho Stack C; M-2 bổ sung `CANONICAL_ORIGIN_APP1..APP4` cho Stack A/B; M-14 xóa `App1ResponseRewriter.groovy`
 - [x] Kiểm thử xác nhận sau Step 5: BackchannelLogout trên đủ 5 OIDC clients đều ghi Redis blacklist; SloHandler trên 5 app đều redirect với `id_token_hint=PRESENT`; phpMyAdmin inline `failureHandler` vẫn hoạt động đúng
-- [ ] Pattern Consolidation Step 6: đồng bộ deliverables, audit docs, testing docs theo trạng thái mới
+- [x] Pattern Consolidation Steps 1-6: COMPLETE
+- [x] Post-audit fixes: Stack A `BackchannelLogoutHandler` consolidated (`f85a3f2`), 3 leftover `SloHandler*` files deleted
+- [x] `.memory` symlink setup cho Codex write access (`15174f6`)
+- [x] Production readiness audit: `36 RESOLVED`, `6 PARTIAL`, `39 STILL OPEN`
+- [x] Gap report written: `docs/audit/2026-03-17-production-readiness-gap-report.md` (`26e8e69`)
+- [x] 64-file maintenance inventory completed
+- [ ] Next: tạo `docs/fix-tracking/master-backlog.md` + Phase 2 Security Hardening plan
 
 ---

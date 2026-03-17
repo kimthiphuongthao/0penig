@@ -44,7 +44,7 @@ Related: [[Stack A]] [[Stack C]] [[OpenIG]] [[Keycloak]] [[Vault]]
 | `00-backchannel-logout-app4.json` | Handles Keycloak `POST /openid/app4/backchannel_logout` and runs `BackchannelLogoutHandler.groovy`. |
 | `00-dotnet-logout.json` (DELETED) | Legacy `/app3/Account/Logout` intercept on `openigb.sso.local`, handled by `DotnetSloHandler.groovy`. |
 | `00-jellyfin-logout.json` | Intercepts Jellyfin logout requests and delegates to `SloHandlerJellyfin.groovy`. |
-| `00-redmine-logout.json` | Intercepts Redmine `POST /logout` and delegates to `SloHandlerRedmine.groovy`. |
+| `00-redmine-logout.json` | Intercepts Redmine `POST /logout` and delegates to the consolidated `SloHandler.groovy`; the old `SloHandlerRedmine.groovy` file was leftover only and has been deleted. |
 | `01-dotnet.json` (DELETED) | Legacy .NET SSO chain for `/app3*` and `/openid/app3*` to `dotnet-app:5000`, with OAuth2 + blacklist + credential injection. |
 | `01-jellyfin.json` | Main Jellyfin SSO chain to `jellyfin:8096`: OAuth2 (`/openid/app3`) + app3 blacklist + Vault creds + token injector + response rewrite. |
 | `02-redmine.json` | Main Redmine SSO chain to `redmine:3000`: OAuth2 (`/openid/app4`) + app4 blacklist + Vault creds + form-login credential injector. |
@@ -63,12 +63,12 @@ Related: [[Stack A]] [[Stack C]] [[OpenIG]] [[Keycloak]] [[Vault]]
 | `SessionBlacklistFilterApp3.groovy` | App3-specific blacklist check for Jellyfin session keys and host-aware OAuth2 session lookup. |
 | `SessionBlacklistFilterApp4.groovy` | App4-specific blacklist check for Redmine session keys and host-aware OAuth2 session lookup. |
 | `SloHandlerJellyfin.groovy` | Calls Jellyfin `/Sessions/Logout` when token exists, clears OpenIG session, redirects to Keycloak logout with `id_token_hint` if found. |
-| `SloHandlerRedmine.groovy` | Clears OpenIG session and redirects to Keycloak logout for app4 with `id_token_hint` when available. |
+| `SloHandler.groovy` | Consolidated Redmine/logout handler shared after Step 4 parameterization. |
 | `VaultCredentialFilterJellyfin.groovy` | AppRole login to Vault and fetch `secret/data/jellyfin-creds/{email}` into `attributes.jellyfin_credentials`. |
 | `VaultCredentialFilterRedmine.groovy` | AppRole login to Vault and fetch `secret/data/redmine-creds/{email}` into `attributes.redmine_credentials`. |
 
 > [!success]
-> SSO+SLO confirmed working for both apps: `redmine-b.sso.local` and `jellyfin-b.sso.local`.
+> SSO/SLO WORKING for both apps: `redmine-b.sso.local` and `jellyfin-b.sso.local`. Post-audit cleanup confirmed `SloHandlerRedmine.groovy` was an unreferenced leftover from Step 4 and has been deleted.
 
 > [!warning]
 > Known pending:

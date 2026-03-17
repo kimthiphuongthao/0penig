@@ -21,7 +21,7 @@ Related: [[OpenIG]] [[Keycloak]] [[Vault]] [[Stack C]]
 - SLO: ✅
 
 > [!success]
-> Front-channel logout and backchannel logout are both wired and active for app5 (Grafana) and app6 (phpMyAdmin).
+> SSO/SLO WORKING for app5 (Grafana) and app6 (phpMyAdmin). Post-audit cleanup confirmed the old `SloHandlerGrafana.groovy` and `SloHandlerPhpMyAdmin.groovy` files were leftover artifacts from Step 4 and have been deleted.
 
 ## Architecture
 
@@ -43,7 +43,7 @@ Related: [[OpenIG]] [[Keycloak]] [[Vault]] [[Stack C]]
 ### Grafana (app5)
 
 1. User hits `GET /logout` on `grafana-c.sso.local:18080`.
-2. `00-grafana-logout.json` intercepts and calls `SloHandlerGrafana.groovy`.
+2. `00-grafana-logout.json` intercepts and calls the consolidated `SloHandler.groovy`.
 3. Handler reads `id_token` from session, clears session, redirects to Keycloak end-session with:
    - `client_id=openig-client-c-app5`
    - `post_logout_redirect_uri=http://grafana-c.sso.local:18080/`
@@ -52,12 +52,12 @@ Related: [[OpenIG]] [[Keycloak]] [[Vault]] [[Stack C]]
 ### phpMyAdmin (app6)
 
 1. User triggers `/?logout=1` on `phpmyadmin-c.sso.local:18080`.
-2. `00-phpmyadmin-logout.json` intercepts and calls `SloHandlerPhpMyAdmin.groovy`.
+2. `00-phpmyadmin-logout.json` intercepts and calls the consolidated `SloHandler.groovy`.
 3. Handler reads `id_token` from session, clears session, redirects to Keycloak end-session with:
    - `client_id=openig-client-c-app6`
    - `post_logout_redirect_uri=http://phpmyadmin-c.sso.local:18080/`
    - `id_token_hint=<id_token>` when available.
-4. `HttpBasicAuthFilter.failureHandler` also points to `SloHandlerPhpMyAdmin.groovy` for `401` logout/auth challenge path.
+4. `HttpBasicAuthFilter.failureHandler` also points to the same `SloHandler.groovy` for the `401` logout/auth challenge path.
 
 ### Backchannel (both apps)
 
@@ -75,8 +75,7 @@ Related: [[OpenIG]] [[Keycloak]] [[Vault]] [[Stack C]]
   - `stack-c/openig_home/config/routes/10-grafana.json`
   - `stack-c/openig_home/config/routes/11-phpmyadmin.json`
 - Handlers/filters:
-  - `stack-c/openig_home/scripts/groovy/SloHandlerGrafana.groovy`
-  - `stack-c/openig_home/scripts/groovy/SloHandlerPhpMyAdmin.groovy`
+  - `stack-c/openig_home/scripts/groovy/SloHandler.groovy`
   - `stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy`
   - `stack-c/openig_home/scripts/groovy/SessionBlacklistFilter.groovy`
   - `stack-c/openig_home/scripts/groovy/VaultCredentialFilter.groovy`
@@ -121,4 +120,3 @@ Related: [[OpenIG]] [[Keycloak]] [[Vault]] [[Stack C]]
 
 > [!tip]
 > For SLO regressions, verify route order first (`00-*` logout routes must run before `10/11-*` app routes).
-
