@@ -5,7 +5,13 @@
     "type": "ScriptableHandler",
     "config": {
       "type": "application/x-groovy",
-      "file": "BackchannelLogoutHandler.groovy"
+      "file": "BackchannelLogoutHandler.groovy",
+      "args": {
+        "audiences": ["openig-client-c-app5"],
+        "redisHost": "redis-c",
+        "jwksUri": "http://host.docker.internal:8080/realms/sso-realm/protocol/openid-connect/certs",
+        "issuer": "http://auth.sso.local:8080/realms/sso-realm"
+      }
     }
   }
 }

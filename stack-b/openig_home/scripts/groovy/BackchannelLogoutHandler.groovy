@@ -1,5 +1,4 @@
 import groovy.json.JsonSlurper
-import groovy.transform.Field
 import org.forgerock.http.protocol.Response
 import org.forgerock.http.protocol.Status
 import static org.forgerock.util.promise.Promises.newResultPromise
@@ -15,14 +14,24 @@ import java.security.Signature
 import java.security.spec.RSAPublicKeySpec
 import java.util.Base64
 
-// --- JWT Validation Constants ---
-@Field static volatile def cachedJwks = null
-@Field static volatile long jwksCacheExpiry = 0
-final String KEYCLOAK_ISSUER = 'http://auth.sso.local:8080/realms/sso-realm'
-final String KEYCLOAK_JWKS_URI = 'http://host.docker.internal:8080/realms/sso-realm/protocol/openid-connect/certs'
-final List<String> EXPECTED_AUDIENCES = ['openig-client-b', 'openig-client-b-app4']
+// --- JWT Validation Configuration ---
+List expectedAudiences = binding.hasVariable('audiences') ? (audiences as List) : []
+String configuredRedisHost = binding.hasVariable('redisHost') ? (redisHost as String) : (System.getenv('REDIS_HOST') ?: 'redis-b')
+String configuredJwksUri = binding.hasVariable('jwksUri') ? (jwksUri as String) : null
+String configuredIssuer = binding.hasVariable('issuer') ? (issuer as String) : null
 final long CLOCK_SKEW_SECONDS = 60
-final long JWKS_CACHE_TTL_SECONDS = 600
+final long JWKS_CACHE_TTL_SECONDS = 3600
+final int REDIS_BLACKLIST_TTL_SECONDS = 28800
+
+private static boolean validateClaims(Map payload, def expectedAudience) {
+    def aud = payload.aud
+    if (expectedAudience instanceof List) {
+        def audList = (aud instanceof List) ? aud : [aud]
+        return audList.any { expectedAudience.contains(it) }
+    } else {
+        return (aud instanceof List) ? aud.contains(expectedAudience) : aud == expectedAudience
+    }
+}
 
 // --- Helper: Read HTTP response body ---
 def readResponseBody = { HttpURLConnection connection ->
@@ -56,13 +65,7 @@ def base64UrlDecode = { String input ->
 }
 
 // --- Helper: Fetch JWKS from Keycloak ---
-def fetchJwks = { String jwksUri ->
-    long now = System.currentTimeMillis() / 1000
-    if (cachedJwks != null && jwksCacheExpiry > now) {
-        logger.info('[BackchannelLogoutHandler] Using cached JWKS, expiresAt={}', jwksCacheExpiry)
-        return cachedJwks
-    }
-
+def fetchJwksKeys = { String jwksUri ->
     logger.info('[BackchannelLogoutHandler] Fetching JWKS from Keycloak')
     try {
         URL url = new URL(jwksUri)
@@ -87,21 +90,45 @@ def fetchJwks = { String jwksUri ->
             logger.error('[BackchannelLogoutHandler] JWKS response missing keys array')
             return null
         }
-        cachedJwks = jwks
-        jwksCacheExpiry = now + JWKS_CACHE_TTL_SECONDS
-        logger.info('[BackchannelLogoutHandler] JWKS fetched successfully, keys: {}', jwks.keys?.size())
-        return jwks
+
+        Map keysByKid = [:]
+        jwks.keys.each { key ->
+            if (key?.kid) {
+                keysByKid[key.kid as String] = key
+            }
+        }
+        if (keysByKid.isEmpty()) {
+            logger.error('[BackchannelLogoutHandler] JWKS response contains no usable keys')
+            return null
+        }
+
+        logger.info('[BackchannelLogoutHandler] JWKS fetched successfully, keys: {}', keysByKid.size())
+        return keysByKid
     } catch (Exception e) {
         logger.error('[BackchannelLogoutHandler] Failed to fetch JWKS', e)
         return null
     }
 }
 
-// --- Helper: Get public key from JWKS by kid ---
-def getPublicKeyFromJwks = { def jwks, String kid ->
-    if (!jwks?.keys) return null
+// --- Helper: Load JWKS keys through global cache ---
+def loadJwksKeys = {
+    def cacheEntry = globals.compute('jwks_cache') { k, existing ->
+        long now = System.currentTimeMillis() / 1000
+        if (existing != null && (now - (existing.cachedAt as long)) < JWKS_CACHE_TTL_SECONDS) {
+            logger.info('[BackchannelLogoutHandler] Using cached JWKS')
+            return existing
+        }
+        def newKeys = fetchJwksKeys(configuredJwksUri)
+        [keys: newKeys, cachedAt: now]
+    }
+    cacheEntry?.keys as Map
+}
 
-    def keyEntry = jwks.keys.find { it.kid == kid }
+// --- Helper: Get public key from JWKS by kid ---
+def getPublicKeyFromJwks = { Map jwksKeys, String kid ->
+    if (!jwksKeys) return null
+
+    def keyEntry = jwksKeys[kid]
     if (!keyEntry) {
         logger.warn('[BackchannelLogoutHandler] Key with kid={} not found in JWKS', kid)
         return null
@@ -151,38 +178,25 @@ def verifySignature = { String jwt, java.security.PublicKey publicKey ->
     }
 }
 
-// --- Helper: Validate JWT claims ---
-def validateClaims = { def payload, def expectedAudience ->
+// --- Helper: Validate logout token claims ---
+def validateLogoutTokenClaims = { Map payload, def expectedAudience ->
     long now = System.currentTimeMillis() / 1000
 
     // 1. Validate 'iss' (issuer)
-    if (payload.iss != KEYCLOAK_ISSUER) {
-        logger.error('[BackchannelLogoutHandler] Invalid iss: expected={}, actual={}', KEYCLOAK_ISSUER, payload.iss)
+    if (payload.iss != configuredIssuer) {
+        logger.error('[BackchannelLogoutHandler] Invalid iss: expected={}, actual={}', configuredIssuer, payload.iss)
         return [valid: false, error: "Invalid issuer: ${payload.iss}"]
     }
     logger.info('[BackchannelLogoutHandler] iss validation: OK (iss={})', payload.iss)
 
     // 2. Validate 'aud' (audience) - must contain expected client ID
-    def aud = payload.aud
-    boolean audValid = false
-    if (aud instanceof String) {
-        if (expectedAudience instanceof String) {
-            audValid = (aud == expectedAudience)
-        } else if (expectedAudience instanceof List) {
-            audValid = expectedAudience.contains(aud)
-        }
-    } else if (aud instanceof List) {
-        if (expectedAudience instanceof String) {
-            audValid = aud.contains(expectedAudience)
-        } else if (expectedAudience instanceof List) {
-            audValid = aud.any { expectedAudience.contains(it) }
-        }
-    }
+    Map claims = payload as Map
+    boolean audValid = validateClaims(claims, expectedAudience)
     if (!audValid) {
-        logger.error('[BackchannelLogoutHandler] Invalid aud: expected={}, actual={}', expectedAudience, aud)
-        return [valid: false, error: "Invalid audience: ${aud}"]
+        logger.error('[BackchannelLogoutHandler] Invalid aud: expected={}, actual={}', expectedAudience, payload.aud)
+        return [valid: false, error: "Invalid audience: ${payload.aud}"]
     }
-    logger.info('[BackchannelLogoutHandler] aud validation: OK (aud={})', aud)
+    logger.info('[BackchannelLogoutHandler] aud validation: OK (aud={})', payload.aud)
 
     // 3. Validate 'events' claim - must contain backchannel logout event
     def events = payload.events
@@ -273,25 +287,24 @@ try {
     }
     logger.info('[BackchannelLogoutHandler] Algorithm validation: OK (alg=RS256)')
 
-    // 4. Fetch JWKS from Keycloak
-    def jwks = fetchJwks(KEYCLOAK_JWKS_URI)
-    if (!jwks) {
+    // 4. Fetch JWKS from Keycloak through atomic global cache
+    Map jwksKeys = loadJwksKeys()
+    if (!jwksKeys) {
         logger.error('[BackchannelLogoutHandler] Failed to fetch JWKS')
         return newResultPromise(new Response(Status.INTERNAL_SERVER_ERROR))
     }
 
     // 5. Get public key from JWKS
-    def publicKey = getPublicKeyFromJwks(jwks, kid)
+    def publicKey = getPublicKeyFromJwks(jwksKeys, kid)
     if (!publicKey) {
         logger.warn('[BackchannelLogoutHandler] kid={} not in cached JWKS, forcing refetch', kid)
-        cachedJwks = null
-        jwksCacheExpiry = 0
-        jwks = fetchJwks(KEYCLOAK_JWKS_URI)
-        if (!jwks) {
+        globals.compute('jwks_cache') { k, v -> null }
+        jwksKeys = loadJwksKeys()
+        if (!jwksKeys) {
             logger.error('[BackchannelLogoutHandler] Failed to refetch JWKS')
             return newResultPromise(new Response(Status.INTERNAL_SERVER_ERROR))
         }
-        publicKey = getPublicKeyFromJwks(jwks, kid)
+        publicKey = getPublicKeyFromJwks(jwksKeys, kid)
         if (!publicKey) {
             logger.error('[BackchannelLogoutHandler] kid={} not found even after JWKS refetch', kid)
             return newResultPromise(new Response(Status.BAD_REQUEST))
@@ -310,7 +323,7 @@ try {
     String payloadJson = new String(base64UrlDecode(tokenParts[1]), 'UTF-8')
     def payload = new JsonSlurper().parseText(payloadJson)
 
-    def validationResult = validateClaims(payload, EXPECTED_AUDIENCES)
+    def validationResult = validateLogoutTokenClaims(payload as Map, expectedAudiences)
     if (!validationResult.valid) {
         logger.error('[BackchannelLogoutHandler] Claims validation failed: {}', validationResult.error)
         return newResultPromise(new Response(Status.BAD_REQUEST))
@@ -320,15 +333,15 @@ try {
     logger.info('[BackchannelLogoutHandler] All JWT validations passed, sid={}', sid)
 
     // 8. Write to Redis blacklist
-    String redisHost = System.getenv('REDIS_HOST') ?: 'redis-b'
     int redisPort = 6379
     String key = "blacklist:${sid}"
     int keySize = key.getBytes('UTF-8').length
     // TTL must be >= JwtSession.sessionTimeout (1800s = 30min)
-    String command = "*5\r\n\$3\r\nSET\r\n\$${keySize}\r\n${key}\r\n\$1\r\n1\r\n\$2\r\nEX\r\n\$4\r\n1800\r\n"
+    String ttl = String.valueOf(REDIS_BLACKLIST_TTL_SECONDS)
+    String command = "*5\r\n\$3\r\nSET\r\n\$${keySize}\r\n${key}\r\n\$1\r\n1\r\n\$2\r\nEX\r\n\$${ttl.length()}\r\n${ttl}\r\n"
 
     new Socket().withCloseable { socket ->
-        socket.connect(new InetSocketAddress(redisHost, redisPort), 200)  // 200ms connect timeout
+        socket.connect(new InetSocketAddress(configuredRedisHost, redisPort), 200)  // 200ms connect timeout
         socket.setSoTimeout(500)  // 500ms read timeout
         socket.outputStream.write(command.getBytes('UTF-8'))
         socket.outputStream.flush()
@@ -342,11 +355,11 @@ try {
     return newResultPromise(new Response(Status.OK))
 
 } catch (IllegalArgumentException e) {
-    // JWT validation/parsing error — client sent bad data
+    // JWT validation/parsing error - client sent bad data
     logger.error('[BackchannelLogoutHandler] Validation error: {}', e.message)
     return newResultPromise(new Response(Status.BAD_REQUEST))
 } catch (Exception e) {
-    // Runtime/infra error (Redis, network, unexpected) — return 500 so Keycloak retries
+    // Runtime/infra error (Redis, network, unexpected) - return 500 so Keycloak retries
     logger.error('[BackchannelLogoutHandler] Runtime error (Redis/infra): {}', e.message, e)
     return newResultPromise(new Response(Status.INTERNAL_SERVER_ERROR))
 }
