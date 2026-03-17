@@ -3,6 +3,8 @@
 **Agent:** architect (Opus, READ-ONLY)
 **Date:** 2026-03-16
 
+> Update 2026-03-17: Recommendation 4 is now resolved by Pattern Consolidation Step 4 (`3b8a6d8`), which added try-catch protection to the consolidated SloHandler flow across the affected stacks.
+
 ---
 
 ## Summary
@@ -113,7 +115,7 @@ Redis per-stack isolation is correct — cross-stack SLO handled by Keycloak sen
 | 1 | Normalize Stack C docker-compose to match A/B | LOW | HIGH |
 | 2 | Add proxy_buffer_size to Stack C nginx | LOW | HIGH |
 | 3 | Externalize Keycloak URLs in BackchannelLogoutHandler | LOW | MEDIUM |
-| 4 | Add SloHandler try-catch (Stack A + C) | LOW | MEDIUM |
+| 4 | Add SloHandler try-catch (Stack A + C) | RESOLVED in Step 4 (`3b8a6d8`) | MEDIUM |
 | 5 | Add CANONICAL_ORIGIN env vars to A/B docker-compose | LOW | MEDIUM |
 | 6 | Externalize Keycloak URLs in Stack A+C routes | MEDIUM | MEDIUM |
 | 7 | Document Keycloak SPOF + host.docker.internal portability | LOW | LOW |

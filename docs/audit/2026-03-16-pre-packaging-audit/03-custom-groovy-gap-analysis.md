@@ -3,6 +3,8 @@
 **Agent:** analyst (Opus, READ-ONLY)
 **Date:** 2026-03-16
 
+> Update 2026-03-17: the `ScriptableHandler` `args` prerequisite was confirmed during Step 1, the Stack C JWKS TTL variance was resolved in Step 3 (`4d8f065`), and the missing SloHandler try-catch in Stack A/C was resolved in Step 4 (`3b8a6d8`).
+
 ---
 
 ## Executive Summary
@@ -17,7 +19,7 @@ Of 24 Groovy files across 3 stacks, **none can be fully replaced by OpenIG 6.0.2
 |---|---|---|---|---|
 | BackchannelLogoutHandler.groovy | A | Backchannel JWT validation + Redis blacklist | **KEEP** | No built-in backchannel logout |
 | BackchannelLogoutHandler.groovy | B | Same, audience list [openig-client-b, openig-client-b-app4] | **KEEP** | Same — only audience/redis host differ |
-| BackchannelLogoutHandler.groovy | C | Same, audience list [openig-client-c-app5, openig-client-c-app6] | **KEEP** | Same — millis vs seconds variance |
+| BackchannelLogoutHandler.groovy | C | Same, audience list [openig-client-c-app5, openig-client-c-app6] | **KEEP** | Same — millis vs seconds variance at audit time, resolved in Step 3 (`4d8f065`) |
 | SessionBlacklistFilter.groovy | A | Check Redis blacklist, fail-closed 500 | **KEEP** | No built-in session revocation |
 | SessionBlacklistFilterApp2.groovy | A | Same for WhoAmI (app2) | **KEEP** | Different session key |
 | SessionBlacklistFilter.groovy | B | Same for Stack B (app3+app4) | **KEEP** | Different redis host |
@@ -35,8 +37,8 @@ Of 24 Groovy files across 3 stacks, **none can be fully replaced by OpenIG 6.0.2
 | SloHandler.groovy | A | Clear session + Keycloak end_session redirect | **KEEP** | No built-in end_session support |
 | SloHandlerRedmine.groovy | B | Same for Redmine (with try-catch) | **KEEP** | Same + has error handling |
 | SloHandlerJellyfin.groovy | B | Same + Jellyfin /Sessions/Logout API call | **KEEP** | Extra app-specific logout |
-| SloHandlerGrafana.groovy | C | Same for Grafana | **KEEP** | Missing try-catch (known gap) |
-| SloHandlerPhpMyAdmin.groovy | C | Same for phpMyAdmin | **KEEP** | Missing try-catch (known gap) |
+| SloHandlerGrafana.groovy | C | Same for Grafana | **KEEP** | Missing try-catch at audit time, resolved in Step 4 (`3b8a6d8`) |
+| SloHandlerPhpMyAdmin.groovy | C | Same for phpMyAdmin | **KEEP** | Missing try-catch at audit time, resolved in Step 4 (`3b8a6d8`) |
 | PhpMyAdminCookieFilter.groovy | C | Track cookie ownership (INACTIVE) | **KEEP (dead)** | WONT_FIX — phpMyAdmin CSRF incompatible |
 | App1ResponseRewriter.groovy | A | Empty file (0 bytes) | **REMOVE** | Dead code |
 
@@ -70,7 +72,7 @@ Same reasoning applies to Redmine (CSRF extraction + GET-then-POST flow).
 
 ## Open Questions
 
-1. Does `ScriptableHandler` support `args` binding? (prerequisite for parameterization of BackchannelLogoutHandler + SloHandler)
+1. `ScriptableHandler` `args` binding? Resolved 2026-03-16 by the Step 1 smoke test; Steps 3 and 4 now use it.
 2. Can OpenIG 6 load shared Groovy utilities from classpath / `evaluate()`?
-3. Is JWKS cache TTL unit difference (Stack C millis vs A/B seconds) intentional or bug?
+3. JWKS cache TTL unit difference (Stack C millis vs A/B seconds)? Resolved 2026-03-17 in Step 3 by standardizing to seconds (`4d8f065`).
 4. Should `App1ResponseRewriter.groovy` (0 bytes) be deleted?

@@ -5,6 +5,8 @@
 **Scope:** All OpenIG gateway code, nginx, docker-compose, Vault across 3 stacks
 **Risk Level:** MEDIUM
 
+> Update 2026-03-17: HIGH finding S-6 is now resolved by Pattern Consolidation Step 4 (`3b8a6d8`). Historical severity counts below remain the original audit snapshot.
+
 ---
 
 ## Summary
@@ -57,6 +59,7 @@
 **Files:** SloHandler.groovy (A), SloHandlerGrafana.groovy (C), SloHandlerPhpMyAdmin.groovy (C)
 **Blast radius:** Session cleared but Keycloak logout incomplete → SSO session remains active.
 **Fix:** Wrap in try-catch (follow SloHandlerRedmine pattern).
+**Status:** RESOLVED 2026-03-17 in Pattern Consolidation Step 4 (`3b8a6d8`).
 
 ---
 
@@ -119,6 +122,6 @@
 - [ ] Redis has no authentication
 - [ ] No security response headers
 - [ ] JwtSession cookies lack Secure/SameSite
-- [ ] SloHandler missing try-catch (A, C)
+- [x] SloHandler try-catch added via Pattern Consolidation Step 4 (`3b8a6d8`)
 - [x] phpMyAdmin/Grafana sensitive material removed from JwtSession (FIX-09)
 - [ ] WP/Jellyfin/Redmine session tokens still in JwtSession

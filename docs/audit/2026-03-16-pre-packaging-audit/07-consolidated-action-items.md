@@ -9,7 +9,7 @@
 
 | # | Finding | Source | Files | Effort |
 |---|---------|--------|-------|--------|
-| C-1 | JWKS cache race condition — non-atomic check-then-act on 2 volatile fields | Code Review | 3x BackchannelLogoutHandler.groovy | LOW — use `globals.compute()` pattern |
+| C-1 | JWKS cache race condition — non-atomic check-then-act on 2 volatile fields | Code Review | 3x BackchannelLogoutHandler.groovy | RESOLVED 2026-03-17 in Step 3 (`4d8f065`) |
 | C-2 | App session tokens in JwtSession over HTTP (WP cookies, Jellyfin token, Redmine cookies) | Security | CredentialInjector.groovy, JellyfinTokenInjector.groovy, RedmineCredentialInjector.groovy | HIGH — requires server-side storage or accept as documented lab limitation |
 
 ---
@@ -18,12 +18,12 @@
 
 | # | Finding | Source | Files | Effort |
 |---|---------|--------|-------|--------|
-| H-1 | SloHandler missing try-catch (3 files) | Code+Security+Architecture | SloHandler.groovy (A), SloHandlerGrafana.groovy (C), SloHandlerPhpMyAdmin.groovy (C) | LOW — wrap in try-catch, follow SloHandlerRedmine pattern |
+| H-1 | SloHandler missing try-catch (3 files) | Code+Security+Architecture | SloHandler.groovy (A), SloHandlerGrafana.groovy (C), SloHandlerPhpMyAdmin.groovy (C) | RESOLVED 2026-03-17 in Step 4 (`3b8a6d8`) |
 | H-2 | `vault/keys/` not in .gitignore | Security | .gitignore | TRIVIAL — 1 line |
 | H-3 | Redmine port 3000 exposed — bypasses SSO | Security | stack-b/docker-compose.yml | TRIVIAL — remove ports mapping |
 | H-4 | Redis without authentication (all stacks) | Security | 3x docker-compose.yml + 9 Groovy files | MEDIUM — add requirepass + AUTH commands |
 | H-5 | Secrets in docker-compose.yml committed to git | Security | 3x docker-compose.yml | MEDIUM — .env file + .gitignore |
-| H-6 | JWKS TTL unit inconsistency (Stack C millis vs A/B seconds) | Code Review | 3x BackchannelLogoutHandler.groovy | LOW — standardize to seconds |
+| H-6 | JWKS TTL unit inconsistency (Stack C millis vs A/B seconds) | Code Review | 3x BackchannelLogoutHandler.groovy | RESOLVED 2026-03-17 in Step 3 (`4d8f065`) |
 | H-7 | Stack C docker-compose missing platform/user/restart/healthchecks | Architecture | stack-c/docker-compose.yml | LOW — copy patterns from A/B |
 | H-8 | SessionBlacklistFilterApp2 divergent Base64 implementation | Code Review | SessionBlacklistFilterApp2.groovy | LOW — align with other files |
 | H-9 | Stack C nginx missing proxy_buffer_size 128k | Architecture | stack-c/nginx/nginx.conf | TRIVIAL — add 2 lines |
@@ -65,9 +65,9 @@
 
 ## Open Questions (require investigation before consolidation)
 
-1. Does OpenIG 6.0.2 `ScriptableHandler` support `args` binding? (prerequisite for P-1, P-4)
+1. OpenIG 6.0.2 `ScriptableHandler` `args` binding? Resolved 2026-03-16 by the Step 1 smoke test; used in Steps 3 and 4.
 2. Can OpenIG 6 load shared Groovy utility scripts from classpath / `evaluate()`? (prerequisite for P-3)
-3. Is JWKS cache TTL unit difference (Stack C millis vs A/B seconds) intentional or bug?
+3. JWKS cache TTL unit difference (Stack C millis vs A/B seconds)? Resolved 2026-03-17 in Step 3 (`4d8f065`) by standardizing to seconds.
 
 ---
 
@@ -78,7 +78,7 @@ Items that can be fixed together with minimal risk:
 - H-3: Remove Redmine port 3000 exposure
 - H-9: Add proxy_buffer_size to Stack C nginx
 - M-2: Add CANONICAL_ORIGIN env vars to A/B docker-compose
-- M-10: SloHandler Stack A → env var for Keycloak URL
+- M-10: SloHandler Stack A → env var for Keycloak URL (already resolved in Step 4, `3b8a6d8`)
 - M-14: Delete App1ResponseRewriter.groovy
 
 **Estimated impact:** 6 fixes, ~30 minutes, zero risk of regression.

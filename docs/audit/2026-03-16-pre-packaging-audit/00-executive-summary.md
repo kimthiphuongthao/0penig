@@ -5,6 +5,8 @@
 **Branch:** `feat/subdomain-test`
 **Agents used:** 6 specialized agents (2x document-specialist, 1x analyst, 1x architect, 1x code-reviewer, 1x security-reviewer)
 
+> Update 2026-03-17: C-1 (JWKS cache race) was resolved in Pattern Consolidation Step 3 (`4d8f065`); H-1 (SloHandler try-catch) was resolved in Step 4 (`3b8a6d8`); the JWKS TTL inconsistency noted in the audit was also resolved in Step 3 (`4d8f065`).
+
 ---
 
 ## Audit Objectives

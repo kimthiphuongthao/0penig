@@ -4,6 +4,8 @@
 **Date:** 2026-03-16
 **Files Reviewed:** 24 Groovy scripts across 3 stacks
 
+> Update 2026-03-17: C-1 was resolved in Pattern Consolidation Step 3 (`4d8f065`), H-1 was resolved in Step 4 (`3b8a6d8`), and H-3 was resolved in Step 3 (`4d8f065`).
+
 ---
 
 ## Summary
@@ -26,6 +28,7 @@
 **Files:** `stack-{a,b,c}/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy`
 **Issue:** Two separate `@Field static volatile` variables (`cachedJwks` + `jwksCacheExpiry`) read/written independently. Classic check-then-act race. Thread A reads non-null cache, Thread B invalidates, Thread A returns null. Unlike Vault token cache which correctly uses `globals.compute()`.
 **Fix:** Use `globals.compute()` for JWKS caching, or combine into single immutable object.
+**Status:** RESOLVED 2026-03-17 in Pattern Consolidation Step 3 (`4d8f065`).
 
 ---
 
@@ -35,6 +38,7 @@
 **Files:** `stack-a/SloHandler.groovy`, `stack-c/SloHandlerGrafana.groovy`, `stack-c/SloHandlerPhpMyAdmin.groovy`
 **Issue:** Zero exception handling. Any runtime exception → stack trace to browser. Contrast with `SloHandlerRedmine.groovy` (Stack B) which has proper try-catch.
 **Fix:** Wrap in try-catch, return HTML error page on failure.
+**Status:** RESOLVED 2026-03-17 in Pattern Consolidation Step 4 (`3b8a6d8`).
 
 ### H-2: SessionBlacklistFilterApp2 divergent Base64 decode
 **File:** `stack-a/SessionBlacklistFilterApp2.groovy:46-51`
@@ -45,6 +49,7 @@
 **Files:** Stack A/B use seconds (600), Stack C uses milliseconds (600000L)
 **Issue:** Functionally equivalent but maintenance-hazardous. Copy-paste between stacks could introduce 600ms or 600000s TTL.
 **Fix:** Standardize to seconds (matching A/B).
+**Status:** RESOLVED 2026-03-17 in Pattern Consolidation Step 3 (`4d8f065`).
 
 ### H-4: SessionBlacklistFilterApp2 manual Socket management
 **File:** `stack-a/SessionBlacklistFilterApp2.groovy:94-141`
