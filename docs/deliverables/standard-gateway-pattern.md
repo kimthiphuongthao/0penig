@@ -90,6 +90,10 @@ Why: All three stacks exposed gateway or OIDC secrets in repo-managed config, wh
 
 How to implement in OpenIG: Use a `VaultCredentialFilter`-style runtime secret source and inject the resulting values into route/filter configuration without serializing them into `JwtSession`. An implementation pattern inferred from the reviewed Vault-backed adapters is: fetch at startup, cache with TTL, and refresh before expiry rather than storing fetched secrets in browser-bound session state. Derived from: Stack A `§4`; Stack C `§3`; Stack C `§4 F5`.
 
+Deployment rule: compose-managed secrets MUST live in gitignored `.env` files or an equivalent runtime secret source. Commit `.env.example` as the contract, never commit `.env`, and never hardcode secret literals in `docker-compose.yml`.
+
+Image rule: OpenIG containers MUST use an explicit image tag and MUST NOT use `:latest`. The validated lab baseline is `openidentityplatform/openig:6.0.1`; the mutable `latest` tag moved to a Tomcat 11 build and broke OpenIG 6 startup.
+
 ### 3. Transport Security
 [Derived from: B F4, C F4, A §6]
 

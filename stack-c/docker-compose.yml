@@ -21,7 +21,7 @@ services:
       - openig-c2
 
   openig-c1:
-    image: openidentityplatform/openig
+    image: openidentityplatform/openig:6.0.1
     entrypoint: ["/docker-entrypoint.sh"]
     networks:
       - frontend-c
@@ -34,10 +34,10 @@ services:
       OPENIG_PUBLIC_URL: "http://openig-c.sso.local:10080"
       KEYCLOAK_BROWSER_URL: "http://auth.sso.local:8080"
       REDIS_HOST: "redis-c"
-      JWT_SHARED_SECRET: "fThJvpugVMgfRGoRYBK2tnuFDAQ+7kdrN9u6romRcUM="
-      KEYSTORE_PASSWORD: "Bx4oNKDVzSav7TMHK6gsKcLyhqCgspqm"
-      OIDC_CLIENT_SECRET_APP5: "CVZ1FfkEwfDPbmcLV+d/wJuvngLK3Mo0PJgr0iIMce4="
-      OIDC_CLIENT_SECRET_APP6: "NXtiA1BqlvkmwXm5aO4G2C5S7mkFZpn9AW78JCAtn/M="
+      JWT_SHARED_SECRET: "${JWT_SHARED_SECRET}"
+      KEYSTORE_PASSWORD: "${KEYSTORE_PASSWORD}"
+      OIDC_CLIENT_SECRET_APP5: "${OIDC_CLIENT_SECRET_APP5}"
+      OIDC_CLIENT_SECRET_APP6: "${OIDC_CLIENT_SECRET_APP6}"
       VAULT_ADDR: "http://vault-c:8200"
       VAULT_ROLE_ID_FILE: "/opt/openig/vault/role_id"
       VAULT_SECRET_ID_FILE: "/opt/openig/vault/secret_id"
@@ -45,7 +45,7 @@ services:
       CANONICAL_ORIGIN_APP6: "http://phpmyadmin-c.sso.local:18080"
 
   openig-c2:
-    image: openidentityplatform/openig
+    image: openidentityplatform/openig:6.0.1
     entrypoint: ["/docker-entrypoint.sh"]
     networks:
       - frontend-c
@@ -58,10 +58,10 @@ services:
       OPENIG_PUBLIC_URL: "http://openig-c.sso.local:10080"
       KEYCLOAK_BROWSER_URL: "http://auth.sso.local:8080"
       REDIS_HOST: "redis-c"
-      JWT_SHARED_SECRET: "fThJvpugVMgfRGoRYBK2tnuFDAQ+7kdrN9u6romRcUM="
-      KEYSTORE_PASSWORD: "Bx4oNKDVzSav7TMHK6gsKcLyhqCgspqm"
-      OIDC_CLIENT_SECRET_APP5: "CVZ1FfkEwfDPbmcLV+d/wJuvngLK3Mo0PJgr0iIMce4="
-      OIDC_CLIENT_SECRET_APP6: "NXtiA1BqlvkmwXm5aO4G2C5S7mkFZpn9AW78JCAtn/M="
+      JWT_SHARED_SECRET: "${JWT_SHARED_SECRET}"
+      KEYSTORE_PASSWORD: "${KEYSTORE_PASSWORD}"
+      OIDC_CLIENT_SECRET_APP5: "${OIDC_CLIENT_SECRET_APP5}"
+      OIDC_CLIENT_SECRET_APP6: "${OIDC_CLIENT_SECRET_APP6}"
       VAULT_ADDR: "http://vault-c:8200"
       VAULT_ROLE_ID_FILE: "/opt/openig/vault/role_id"
       VAULT_SECRET_ID_FILE: "/opt/openig/vault/secret_id"
@@ -85,10 +85,10 @@ services:
     networks:
       - backend-c
     environment:
-      MYSQL_ROOT_PASSWORD: "rootpass"
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
       MYSQL_DATABASE: "appdb"
       MYSQL_USER: "alice"
-      MYSQL_PASSWORD: "AlicePass123"
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD}"
 
   phpmyadmin:
     image: phpmyadmin:latest

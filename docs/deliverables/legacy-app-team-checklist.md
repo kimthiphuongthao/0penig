@@ -163,6 +163,9 @@ Bạn có thể tìm thông tin này bằng cách: mở DevTools (F12) > tab App
 - [ ] App hiện đang chạy dưới subpath (`/appX`)
 - [ ] App có thể được deploy ở subdomain riêng (ví dụ: `myapp.sso.local`) không?
 - [ ] Container image có thể customize được (Dockerfile, entrypoint, config mount)?
+- [ ] Tạo file `.env` local từ `.env.example` trước lần deploy đầu tiên.
+- [ ] Không commit file `.env` vào Git.
+- [ ] Pin container image bằng version cụ thể; với OpenIG 6, không dùng `:latest`.
 
 Ghi chú về deployment hiện tại (port, reverse proxy đang dùng, v.v.):
 

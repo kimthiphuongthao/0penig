@@ -20,10 +20,18 @@ Related: [[OpenIG]] [[Keycloak]] [[Vault]] [[Stack C]]
 - SSO: ✅
 - SLO: ✅
 - OIDC_CLIENT_SECRET_APP5 and OIDC_CLIENT_SECRET_APP6 rotated to strong 44-char secrets (Phase 2 STEP-02, M-5/S-9). Keycloak clients openig-client-c-app5 and openig-client-c-app6 updated to match.
+- Phase 2 hardening `[H-5/S-3]`: secret-bearing Compose values moved out of `stack-c/docker-compose.yml` into local `stack-c/.env`; committed `stack-c/.env.example` documents the required variables and K8s Secret bootstrap flow.
+- `openig-c1` and `openig-c2` are pinned to `openidentityplatform/openig:6.0.1`; `openidentityplatform/openig:latest` moved to a Tomcat 11 build that breaks OpenIG 6 startup.
 
 > [!success]
 > SSO/SLO WORKING for app5 (Grafana) and app6 (phpMyAdmin). Post-audit cleanup confirmed the old `SloHandlerGrafana.groovy` and `SloHandlerPhpMyAdmin.groovy` files were leftover artifacts from Step 4 and have been deleted.
 > Phase 2 STEP-01 (L-5): `PhpMyAdminCookieFilter.groovy` dead code also deleted — file was never wired into any route; no runtime impact.
+
+> [!success]
+> `stack-c/docker-compose.yml` no longer commits literal values for `JWT_SHARED_SECRET`, `KEYSTORE_PASSWORD`, `OIDC_CLIENT_SECRET_APP5`, `OIDC_CLIENT_SECRET_APP6`, `MYSQL_ROOT_PASSWORD`, or `MYSQL_PASSWORD`. Validation on 2026-03-17: `docker compose config` resolved the env-backed values correctly, and the committed Compose file no longer matched the previous secret prefixes.
+
+> [!success]
+> Validation on `2026-03-17`: Stack C started cleanly with the pinned image and loaded all 6 routes.
 
 ## Architecture
 
@@ -103,15 +111,15 @@ Related: [[OpenIG]] [[Keycloak]] [[Vault]] [[Stack C]]
 ## Credentials and secrets
 
 - Keycloak client secrets:
-  - `openig-client-c-app5` -> strong 44-char secret via `OIDC_CLIENT_SECRET_APP5`
-  - `openig-client-c-app6` -> strong 44-char secret via `OIDC_CLIENT_SECRET_APP6`
+  - `openig-client-c-app5` -> strong 44-char secret via local `OIDC_CLIENT_SECRET_APP5` in `stack-c/.env`
+  - `openig-client-c-app6` -> strong 44-char secret via local `OIDC_CLIENT_SECRET_APP6` in `stack-c/.env`
 - OpenIG JWT session:
   - Cookie: `IG_SSO_C` on domain `.sso.local`
-  - Stack-C specific `sharedSecret` configured in `stack-c/openig_home/config/config.json`
+  - Stack-C specific `sharedSecret` configured in `stack-c/openig_home/config/config.json`, with Compose passing `JWT_SHARED_SECRET` from local env instead of a committed literal
 - MariaDB bootstrap (dev):
-  - `MYSQL_ROOT_PASSWORD=rootpass`
+  - `MYSQL_ROOT_PASSWORD` sourced from local `stack-c/.env`
   - `MYSQL_USER=alice`
-  - `MYSQL_PASSWORD=AlicePass123`
+  - `MYSQL_PASSWORD` sourced from local `stack-c/.env`
 - phpMyAdmin runtime auth:
   - `auth_type=http`
   - actual Basic Auth username/password fetched from Vault path `secret/data/phpmyadmin/{preferred_username}`
@@ -119,6 +127,9 @@ Related: [[OpenIG]] [[Keycloak]] [[Vault]] [[Stack C]]
 
 > [!warning]
 > Do not reuse `JwtSession.sharedSecret` across stacks sharing `.sso.local` cookie domain.
+
+> [!tip]
+> For Kubernetes deployment, generate the stack secret bundle from `stack-c/.env.example` and load it with `envFrom.secretRef` rather than reintroducing literals into `docker-compose.yml` or Helm values.
 
 > [!tip]
 > For SLO regressions, verify route order first (`00-*` logout routes must run before `10/11-*` app routes).

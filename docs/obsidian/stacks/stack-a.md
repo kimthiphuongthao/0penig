@@ -29,6 +29,25 @@ Related: [[Stack B]] [[Stack C]] [[OpenIG]] [[Keycloak]] [[Vault]]
 - Port: `80`
 - URL: `http://wp-a.sso.local`
 
+## 2026-03-17 Security Hardening
+
+- Externalized Compose-managed secrets from committed literals into local `stack-a/.env`.
+- Added committed `stack-a/.env.example` with Kubernetes handoff comments for `envFrom secretRef`.
+- Switched `openig-1` and `openig-2` to interpolate `JWT_SHARED_SECRET`, `KEYSTORE_PASSWORD`, and `OIDC_CLIENT_SECRET`.
+- Pinned `openig-1` and `openig-2` to `openidentityplatform/openig:6.0.1` because `openidentityplatform/openig:latest` now resolves to a Tomcat 11 build that breaks OpenIG 6.
+- Switched `mysql` to interpolate `MYSQL_ROOT_PASSWORD` and changed the healthcheck to shell form so the container resolves `-p$${MYSQL_ROOT_PASSWORD}` at runtime.
+- Switched `wordpress` to interpolate `WORDPRESS_DB_PASSWORD`.
+- Left `REDIS_PASSWORD` out of Stack A by design because STEP-04 handles Redis auth separately.
+
+> [!success]
+> `docker compose config` on `2026-03-17` rendered the expected `JWT_SHARED_SECRET` value for both OpenIG nodes with no Compose interpolation errors.
+
+> [!success]
+> Validation on `2026-03-17`: Stack A started cleanly with the pinned image and loaded all 4 routes.
+
+> [!tip]
+> For Kubernetes migration, keep `stack-a/.env.example` as the committed contract and create the runtime secret with `kubectl create secret generic stack-a-secrets --from-env-file=.env`.
+
 ## Auth Mechanism
 
 - Form-based login intercept via OpenIG:

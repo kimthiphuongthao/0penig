@@ -35,7 +35,7 @@ services:
     restart: unless-stopped
 
   openig-b1:
-    image: openidentityplatform/openig
+    image: openidentityplatform/openig:6.0.1
     platform: linux/amd64
     container_name: sso-b-openig-1
     user: root
@@ -51,14 +51,14 @@ services:
       OPENIG_PUBLIC_URL: 'http://openigb.sso.local:9080'
       CANONICAL_ORIGIN_APP3: 'http://redmine-b.sso.local:9080'
       CANONICAL_ORIGIN_APP4: 'http://jellyfin-b.sso.local:9080'
-      JWT_SHARED_SECRET: "jla+d8IjpRqlcvKyxs8S5SFQHIGaObqXfVIt5Z/mn+I="
-      KEYSTORE_PASSWORD: "Kp9mZxQv3wNrL2eA7yUhBc6TdsFjX8oY"
+      JWT_SHARED_SECRET: "${JWT_SHARED_SECRET}"
+      KEYSTORE_PASSWORD: "${KEYSTORE_PASSWORD}"
       KEYCLOAK_BROWSER_URL: "http://auth.sso.local:8080"
       KEYCLOAK_INTERNAL_URL: "http://host.docker.internal:8080"
       OIDC_CLIENT_ID: "openig-client-b"
       OIDC_CLIENT_ID_APP4: "openig-client-b-app4"
-      OIDC_CLIENT_SECRET: "openig-client-b-secret"
-      OIDC_CLIENT_SECRET_APP4: "openig-client-b-app4-secret"
+      OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET}"
+      OIDC_CLIENT_SECRET_APP4: "${OIDC_CLIENT_SECRET_APP4}"
       OPENIG_NODE_NAME: "openig-b1"
       VAULT_ADDR: "http://vault-b:8200"
       VAULT_ROLE_ID_FILE: "/vault/file/openig-role-id"
@@ -75,7 +75,7 @@ services:
       start_period: 60s
 
   openig-b2:
-    image: openidentityplatform/openig
+    image: openidentityplatform/openig:6.0.1
     platform: linux/amd64
     container_name: sso-b-openig-2
     user: root
@@ -91,14 +91,14 @@ services:
       OPENIG_PUBLIC_URL: 'http://openigb.sso.local:9080'
       CANONICAL_ORIGIN_APP3: 'http://redmine-b.sso.local:9080'
       CANONICAL_ORIGIN_APP4: 'http://jellyfin-b.sso.local:9080'
-      JWT_SHARED_SECRET: "jla+d8IjpRqlcvKyxs8S5SFQHIGaObqXfVIt5Z/mn+I="
-      KEYSTORE_PASSWORD: "Kp9mZxQv3wNrL2eA7yUhBc6TdsFjX8oY"
+      JWT_SHARED_SECRET: "${JWT_SHARED_SECRET}"
+      KEYSTORE_PASSWORD: "${KEYSTORE_PASSWORD}"
       KEYCLOAK_BROWSER_URL: "http://auth.sso.local:8080"
       KEYCLOAK_INTERNAL_URL: "http://host.docker.internal:8080"
       OIDC_CLIENT_ID: "openig-client-b"
       OIDC_CLIENT_ID_APP4: "openig-client-b-app4"
-      OIDC_CLIENT_SECRET: "openig-client-b-secret"
-      OIDC_CLIENT_SECRET_APP4: "openig-client-b-app4-secret"
+      OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET}"
+      OIDC_CLIENT_SECRET_APP4: "${OIDC_CLIENT_SECRET_APP4}"
       OPENIG_NODE_NAME: "openig-b2"
       VAULT_ADDR: "http://vault-b:8200"
       VAULT_ROLE_ID_FILE: "/vault/file/openig-role-id"
@@ -146,10 +146,10 @@ services:
     image: mysql:8.0
     container_name: sso-b-mysql-redmine
     environment:
-      MYSQL_ROOT_PASSWORD: root_pass
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
       MYSQL_DATABASE: redmine
       MYSQL_USER: redmine
-      MYSQL_PASSWORD: redmine_pass
+      MYSQL_PASSWORD: "${REDMINE_DB_PASSWORD}"
     volumes:
       - redmine_mysql_data:/var/lib/mysql
     networks:
@@ -168,8 +168,8 @@ services:
       REDMINE_DB_MYSQL: mysql-redmine
       REDMINE_DB_DATABASE: redmine
       REDMINE_DB_USERNAME: redmine
-      REDMINE_DB_PASSWORD: redmine_pass
-      REDMINE_SECRET_KEY_BASE: redmine_secret_key_lab_2026
+      REDMINE_DB_PASSWORD: "${REDMINE_DB_PASSWORD}"
+      REDMINE_SECRET_KEY_BASE: "${REDMINE_SECRET_KEY_BASE}"
     depends_on:
       mysql-redmine:
         condition: service_healthy

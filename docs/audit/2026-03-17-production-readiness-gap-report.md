@@ -6,13 +6,13 @@ Status: NOT READY
 
 ## Executive Summary
 
-This report captures the 2026-03-17 production-readiness gap assessment for SSO Lab, cross-referencing the 2026-03-16 pre-packaging audit against the current codebase. The current state is **NOT READY** for release as a production reference solution: **38 findings remain open, 6 are partial, and 37 are resolved** out of 81 checks.
+This report captures the 2026-03-17 production-readiness gap assessment for SSO Lab, cross-referencing the 2026-03-16 pre-packaging audit against the current codebase. The current state is **NOT READY** for release as a production reference solution: **37 findings remain open, 6 are partial, and 38 are resolved** out of 81 checks.
 
-Pattern Consolidation resolved 37 findings and materially improved the gateway baseline. The resolved work includes the JWKS cache race, `SloHandler` try-catch hardening, TTL unit standardization, consolidation of `SessionBlacklistFilter` / `BackchannelLogoutHandler` / `SloHandler`, `vault/keys/` repo hygiene, Redmine direct-port exposure removal, Stack C nginx buffer alignment, `CANONICAL_ORIGIN_*` environment variables, dead-code cleanup, and Stack C OIDC client secret rotation.
+Resolved work now covers 38 findings and materially improved the gateway baseline. The resolved work includes the JWKS cache race, `SloHandler` try-catch hardening, TTL unit standardization, consolidation of `SessionBlacklistFilter` / `BackchannelLogoutHandler` / `SloHandler`, `vault/keys/` repo hygiene, Redmine direct-port exposure removal, Stack C nginx buffer alignment, `CANONICAL_ORIGIN_*` environment variables, dead-code cleanup, Stack C OIDC client secret rotation, and STEP-03 secret externalization plus OpenIG image pinning.
 
-The remaining 38 open findings are concentrated in three categories that matter for a reusable reference solution:
+The remaining 37 open findings are concentrated in three categories that matter for a reusable reference solution:
 
-- Security: Redis revocation state is unauthenticated, live secrets remain committed in compose files, and security headers and cookie flags are incomplete.
+- Security: Redis revocation state is unauthenticated, and security headers and cookie flags are incomplete.
 - Architecture: Stack C is not yet parity-aligned with the Stack A/B reference pattern, Keycloak endpoint configuration is still hardcoded in Stack A/C routes, and Linux portability remains incomplete because `host.docker.internal` is assumed.
 - Code quality and operational consistency: several low-effort Groovy and nginx fixes remain open, including EOF handling, Base64 decoding simplification, and inconsistent upstream error semantics.
 
@@ -29,11 +29,11 @@ These items block production-reference status because they either leave an activ
 - Fix approach: Add Redis password protection in all three compose stacks, pass the password through environment variables, and update all revocation Groovy templates to authenticate before issuing Redis commands.
 - Effort: MEDIUM
 
-### H-5/S-3: Live secrets in docker-compose committed to git
+### H-5/S-3: Live secrets in docker-compose committed to git [RESOLVED]
 - Files: `stack-a/docker-compose.yml`, `stack-b/docker-compose.yml`, `stack-c/docker-compose.yml`
-- Finding: OIDC client secrets, keystore passwords, JWT shared secrets, database passwords, and downstream app credentials are hardcoded in compose files tracked by git.
-- Impact: Secrets are exposed in the working tree and repository history, which makes the lab unsafe as a public or internal reference baseline and normalizes an incorrect secret-management pattern.
-- Fix approach: Split live secrets into gitignored `.env` files or another runtime secret source, replace hardcoded literals with `${VAR}` references, and document the required variable set per stack.
+- Finding: RESOLVED — Secrets externalized to `.env` files (gitignored). `.env.example` committed. Image pinned to `6.0.1`.
+- Impact: Live secrets no longer ship in versioned compose files, and the gateway no longer depends on the mutable `latest` tag that broke OpenIG 6 startup.
+- Fix approach: Completed. Keep `.env.example` as the committed contract, never commit `.env`, and always pin OpenIG image versions explicitly.
 - Effort: MEDIUM
 
 ### H-7/A-1: Stack C docker-compose parity gap vs Stack A/B reference
@@ -162,7 +162,7 @@ These items remain acceptable only as explicitly documented lab constraints. The
 | Priority | ID | Finding | Effort |
 |----------|----|---------|--------|
 | P1-MUST | H-4/S-2 | Redis authentication | MEDIUM |
-| P1-MUST | H-5/S-3 | Secrets out of docker-compose to `.env` | MEDIUM |
+| P1-MUST | H-5/S-3 | Secrets out of docker-compose to `.env` + OpenIG image pin [RESOLVED] | MEDIUM |
 | P1-MUST | H-7/A-1 | Stack C docker-compose parity | MEDIUM |
 | P1-MUST | A-6/A-7 | Keycloak URL externalization Stack A+C | MEDIUM |
 | P1-MUST | M-5/S-9 | Stack C weak OIDC secrets [RESOLVED] | LOW |
@@ -186,6 +186,7 @@ These items remain acceptable only as explicitly documented lab constraints. The
 | H-1 | `SloHandler` missing try-catch | Consolidated `SloHandler` template (commit `3b8a6d8`) |
 | H-2 | `vault/keys/` not in `.gitignore` | Added `**/vault/keys/` (commit `5ae657e`) |
 | H-3 | Redmine port `3000` exposed | Removed `3000:3000` mapping (commit `f86c7eb`) |
+| H-5/S-3 | Secrets externalized from compose files | `.env` files are gitignored, `.env.example` files are committed, and all three stacks pin `openidentityplatform/openig:6.0.1` (commit `TBD`) |
 | H-6 | JWKS TTL unit inconsistency | Standardized to seconds (commit `4d8f065`) |
 | H-8 | `SessionBlacklistFilterApp2` divergent Base64 | File deleted in consolidation (commit `832bbae`) |
 | H-9 | Stack C nginx proxy buffer missing | Added `proxy_buffer_size 128k` (commit `f86c7eb`) |

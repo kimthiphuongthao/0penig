@@ -47,7 +47,7 @@ services:
   # so any node can decrypt the session cookie from the other
   # ----------------------------------------------------------
   openig-1:
-    image: openidentityplatform/openig
+    image: openidentityplatform/openig:6.0.1
     platform: linux/amd64
     container_name: sso-openig-1
     user: root   # lab only — needed for write access to mounted volume on macOS
@@ -60,9 +60,9 @@ services:
       - ./vault/file:/vault/file:ro
     environment:
       OPENIG_BASE: /opt/openig
-      JWT_SHARED_SECRET: "zK7izY2ZLyxsCm1AVJlcdXsZgwo7Y1LvyYTM6KcR+3Q="
-      KEYSTORE_PASSWORD: "oT38gAgX25lFDkv9J4u+kPXtOFpddCTl"
-      OIDC_CLIENT_SECRET: "openig-client-secret"
+      JWT_SHARED_SECRET: "${JWT_SHARED_SECRET}"
+      KEYSTORE_PASSWORD: "${KEYSTORE_PASSWORD}"
+      OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET}"
       KEYCLOAK_INTERNAL_URL: "http://host.docker.internal:8080"
       KEYCLOAK_BROWSER_URL: "http://auth.sso.local:8080"
       REDIS_HOST: "redis-a"
@@ -81,7 +81,7 @@ services:
   # OpenIG node 2 — identical config to node 1
   # ----------------------------------------------------------
   openig-2:
-    image: openidentityplatform/openig
+    image: openidentityplatform/openig:6.0.1
     platform: linux/amd64
     container_name: sso-openig-2
     user: root   # lab only
@@ -93,9 +93,9 @@ services:
       - ./vault/file:/vault/file:ro
     environment:
       OPENIG_BASE: /opt/openig
-      JWT_SHARED_SECRET: "zK7izY2ZLyxsCm1AVJlcdXsZgwo7Y1LvyYTM6KcR+3Q="
-      KEYSTORE_PASSWORD: "oT38gAgX25lFDkv9J4u+kPXtOFpddCTl"
-      OIDC_CLIENT_SECRET: "openig-client-secret"
+      JWT_SHARED_SECRET: "${JWT_SHARED_SECRET}"
+      KEYSTORE_PASSWORD: "${KEYSTORE_PASSWORD}"
+      OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET}"
       KEYCLOAK_INTERNAL_URL: "http://host.docker.internal:8080"
       KEYCLOAK_BROWSER_URL: "http://auth.sso.local:8080"
       REDIS_HOST: "redis-a"
@@ -123,7 +123,7 @@ services:
       WORDPRESS_DB_HOST: mysql:3306
       WORDPRESS_DB_NAME: wordpress
       WORDPRESS_DB_USER: wordpress
-      WORDPRESS_DB_PASSWORD: wordpress_pass
+      WORDPRESS_DB_PASSWORD: "${WORDPRESS_DB_PASSWORD}"
       # Pre-set admin credentials to match credentials store
       WORDPRESS_TABLE_PREFIX: wp_
     entrypoint: ["bash", "-c", "a2enmod alias && exec docker-entrypoint.sh apache2-foreground"]
@@ -178,14 +178,14 @@ services:
     image: mysql:8.0
     container_name: sso-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: root_pass
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
     volumes:
       - mysql_data:/var/lib/mysql
       - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     networks:
       - backend
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot_pass"]
+      test: "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD}"
       interval: 10s
       timeout: 5s
       retries: 10

@@ -40,7 +40,12 @@ stack-c/.omc/
 obsidian-skills/
 
 # Misc generated files
+stack-b/.env
 -b
 redis-analysis-prompt.md
 sso-lab-presentation.html
 .memory
+
+# Local stack secrets
+stack-a/.env
+stack-c/.env

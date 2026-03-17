@@ -6,7 +6,8 @@ tags:
   - openig
   - redmine
   - jellyfin
-date: 2026-03-12
+  - security-hardening
+date: 2026-03-17
 status: complete
 ---
 
@@ -74,3 +75,21 @@ Related: [[Stack A]] [[Stack C]] [[OpenIG]] [[Keycloak]] [[Vault]]
 > Known pending:
 > - Jellyfin WebSocket `http://` -> `ws://` bug (`01-jellyfin.json`)
 > - Missing `cookieDomain` in Stack B `config.json` (LOW priority)
+
+## 2026-03-17 Security Hardening
+
+- Confirmed hardening item `[H-5/S-3]` from `.omc/plans/phase2-security-hardening.md` was implemented directly for [[Stack B]].
+- Moved Stack B runtime secrets out of `stack-b/docker-compose.yml` into local `stack-b/.env`.
+- Added committed `stack-b/.env.example` placeholders with Kubernetes `envFrom secretRef` guidance for production secret delivery.
+- Replaced hardcoded secret values in `openig-b1`, `openig-b2`, `mysql-redmine`, and `redmine` with `${...}` environment references.
+- Pinned `openig-b1` and `openig-b2` to `openidentityplatform/openig:6.0.1` because `openidentityplatform/openig:latest` now resolves to a Tomcat 11 build that breaks OpenIG 6.
+- Kept `REDIS_PASSWORD` out of this step intentionally; STEP-04 remains the owner for Redis auth rollout.
+
+> [!success]
+> Validation passed: `cd stack-b && docker compose config | grep JWT_SHARED_SECRET` resolved the expected shared secret for both [[OpenIG]] nodes.
+
+> [!success]
+> Validation on `2026-03-17`: Stack B started cleanly with the pinned image and loaded all 6 routes.
+
+> [!warning]
+> `stack-b/.env` was not covered by existing ignore rules. Root `.gitignore` now includes `stack-b/.env` so Stack B lab secrets stay out of Git.
