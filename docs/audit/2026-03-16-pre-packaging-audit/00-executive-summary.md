@@ -5,7 +5,7 @@
 **Branch:** `feat/subdomain-test`
 **Agents used:** 6 specialized agents (2x document-specialist, 1x analyst, 1x architect, 1x code-reviewer, 1x security-reviewer)
 
-> Update 2026-03-17: C-1 (JWKS cache race) was resolved in Pattern Consolidation Step 3 (`4d8f065`); H-1 (SloHandler try-catch) was resolved in Step 4 (`3b8a6d8`); the JWKS TTL inconsistency noted in the audit was also resolved in Step 3 (`4d8f065`).
+> Update 2026-03-17: Pattern Consolidation Steps 1-4 are now complete for the three major duplication tracks: SessionBlacklistFilter `6 -> 1` (Steps 1+2, `a76e194`, `832bbae`), BackchannelLogoutHandler `3 -> 1` (Step 3, `4d8f065`), and SloHandler `5 -> 2` (Step 4, `3b8a6d8`). C-1 (JWKS cache race), H-1 (SloHandler try-catch), and the JWKS TTL inconsistency were resolved as part of those steps.
 
 ---
 
@@ -32,15 +32,15 @@
 - Vault integration exceeds typical lab quality
 - Stack C diverges significantly from A/B in docker-compose, nginx, naming conventions
 
-### 3. Code Quality: 78% duplication, 1 CRITICAL defect
-- 24 files contain only 7 distinct logic patterns, copy-pasted with parameter changes
-- ~1676 lines could be saved through parameterization
-- CRITICAL: JWKS cache race condition (non-atomic check-then-act)
-- 4 HIGH issues: SloHandler missing try-catch, Base64 divergence, JWKS TTL unit inconsistency
+### 3. Code Quality: historical audit snapshot identified heavy duplication and one critical defect
+- At audit time, 24 files contained only 7 distinct logic patterns, copy-pasted with parameter changes
+- The audit estimated ~1676 lines could be saved through parameterization; Steps 1-4 have since completed the BackchannelLogoutHandler / SessionBlacklistFilter / SloHandler consolidation tracks
+- Historical CRITICAL defect `C-1` (JWKS cache race condition) is now resolved in Step 3 (`4d8f065`)
+- Historical HIGH findings included `H-1` (SloHandler try-catch) and the JWKS TTL inconsistency; both are now resolved, while the remaining open code-review items are documented in the detailed reports
 
-### 4. Security: MEDIUM risk level, 1 CRITICAL + 5 HIGH
+### 4. Security: MEDIUM risk level, historical snapshot showed 1 CRITICAL + 5 HIGH
 - CRITICAL: App session tokens (WP cookies, Jellyfin token, Redmine cookies) in JwtSession over HTTP
-- HIGH: Redis without auth, secrets in git, vault/keys not gitignored, Redmine port 3000 exposed, SloHandler missing try-catch
+- HIGH findings at audit time included Redis without auth, secrets in git, `vault/keys/` not gitignored, Redmine port 3000 exposed, and SloHandler missing try-catch; the SloHandler item is now resolved in Step 4 (`3b8a6d8`)
 - 7 MEDIUM: No security headers, no cookie flags, weak secrets, root containers, Vault TLS disabled
 
 ---
@@ -70,7 +70,7 @@
 | LOW | 7 | 4 | 2 | **13** |
 | **Total** | **22** | **17** | **10** | **49** |
 
-Note: Some findings overlap across reviews (e.g., SloHandler try-catch appears in all 3).
+Note: Counts above remain the original 2026-03-16 audit snapshot; some findings listed in those totals are now resolved by Pattern Consolidation Steps 1-4.
 
 ---
 

@@ -4,7 +4,7 @@
 **Date:** 2026-03-16
 **Files Reviewed:** 24 Groovy scripts across 3 stacks
 
-> Update 2026-03-17: C-1 was resolved in Pattern Consolidation Step 3 (`4d8f065`), H-1 was resolved in Step 4 (`3b8a6d8`), and H-3 was resolved in Step 3 (`4d8f065`).
+> Update 2026-03-17: C-1 was resolved in Pattern Consolidation Step 3 (`4d8f065`), H-1 was resolved in Step 4 (`3b8a6d8`), H-3 was resolved in Step 3 (`4d8f065`), M-1/M-2 were resolved by the completed BackchannelLogoutHandler / SessionBlacklistFilter consolidation tracks (`4d8f065`, `a76e194`, `832bbae`), and L-7 was resolved in Step 4 (`3b8a6d8`).
 
 ---
 
@@ -62,8 +62,8 @@
 
 | # | Finding | Files |
 |---|---------|-------|
-| M-1 | BackchannelLogoutHandler duplication (~95%, 3 copies) | 3 files, ~1043 lines |
-| M-2 | SessionBlacklistFilter duplication (~85%, 6 copies) | 6 files, ~752 lines |
+| M-1 | BackchannelLogoutHandler duplication (~95%, 3 copies) | RESOLVED in Step 3 (`4d8f065`) |
+| M-2 | SessionBlacklistFilter duplication (~85%, 6 copies) | RESOLVED in Steps 1+2 (`a76e194`, `832bbae`) |
 | M-3 | VaultCredentialFilter duplication (~75%, 4 copies) | 4 files, ~546 lines |
 | M-4 | SloHandler Stack A hardcoded Keycloak URL | SloHandler.groovy:26 |
 | M-5 | readRespLine doesn't throw on EOF | 8 files |
@@ -85,11 +85,16 @@
 | L-4 | SloHandlerJellyfin skips Keycloak logout when no id_token_hint |
 | L-5 | PhpMyAdminCookieFilter exists but dead code (WONT_FIX) |
 | L-6 | JellyfinResponseRewriter `buildDeviceId` uses session hashCode |
-| L-7 | SloHandler duplication (~70%, 5 copies) |
+| L-7 | SloHandler duplication (~70%, 5 copies) — RESOLVED in Step 4 (`3b8a6d8`) |
 
 ---
 
 ## Duplication Quantification
+
+Historical audit snapshot at review time. Current live state after consolidation:
+- BackchannelLogoutHandler: `3 -> 1`
+- SessionBlacklistFilter: `6 -> 1`
+- SloHandler: `5 -> 2`
 
 | Pattern | Files | Duplicated Lines |
 |---------|-------|-----------------|

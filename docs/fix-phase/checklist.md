@@ -19,7 +19,7 @@
 
 | ID | Task | Stack | Status | Notes |
 |----|------|-------|--------|-------|
-| 1a | BackchannelLogoutHandler.groovy — TTL 3600s → 28800s | A, B, C | [x] | ✅ Done 2026-03-15. Also fixed RESP prefix $4→$5. Verified TTL≈28800 all 3 stacks. Commit 792760f |
+| 1a | BackchannelLogoutHandler.groovy — align blacklist TTL with sessionTimeout (historically 3600s → 28800s; current live state 1800s) | A, B, C | [x] | ✅ Done 2026-03-15 as FIX-02 (`792760f`). Later superseded by session-timeout reduction commit `9cbf71a`, which standardized live TTL to 1800s to match `JwtSession.sessionTimeout: "30 minutes"` after consolidation. |
 | 1b | SessionBlacklistFilter + variants — catch block fail-open → fail-closed (503/redirect login) | A, B, C | [x] | ✅ Done 2026-03-15. Return 500 on Redis error (fail-closed). Session preserved for recovery. Tested A+B+C. Commit 278a29c |
 | 1c | Redis socket timeouts — connectTimeout=200ms, soTimeout=500ms (BackchannelLogoutHandler + SessionBlacklistFilter) | A, B, C | [x] | ✅ Done 2026-03-15. connect=200ms, read=500ms via InetSocketAddress. 9 files across 3 stacks. Commit 278a29c |
 | 1d | BackchannelLogoutHandler — catch Exception → 500 (không phải 400) cho infra faults | A, B, C | [x] | ✅ Done 2026-03-15. All 3 stacks (A also had same pattern). Tested Redis down → 500. Commit 9b770cd |
@@ -111,7 +111,8 @@
 
 | Date | ID | Action | Result | Commit |
 |------|----|--------|--------|--------|
-| 2026-03-15 | 1a | FIX-02: Redis TTL 3600→28800 + RESP prefix fix | PASS — TTL≈28800 verified A+B+C | 792760f |
+| 2026-03-15 | 1a | FIX-02: Redis TTL 3600→28800 + RESP prefix fix | PASS — initial hardening applied across A+B+C | 792760f |
+| 2026-03-17 | 1a | Session timeout reduction aligned live blacklist TTL to 1800s | PASS — consolidated `BackchannelLogoutHandler` now writes `EX 1800`, matching `JwtSession.sessionTimeout: "30 minutes"` | 9cbf71a |
 | 2026-03-15 | 1b+1c | FIX-03+04: fail-closed 500 + socket timeout 200/500ms | PASS — tested Redis stop/start A+B+C | 278a29c |
 | 2026-03-15 | 1d | FIX-05: backchannel error code 400→500 for infra errors | PASS — tested Redis down→500, normal SLO→200 | 9b770cd |
 | 2026-03-15 | 2a+2b+2c+2d | FIX-06: externalize secrets to env vars + rotate sharedSecret/PKCS12 | PASS — 16 files, 3 entrypoint scripts, all routes loaded, SSO/SLO verified | f677d9f |

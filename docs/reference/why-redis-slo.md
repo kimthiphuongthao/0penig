@@ -23,7 +23,7 @@ Redis đóng vai trò **'bảng thông báo'** dùng chung:
    (BackchannelLogoutHandler nhận)
         ↓
 3. Handler ghi vào Redis:
-   SET blacklist:abc-session-id '1' EX 3600
+   SET blacklist:abc-session-id '1' EX 1800
         ↓
 4. User vào app1 lần sau → SessionBlacklistFilter chạy
    GET blacklist:abc-session-id → có! → xóa JSESSIONID → redirect login
@@ -97,12 +97,12 @@ Sau đó redirect → browser gửi request mới → OidcFilter thấy session 
 **Không ai xóa key Redis thủ công** — Redis tự xóa sau TTL:
 
 ```
-SET blacklist:abc-session-id "1" EX 3600
+SET blacklist:abc-session-id "1" EX 1800
                                     ↑
                               tự hết hạn sau 1 giờ
 ```
 
-TTL 3600s ≈ tuổi thọ tối đa của 1 Keycloak session. Sau khi hết hạn, key tự biến mất.
+TTL 1800s hiện được giữ đồng bộ với `JwtSession.sessionTimeout = 30 minutes` trong lab hiện tại. Sau khi hết hạn, key tự biến mất.
 
 ---
 
@@ -132,9 +132,9 @@ SessionBlacklistFilter chạy (luôn luôn)
 
 | Việc | Ai làm | Bằng cách nào |
 |------|--------|---------------|
-| Ghi blacklist | `BackchannelLogoutHandler.groovy` (ScriptableHandler) | Redis `SET blacklist:{sid} 1 EX 3600` |
+| Ghi blacklist | `BackchannelLogoutHandler.groovy` (ScriptableHandler) | Redis `SET blacklist:{sid} 1 EX 1800` |
 | Đọc blacklist | `SessionBlacklistFilter.groovy` (ScriptableFilter) | Redis `GET blacklist:{sid}` |
-| Xóa blacklist | Redis tự xóa | TTL hết hạn sau 3600s |
+| Xóa blacklist | Redis tự xóa | TTL hết hạn sau 1800s |
 | Xóa session data | `SessionBlacklistFilter.groovy` | `session.clear()` |
 | Force re-login | OidcFilter (built-in OpenIG) | Thấy session rỗng → redirect Keycloak |
 

@@ -37,8 +37,8 @@ Tài liệu này dành cho team ứng dụng legacy cần tích hợp vào kiế
 
 Back-channel logout flow:
 Keycloak -> POST http://host.docker.internal/openid/app1/backchannel_logout        (Stack A)
-Keycloak -> POST http://host.docker.internal:9080/openid/app3/backchannel_logout   (Stack B — Jellyfin)
-Keycloak -> POST http://host.docker.internal:9080/openid/app4/backchannel_logout   (Stack B — Redmine)
+Keycloak -> POST http://host.docker.internal:9080/openid/app4/backchannel_logout   (Stack B — Jellyfin)
+Keycloak -> POST http://host.docker.internal:9080/openid/app3/backchannel_logout   (Stack B — Redmine)
 Keycloak -> POST http://host.docker.internal:18080/openid/app5/backchannel_logout  (Stack C — Grafana)
 Keycloak -> POST http://host.docker.internal:18080/openid/app6/backchannel_logout  (Stack C — phpMyAdmin)
 Mỗi stack tự ghi blacklist SID vào Redis của chính stack đó.
@@ -117,12 +117,12 @@ Trong môi trường lab hiện tại, các app chính đi theo mô hình subdom
 - Mỗi app phải có `clientEndpoint` riêng:
   - App1: `/openid/app1`
   - App2: `/openid/app2`
+  - App3 (Redmine): `/openid/app3` — client `openig-client-b` (shared Stack B client)
   - App4 (Jellyfin): `/openid/app4` — client `openig-client-b-app4` (dedicated)
-  - App4 (Redmine): `/openid/app4` — client `openig-client-b` (shared Stack B client)
   - App5: `/openid/app5`
   - App6: `/openid/app6`
 
-  **Ghi chú Stack B:** Jellyfin và Redmine hiện cùng dùng `clientEndpoint: /openid/app4` nhưng đăng ký với Keycloak client khác nhau. Jellyfin dùng client riêng `openig-client-b-app4` (với `OIDC_CLIENT_ID_APP4`); Redmine dùng client chung `openig-client-b` (với `OIDC_CLIENT_ID`).
+  **Ghi chú Stack B:** Redmine dùng `clientEndpoint: /openid/app3` với client chung `openig-client-b` (`OIDC_CLIENT_ID`), còn Jellyfin dùng `clientEndpoint: /openid/app4` với client riêng `openig-client-b-app4` (`OIDC_CLIENT_ID_APP4`).
 
 - Scopes chuẩn đang dùng: `openid`, `profile`, `email`.
 - Trong môi trường lab, realm Keycloak đang để `sslRequired=NONE` vì toàn bộ luồng chạy trên HTTP nội bộ. Không mang cấu hình này sang môi trường production.
@@ -140,8 +140,8 @@ Ví dụ cho Stack B:
 
 - `http://jellyfin-b.sso.local:9080/openid/app4/*`
 - `http://jellyfin-b.sso.local/openid/app4/*`
-- `http://redmine-b.sso.local:9080/openid/app4/*`
-- `http://redmine-b.sso.local/openid/app4/*`
+- `http://redmine-b.sso.local:9080/openid/app3/*`
+- `http://redmine-b.sso.local/openid/app3/*`
 
 Ví dụ cho Stack C:
 
@@ -190,8 +190,8 @@ http://phpmyadmin-c.sso.local:18080/##http://phpmyadmin-c.sso.local/
 - Giá trị này trong lab PHẢI dùng `host.docker.internal`, không dùng domain `.sso.local`, vì container Keycloak không resolve được các host public kiểu `wp-a.sso.local`, `jellyfin-b.sso.local`, `redmine-b.sso.local`, `grafana-c.sso.local`, `phpmyadmin-c.sso.local`.
 - Ví dụ:
   - App1: `http://host.docker.internal/openid/app1/backchannel_logout`
-  - App3 (Jellyfin — Keycloak client `openig-client-b-app4`): `http://host.docker.internal:9080/openid/app3/backchannel_logout`
-  - App4 (Redmine — Keycloak client `openig-client-b`): `http://host.docker.internal:9080/openid/app4/backchannel_logout`
+  - App3 (Redmine — Keycloak client `openig-client-b`): `http://host.docker.internal:9080/openid/app3/backchannel_logout`
+  - App4 (Jellyfin — Keycloak client `openig-client-b-app4`): `http://host.docker.internal:9080/openid/app4/backchannel_logout`
   - App5 (Grafana — Keycloak client `openig-client-c-app5`): `http://host.docker.internal:18080/openid/app5/backchannel_logout`
   - App6 (phpMyAdmin — Keycloak client `openig-client-c-app6`): `http://host.docker.internal:18080/openid/app6/backchannel_logout`
 - Bật `backchannel.logout.session.required=true`.
@@ -224,9 +224,9 @@ Ví dụ đúng trong Stack A:
 
 Ví dụ đúng trong Stack B:
 
-- Jellyfin (App3): `oauth2:http://jellyfin-b.sso.local:9080/openid/app4`
-- Redmine (App4): `oauth2:http://redmine-b.sso.local:9080/openid/app4`
-- Canonical fallback của cả Stack B vẫn dựa trên `OPENIG_PUBLIC_URL`: `oauth2:http://openigb.sso.local:9080/openid/app4`.
+- Jellyfin (App4): `oauth2:http://jellyfin-b.sso.local:9080/openid/app4`
+- Redmine (App3): `oauth2:http://redmine-b.sso.local:9080/openid/app3`
+- Canonical fallback của Stack B là `oauth2:http://openigb.sso.local:9080/openid/app4` cho Jellyfin và `oauth2:http://openigb.sso.local:9080/openid/app3` cho Redmine.
 
 Ví dụ đúng trong Stack C:
 
@@ -245,7 +245,7 @@ Lưu ý hiện trạng:
 
 - Stack A `SessionBlacklistFilter` không lookup theo 1 key duy nhất. Filter này đang dùng 3-key host-aware lookup cho App1 theo thứ tự: `hostWithPort`, `hostWithoutPort`, rồi fallback về `OPENIG_PUBLIC_URL`.
 - Lý do: browser truy cập WordPress bằng `wp-a.sso.local`, nhưng `OPENIG_PUBLIC_URL` lại là `openiga.sso.local:80`.
-- Stack B `SloHandlerJellyfin` và `SessionBlacklistFilterApp3` cũng dùng 3-key host-aware lookup tương tự.
+- Stack B `SloHandlerJellyfin` và `SessionBlacklistFilterApp4` cũng dùng 3-key host-aware lookup tương tự; Redmine giữ lookup riêng cho `/openid/app3`.
 - Stack C `SloHandlerGrafana` và `SloHandlerPhpMyAdmin` dùng 3-key host-aware lookup với fallback về `OPENIG_PUBLIC_URL` (`http://openig-c.sso.local:10080`).
 - Không dùng path-only kiểu `oauth2:/openid/appX` cho app mới; kiểu này rất dễ làm mất `id_token` khi xử lý SLO.
 
@@ -267,7 +267,7 @@ Thứ tự này không được đảo:
 - Vault lấy credential sau khi biết user.
 - Injector chạy cuối để login ngầm vào app legacy rồi inject cookie.
 
-### 6.2 App3 (Jellyfin) — Stack B
+### 6.2 App4 (Jellyfin) — Stack B
 
 Stack B dùng chuỗi:
 
@@ -277,14 +277,14 @@ Stack B dùng chuỗi:
 4. `JellyfinTokenInjectorFilter`
 5. `JellyfinResponseRewriterFilter`
 
-Ghi chú: Backchannel logout cho Jellyfin được đăng ký ở `/openid/app3/backchannel_logout` trong Keycloak (file `00-backchannel-logout-app3.json`), trong khi OAuth2ClientFilter của Jellyfin dùng `clientEndpoint: /openid/app4`. Đây là trạng thái hiện tại của codebase — xem FIX-01 trong `.omc/plans/fix-phase-openig-gaps.md` để biết kế hoạch đồng bộ.
+Ghi chú: Jellyfin hiện đã được đồng bộ hoàn toàn về `/openid/app4/backchannel_logout` với client riêng `openig-client-b-app4`; lệch namespace `/openid/app3` trước đây đã được sửa trong FIX-01 (commit a3cb6c3) và giữ nguyên qua Step 4 (`3b8a6d8`).
 
-### 6.3 App4 (Redmine) — Stack B
+### 6.3 App3 (Redmine) — Stack B
 
 Stack B dùng chuỗi:
 
-1. `OAuth2ClientFilter` (`clientEndpoint: /openid/app4`, client `openig-client-b`)
-2. `SessionBlacklistFilterApp4`
+1. `OAuth2ClientFilter` (`clientEndpoint: /openid/app3`, client `openig-client-b`)
+2. `SessionBlacklistFilterApp3`
 3. `VaultCredentialFilterRedmine`
 4. `RedmineCredentialInjectorFilter`
 
@@ -333,7 +333,7 @@ OpenIG load route theo thứ tự tên file/route có prefix số, nên dùng co
 Trong stack hiện tại:
 
 - Stack A: `00-backchannel-logout-app1.json` -> `00-wp-logout.json` -> `01-wordpress.json` -> `02-app2.json`
-- Stack B: `00-backchannel-logout-app3.json` -> `00-backchannel-logout-app4.json` -> `00-jellyfin-logout.json` -> `00-redmine-logout.json` -> `01-jellyfin.json` -> `02-redmine.json`
+- Stack B: `00-backchannel-logout-app3.json` (Redmine) -> `00-backchannel-logout-app4.json` (Jellyfin) -> `00-jellyfin-logout.json` -> `00-redmine-logout.json` -> `01-jellyfin.json` -> `02-redmine.json`
 - Stack C: `00-backchannel-logout-app5.json` -> `00-backchannel-logout-app6.json` -> `00-grafana-logout.json` -> `00-phpmyadmin-logout.json` -> `10-grafana.json` -> `11-phpmyadmin.json`
 
 ## 8) Credential Injection (Vault AppRole + KV v2)
@@ -395,7 +395,7 @@ Grafana dùng proxy authentication — không cần Vault credential injection:
 - Ghi Redis key:
 
 ```text
-SET blacklist:{sid} 1 EX 3600
+SET blacklist:{sid} 1 EX 1800
 ```
 
 - Việc giao tiếp Redis làm thủ công bằng raw RESP protocol qua `Socket`.
@@ -403,11 +403,11 @@ SET blacklist:{sid} 1 EX 3600
 ### 9.2 `SessionBlacklistFilter`
 
 - Mỗi request app đi qua filter sẽ:
-  1. Resolve SID từ session cache (`oidc_sid` / `oidc_sid_app2` / `oidc_sid_app3` / `oidc_sid_app5` / `oidc_sid_app6`).
+  1. Resolve SID từ session cache (`oidc_sid` / `oidc_sid_app2` / `oidc_sid_app3` / `oidc_sid_app4` / `oidc_sid_app5` / `oidc_sid_app6`).
   2. Nếu chưa có cache, đọc `id_token` từ session key `oauth2:{FULL_PUBLIC_ORIGIN}/clientEndpoint`.
   3. Decode JWT lấy `sid` và cache lại.
   4. `GET blacklist:{sid}` trên Redis.
-- Stack A App1 và Stack B App3 (Jellyfin) đang dùng 3-key host-aware lookup:
+- Stack A App1 và Stack B App4 (Jellyfin) đang dùng 3-key host-aware lookup:
   1. `oauth2:http://{HostWithPort}/openid/appX`
   2. `oauth2:http://{HostWithoutPort}/openid/appX`
   3. `oauth2:{OPENIG_PUBLIC_URL}/openid/appX`

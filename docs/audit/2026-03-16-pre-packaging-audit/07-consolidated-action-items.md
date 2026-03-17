@@ -51,22 +51,22 @@
 
 ---
 
-## Priority 4 — Consolidation (post-packaging, maintenance improvement)
+## Priority 4 — Consolidation (historical plan; Steps 1-4 now largely complete)
 
-| # | Task | Lines Saved | Prerequisite |
-|---|------|-------------|-------------|
-| P-1 | Parameterize BackchannelLogoutHandler via `args` (3 → 1 file) | ~693 | Verify ScriptableHandler supports `args` |
-| P-2 | Parameterize SessionBlacklistFilter (6 → 1 file, Stack C pattern) | ~597 | None — Stack C already proves pattern |
-| P-3 | Extract shared Vault login utility | ~196 | Verify OpenIG Groovy classpath includes |
-| P-4 | Parameterize SloHandler via `args` (5 → 1-2 files) | ~190 | Verify ScriptableHandler `args` |
+| # | Task | Lines Saved | Status / prerequisite |
+|---|------|-------------|---------------------|
+| P-1 | Parameterize BackchannelLogoutHandler via `args` (3 → 1 file) | ~693 | **RESOLVED** in Step 3 (`4d8f065`) |
+| P-2 | Parameterize SessionBlacklistFilter (6 → 1 file, Stack C pattern) | ~597 | **RESOLVED** in Steps 1+2 (`a76e194`, `832bbae`) |
+| P-3 | Extract shared Vault login utility | ~196 | Still open — verify OpenIG Groovy classpath / `evaluate()` support |
+| P-4 | Parameterize SloHandler via `args` (5 → 1-2 files) | ~190 | **RESOLVED** in Step 4 (`3b8a6d8`) |
 | **Total** | | **~1676** | |
 
 ---
 
 ## Open Questions (require investigation before consolidation)
 
-1. OpenIG 6.0.2 `ScriptableHandler` `args` binding? Resolved 2026-03-16 by the Step 1 smoke test; used in Steps 3 and 4.
-2. Can OpenIG 6 load shared Groovy utility scripts from classpath / `evaluate()`? (prerequisite for P-3)
+1. OpenIG 6.0.2 `ScriptableHandler` `args` binding? Resolved 2026-03-16 by the Step 1 smoke test; Steps 3 and 4 now depend on it in production code.
+2. Can OpenIG 6 load shared Groovy utility scripts from classpath / `evaluate()`? Still open (prerequisite for P-3 only).
 3. JWKS cache TTL unit difference (Stack C millis vs A/B seconds)? Resolved 2026-03-17 in Step 3 (`4d8f065`) by standardizing to seconds.
 
 ---

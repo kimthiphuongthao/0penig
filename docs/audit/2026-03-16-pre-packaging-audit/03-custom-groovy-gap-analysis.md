@@ -3,7 +3,7 @@
 **Agent:** analyst (Opus, READ-ONLY)
 **Date:** 2026-03-16
 
-> Update 2026-03-17: the `ScriptableHandler` `args` prerequisite was confirmed during Step 1, the Stack C JWKS TTL variance was resolved in Step 3 (`4d8f065`), and the missing SloHandler try-catch in Stack A/C was resolved in Step 4 (`3b8a6d8`).
+> Update 2026-03-17: the `ScriptableHandler` `args` prerequisite was confirmed during Step 1; SessionBlacklistFilter consolidation `6 -> 1` is complete (Steps 1+2, `a76e194`, `832bbae`); BackchannelLogoutHandler consolidation `3 -> 1` is complete (Step 3, `4d8f065`); and the missing SloHandler try-catch plus SloHandler consolidation `5 -> 2` are complete (Step 4, `3b8a6d8`).
 
 ---
 
@@ -46,6 +46,11 @@ Of 24 Groovy files across 3 stacks, **none can be fully replaced by OpenIG 6.0.2
 
 ## Cross-Stack Duplication Analysis
 
+Historical audit snapshot below. Current live state after Steps 1-4:
+- BackchannelLogoutHandler: **RESOLVED** — `3 -> 1` in Step 3 (`4d8f065`)
+- SessionBlacklistFilter: **RESOLVED** — `6 -> 1` in Steps 1+2 (`a76e194`, `832bbae`)
+- SloHandler: **RESOLVED** — `5 -> 2` in Step 4 (`3b8a6d8`)
+
 | Pattern | Current | Target | Lines Saved |
 |---------|---------|--------|-------------|
 | BackchannelLogoutHandler (3 copies, ~95% identical) | 3 files, ~1043 lines | 1 file, ~350 lines | **~693** |
@@ -73,6 +78,6 @@ Same reasoning applies to Redmine (CSRF extraction + GET-then-POST flow).
 ## Open Questions
 
 1. `ScriptableHandler` `args` binding? Resolved 2026-03-16 by the Step 1 smoke test; Steps 3 and 4 now use it.
-2. Can OpenIG 6 load shared Groovy utilities from classpath / `evaluate()`?
+2. Can OpenIG 6 load shared Groovy utilities from classpath / `evaluate()`? Still open (prerequisite for Vault utility consolidation only).
 3. JWKS cache TTL unit difference (Stack C millis vs A/B seconds)? Resolved 2026-03-17 in Step 3 by standardizing to seconds (`4d8f065`).
 4. Should `App1ResponseRewriter.groovy` (0 bytes) be deleted?
