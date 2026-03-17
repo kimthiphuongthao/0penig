@@ -19,6 +19,7 @@ Related: [[OpenIG]] [[Keycloak]] [[Vault]] [[Stack C]]
 
 - SSO: ✅
 - SLO: ✅
+- OIDC_CLIENT_SECRET_APP5 and OIDC_CLIENT_SECRET_APP6 rotated to strong 44-char secrets (Phase 2 STEP-02, M-5/S-9). Keycloak clients openig-client-c-app5 and openig-client-c-app6 updated to match.
 
 > [!success]
 > SSO/SLO WORKING for app5 (Grafana) and app6 (phpMyAdmin). Post-audit cleanup confirmed the old `SloHandlerGrafana.groovy` and `SloHandlerPhpMyAdmin.groovy` files were leftover artifacts from Step 4 and have been deleted.
@@ -102,8 +103,8 @@ Related: [[OpenIG]] [[Keycloak]] [[Vault]] [[Stack C]]
 ## Credentials and secrets
 
 - Keycloak client secrets:
-  - `openig-client-c-app5` -> `secret-c`
-  - `openig-client-c-app6` -> `secret-c`
+  - `openig-client-c-app5` -> strong 44-char secret via `OIDC_CLIENT_SECRET_APP5`
+  - `openig-client-c-app6` -> strong 44-char secret via `OIDC_CLIENT_SECRET_APP6`
 - OpenIG JWT session:
   - Cookie: `IG_SSO_C` on domain `.sso.local`
   - Stack-C specific `sharedSecret` configured in `stack-c/openig_home/config/config.json`

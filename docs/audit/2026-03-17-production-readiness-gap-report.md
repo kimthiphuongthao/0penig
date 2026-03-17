@@ -6,13 +6,13 @@ Status: NOT READY
 
 ## Executive Summary
 
-This report captures the 2026-03-17 production-readiness gap assessment for SSO Lab, cross-referencing the 2026-03-16 pre-packaging audit against the current codebase. The current state is **NOT READY** for release as a production reference solution: **39 findings remain open, 6 are partial, and 36 are resolved** out of 81 checks.
+This report captures the 2026-03-17 production-readiness gap assessment for SSO Lab, cross-referencing the 2026-03-16 pre-packaging audit against the current codebase. The current state is **NOT READY** for release as a production reference solution: **38 findings remain open, 6 are partial, and 37 are resolved** out of 81 checks.
 
-Pattern Consolidation resolved 36 findings and materially improved the gateway baseline. The resolved work includes the JWKS cache race, `SloHandler` try-catch hardening, TTL unit standardization, consolidation of `SessionBlacklistFilter` / `BackchannelLogoutHandler` / `SloHandler`, `vault/keys/` repo hygiene, Redmine direct-port exposure removal, Stack C nginx buffer alignment, `CANONICAL_ORIGIN_*` environment variables, and dead-code cleanup.
+Pattern Consolidation resolved 37 findings and materially improved the gateway baseline. The resolved work includes the JWKS cache race, `SloHandler` try-catch hardening, TTL unit standardization, consolidation of `SessionBlacklistFilter` / `BackchannelLogoutHandler` / `SloHandler`, `vault/keys/` repo hygiene, Redmine direct-port exposure removal, Stack C nginx buffer alignment, `CANONICAL_ORIGIN_*` environment variables, dead-code cleanup, and Stack C OIDC client secret rotation.
 
-The remaining 39 open findings are concentrated in three categories that matter for a reusable reference solution:
+The remaining 38 open findings are concentrated in three categories that matter for a reusable reference solution:
 
-- Security: Redis revocation state is unauthenticated, live secrets remain committed in compose files, security headers and cookie flags are incomplete, and Stack C still ships weak client secrets.
+- Security: Redis revocation state is unauthenticated, live secrets remain committed in compose files, and security headers and cookie flags are incomplete.
 - Architecture: Stack C is not yet parity-aligned with the Stack A/B reference pattern, Keycloak endpoint configuration is still hardcoded in Stack A/C routes, and Linux portability remains incomplete because `host.docker.internal` is assumed.
 - Code quality and operational consistency: several low-effort Groovy and nginx fixes remain open, including EOF handling, Base64 decoding simplification, and inconsistent upstream error semantics.
 
@@ -43,11 +43,11 @@ These items block production-reference status because they either leave an activ
 - Fix approach: Align `stack-c/docker-compose.yml` with `stack-a/docker-compose.yml` as the reference baseline, then keep only the stack-specific service differences that are intentional.
 - Effort: MEDIUM
 
-### M-5/S-9: Stack C weak OIDC client secrets
+### M-5/S-9: Stack C weak OIDC client secrets [RESOLVED]
 - Files: `stack-c/docker-compose.yml`
-- Finding: `OIDC_CLIENT_SECRET_APP5` and `OIDC_CLIENT_SECRET_APP6` are still set to the trivially guessable value `secret-c`.
-- Impact: Stack C keeps demonstrably weak OIDC credentials in an environment that is supposed to model the production-ready reference pattern.
-- Fix approach: Generate strong random client secrets, update Keycloak client configuration to match, and remove the weak default from versioned configuration.
+- Finding: RESOLVED — `OIDC_CLIENT_SECRET_APP5` and `OIDC_CLIENT_SECRET_APP6` were rotated away from the trivially guessable value `secret-c` to strong 44-character secrets, and the Keycloak client configuration was updated to match.
+- Impact: Stack C no longer ships trivially guessable OIDC client credentials in a production-readiness reference path.
+- Fix approach: Completed. Keep the strong-random secret generation requirement documented in the gateway pattern.
 - Effort: LOW
 
 ### A-6/A-7/M-13/S-17: Keycloak URLs hardcoded in Stack A and Stack C routes
@@ -165,7 +165,7 @@ These items remain acceptable only as explicitly documented lab constraints. The
 | P1-MUST | H-5/S-3 | Secrets out of docker-compose to `.env` | MEDIUM |
 | P1-MUST | H-7/A-1 | Stack C docker-compose parity | MEDIUM |
 | P1-MUST | A-6/A-7 | Keycloak URL externalization Stack A+C | MEDIUM |
-| P1-MUST | M-5/S-9 | Stack C weak OIDC secrets | LOW |
+| P1-MUST | M-5/S-9 | Stack C weak OIDC secrets [RESOLVED] | LOW |
 | P1-MUST | L-5 | `PhpMyAdminCookieFilter` dead code | LOW |
 | P2-SHOULD | M-11 | `readRespLine` EOF in `BackchannelLogoutHandler` | LOW |
 | P2-SHOULD | M-12 | `base64UrlDecode` manual padding | LOW |
@@ -190,6 +190,7 @@ These items remain acceptable only as explicitly documented lab constraints. The
 | H-8 | `SessionBlacklistFilterApp2` divergent Base64 | File deleted in consolidation (commit `832bbae`) |
 | H-9 | Stack C nginx proxy buffer missing | Added `proxy_buffer_size 128k` (commit `f86c7eb`) |
 | M-2 | `CANONICAL_ORIGIN_*` env vars missing A/B | Added to docker-compose A+B (commit `aaf66d5`) |
+| M-5/S-9 | Stack C weak OIDC client secrets | Rotated `OIDC_CLIENT_SECRET_APP5` and `OIDC_CLIENT_SECRET_APP6` to strong 44-character values and updated Keycloak clients to match (commit `TBD`) |
 | M-4 | Stack A `SloHandler` hardcoded Keycloak URL | Parameterized via `KEYCLOAK_BROWSER_URL` env (commit `3b8a6d8`) |
 | M-14 | `App1ResponseRewriter.groovy` dead code | Deleted (commit `f86c7eb`) |
 | Pattern | `SessionBlacklistFilter` 6 copies -> 1 template | Three per-stack parameterized copies via args (commits `a76e194`, `832bbae`) |

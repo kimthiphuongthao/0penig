@@ -234,6 +234,7 @@ Derived from: Cross-Stack Summary "Recommended Standard Pattern" and "Next Steps
 
 - [ ] `JwtSession.sharedSecret`, OIDC `clientSecret`, and keystore passwords come from Vault or environment at runtime and do not appear in config, routes, or Groovy.
 - [ ] Any Vault-backed secret retrieval is cached with bounded TTL and refreshed before expiry without writing the fetched secret into `JwtSession`.
+- [ ] OIDC client secrets use strong random values only. Minimum baseline: 32+ random bytes encoded as Base64. Trivially guessable values such as `secret-c` are a P1 security issue. Generate with `openssl rand -base64 32`.
 
 ### Session and revocation
 
