@@ -26,9 +26,9 @@
 codex exec --skip-git-repo-check --full-auto \
   -m gpt-5.3-codex -c model_reasoning_effort="medium" -C <workdir> "prompt" 2>/dev/null
 
-# gpt-5.4 high — dùng cho MỌI thứ còn lại: bug fix, debug, refactor, đọc code cũ, sửa config có logic
+# gpt-5.4 x-high — dùng cho MỌI thứ còn lại: bug fix, debug, refactor, đọc code cũ, sửa config có logic
 codex exec --skip-git-repo-check --full-auto \
-  -m gpt-5.4 -c model_reasoning_effort="high" -C <workdir> "prompt" 2>/dev/null
+  -m gpt-5.4 -c model_reasoning_effort="x-high" -C <workdir> "prompt" 2>/dev/null
 
 # Read-only analysis (--sandbox bị --full-auto override → thực tế vẫn workspace-write)
 codex exec --skip-git-repo-check --full-auto \
