@@ -1,5 +1,7 @@
 # Hướng dẫn tích hợp Legacy App vào hệ thống SSO (OpenIG + Keycloak)
 
+> Update 2026-03-17: Pattern Consolidation Steps 1-5 are complete. Step 5 normalized Stack A/B `CANONICAL_ORIGIN_APP*`, removed the old Redmine direct-host bypass, aligned Stack C nginx proxy buffers, and deleted dead code. Step 6 is the current document-sync pass.
+
 Tài liệu này dành cho team ứng dụng legacy cần tích hợp vào kiến trúc SSO hiện tại. Nội dung bám sát cấu hình đang chạy ở 3 stack (`stack-a`, `stack-b`, `stack-c`), tập trung vào các điểm thường gây lỗi khi triển khai thực tế.
 
 ## 1) Tổng quan kiến trúc
@@ -69,6 +71,8 @@ Mỗi stack tự ghi blacklist SID vào Redis của chính stack đó.
   - App6 (phpMyAdmin): `http://phpmyadmin-c.sso.local:18080/`
 
 `OPENIG_PUBLIC_URL` vẫn là canonical URL của từng stack, nhưng browser hiện truy cập app qua subdomain riêng. Đây là lý do một số script không thể chỉ dựa vào duy nhất `OPENIG_PUBLIC_URL` để lookup session key.
+
+Sau Step 5, tất cả OpenIG nodes ở cả 3 stacks đều có `CANONICAL_ORIGIN_APPx` env var tương ứng. Đây là source-of-truth cho logout redirect và fail-closed redirect; không dùng inbound `Host` làm canonical origin.
 
 ### 2.2 Quy ước route điều kiện Host + path
 

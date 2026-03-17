@@ -1,5 +1,7 @@
 # Vault Security Hardening — Gap Analysis
 
+> Update 2026-03-17: Pattern Consolidation Steps 1-5 are complete. This gap list is unchanged architecturally, but Step 5 resolved the repo-hygiene quick win for `vault/keys/` by adding it to `.gitignore` (`5ae657e`). Step 6 is the document-sync phase.
+
 ## Context
 - Vault stores plaintext credentials of legacy apps (WordPress, Redmine, Jellyfin, phpMyAdmin/MariaDB)
 - OpenIG calls Vault via AppRole on every SSO request
@@ -11,7 +13,7 @@
 | # | Criterion | Current State | Severity | Status |
 |---|---|---|---|---|
 | 1 | Root token revocation | Root token revoked after bootstrap. Orphan admin token (vault-admin policy) used for operations. Break-glass via `vault operator generate-root`. | CRITICAL | **RESOLVED** (commit d4920a9) |
-| 2 | Unseal key storage | Unseal keys stored at `/vault/keys/` (separate volume from `/vault/data/`). Migration block handles existing installations. | HIGH | **RESOLVED** (commit d4920a9) |
+| 2 | Unseal key storage | Unseal keys stored at `/vault/keys/` (separate volume from `/vault/data/`). Migration block handles existing installations. Step 5 also added `vault/keys/` to `.gitignore`, reducing accidental repo exposure risk. | HIGH | **RESOLVED** (commits `d4920a9`, `5ae657e`) |
 | 3 | AppRole hardening | `secret_id_ttl=72h` enforced via post-bootstrap hardening. CIDR binding deferred — Docker network CIDRs auto-assigned, not stable. Production: use K8s pod CIDR or fixed Docker subnets. | HIGH | **PARTIAL** — TTL done, CIDR deferred |
 | 4 | Audit logging | File audit device enabled at `/vault/file/audit.log` (idempotent, runs every bootstrap). | HIGH | **RESOLVED** (commit 494405b) |
 | 5 | Storage backend | File storage (no HA). Acceptable for single-node lab. Production: migrate to Raft integrated storage. | HIGH | Lab Convenience — deferred |

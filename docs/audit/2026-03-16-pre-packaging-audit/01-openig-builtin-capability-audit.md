@@ -4,6 +4,8 @@
 **Source:** https://github.com/OpenIdentityPlatform/OpenIG (master, tag 6.0.2)
 **Date:** 2026-03-16
 
+> Update 2026-03-17: Pattern Consolidation Steps 1-5 are complete. Step 5 did not change the built-in capability verdict; it resolved config/deployment quick wins and Step 6 is the current document-sync pass.
+
 ---
 
 ## A. Built-in Filters (Core)

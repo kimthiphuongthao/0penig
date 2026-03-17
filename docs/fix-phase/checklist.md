@@ -5,6 +5,8 @@
 > **`.omc/plans/fix-phase-openig-gaps.md`**
 > Maintain this file for progress tracking (Status column + Fix Log). Do not use as implementation guide.
 
+> Update 2026-03-17: Pattern Consolidation Steps 1-5 are complete. Step 5 resolved the remaining quick wins tracked against the audit set: H-2 (`vault/keys/` gitignore), H-3 (Redmine port 3000 removed), H-9 (Stack C proxy buffers), M-2 (Stack A/B `CANONICAL_ORIGIN_APP*`), and M-14 (dead-code deletion). Step 6 is the document-sync phase.
+
 
 
 **Based on:** `docs/deliverables/standard-gateway-pattern.md` v1.1
@@ -131,3 +133,5 @@
 | 2026-03-16 | 5b | FIX-13: SloHandler id_token_hint log redaction (Stack A) | PASS — logs PRESENT/ABSENT only, no JWT in output. Verified in live logs | a9d2947 |
 | 2026-03-16 | 6b+6c+7a | FIX-14+15: unsafe method reauth 409 + WordPress fail-closed 502 | PASS — POST expired→409, WP login non-302→502. Normal flow verified no regression | 9cdb3fd |
 | 2026-03-16 | — | Entrypoint cp -r stale config fix: rm -rf before cp (all 3 stacks) | PASS — rebuilt images, zero "Failed to initialise" errors on restart | 8e616a7 |
+| 2026-03-17 | H-2 | Step 5 quick win: `vault/keys/` added to `.gitignore` | PASS — repo hygiene fix completed before packaging docs sync | 5ae657e |
+| 2026-03-17 | H-3+H-9+M-2+M-14 | Step 5 quick wins: remove Redmine port `3000`, align Stack C proxy buffers, add Stack A/B `CANONICAL_ORIGIN_APP*`, delete `App1ResponseRewriter.groovy` | PASS — validated by 5 backchannel blacklist writes, 5 logout redirects, phpMyAdmin inline failureHandler path | aaf66d5, f86c7eb |

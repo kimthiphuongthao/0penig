@@ -5,6 +5,8 @@
 **Derived from:** Code and security review of 3 integration stacks (WordPress, Redmine+Jellyfin, Grafana+phpMyAdmin)
 **Scope:** OpenIG 6 + Keycloak + Vault + Redis
 
+> Update 2026-03-17: Pattern Consolidation Steps 1-5 are complete. The lab implementation now also matches more of this pattern operationally: Redmine no longer exposes host port `3000`, Stack C nginx carries the same proxy buffer settings as A/B, and all 3 stacks declare app-specific `CANONICAL_ORIGIN_APP*` env vars. Step 6 is the current document-sync pass.
+
 ---
 
 ## Overview

@@ -69,6 +69,8 @@
 - [ ] Thu thập đặc tả ban đầu của các hệ thống trong phạm vi triển khai thực tế
 
 ### Kết quả
-_(cập nhật cuối tuần)_
+- [x] Pattern Consolidation Step 5 hoàn tất: H-2 `vault/keys/` trong `.gitignore` (`5ae657e`); H-3 bỏ Redmine host port `3000`; H-9 thêm `proxy_buffer_size 128k` + `proxy_buffers 4 256k` cho Stack C; M-2 bổ sung `CANONICAL_ORIGIN_APP1..APP4` cho Stack A/B; M-14 xóa `App1ResponseRewriter.groovy`
+- [x] Kiểm thử xác nhận sau Step 5: BackchannelLogout trên đủ 5 OIDC clients đều ghi Redis blacklist; SloHandler trên 5 app đều redirect với `id_token_hint=PRESENT`; phpMyAdmin inline `failureHandler` vẫn hoạt động đúng
+- [ ] Pattern Consolidation Step 6: đồng bộ deliverables, audit docs, testing docs theo trạng thái mới
 
 ---

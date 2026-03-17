@@ -4,6 +4,8 @@
 > **Người thực hiện:** Antigravity AI Agent (chỉ đọc, không can thiệp file project)
 > **Môi trường:** Docker Compose local, macOS host
 
+> Update 2026-03-17: Historical baseline below is retained. Pattern Consolidation Steps 1-5 are now complete, and a supplemental Step 5 verification block is appended at the end of this report.
+
 ---
 
 ## Tóm tắt kết quả (Summary)
@@ -389,3 +391,26 @@ docker exec sso-redis-a redis-cli get "blacklist:<SESSION_ID>"
 - **Root cause:** 2 code path khác nhau trong Keycloak — "Logout all sessions" chỉ invalidate server-side session, không notify OIDC clients
 - **Workaround:** Dùng sign out từng session, hoặc Keycloak admin REST API
 - **Classification:** Known Keycloak limitation, không phải bug trong OpenIG/SSO lab
+
+## Bổ sung kiểm thử — 2026-03-17 (Pattern Consolidation Step 5)
+
+> **Ngày thực hiện:** 2026-03-17
+> **Môi trường:** Docker Compose local, branch `feat/subdomain-test`
+
+### TC-STEP5-01 — Backchannel logout coverage ✅ PASS
+
+- **Phương pháp:** Trigger logout paths và kiểm tra Redis blacklist writes cho toàn bộ OIDC clients đang dùng.
+- **Kết quả:** Cả 5 client đều ghi blacklist thành công: `openig-client`, `openig-client-b`, `openig-client-b-app4`, `openig-client-c-app5`, `openig-client-c-app6`.
+- **Đánh giá:** BackchannelLogoutHandler consolidation (Step 3) vẫn đúng sau Step 5 cleanup.
+
+### TC-STEP5-02 — RP-initiated logout redirect integrity ✅ PASS
+
+- **Phương pháp:** Thực hiện logout trên 5 app có logout UI hoặc equivalent path: WordPress, Redmine, Jellyfin, Grafana, phpMyAdmin.
+- **Kết quả:** Tất cả redirect sang Keycloak end-session với `id_token_hint=PRESENT` và `post_logout_redirect_uri` đúng app.
+- **Đánh giá:** SloHandler consolidation (Step 4) + Step 5 `CANONICAL_ORIGIN_APP*` rollout không gây regression.
+
+### TC-STEP5-03 — phpMyAdmin inline failureHandler path ✅ PASS
+
+- **Phương pháp:** Xác nhận phpMyAdmin logout/401 challenge vẫn đi qua inline `failureHandler` trong route.
+- **Kết quả:** Inline path hoạt động đúng, không có regression sau Step 4/5 consolidation.
+- **Đánh giá:** Stack C logout path vẫn tương thích với `HttpBasicAuthFilter` I/O dispatcher flow.

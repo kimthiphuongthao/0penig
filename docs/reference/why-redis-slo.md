@@ -1,5 +1,7 @@
 # Tại sao cần Redis để thực hiện SLO?
 
+> Update 2026-03-17: Pattern Consolidation Steps 1-5 are complete. Step 5 verification confirmed Redis blacklist writes for all 5 OIDC clients, and Step 6 is the current document-sync pass.
+
 > Câu hỏi: Tôi chưa hiểu rõ hết vì sao lại cần đến Redis, tại sao dùng thêm Redis thì lại SLO được?
 
 ## Vấn đề gốc: Keycloak không thể 'vào tận nơi' xóa session
@@ -33,6 +35,8 @@ Redis là **tầng trung gian** vì:
 - Keycloak không biết OpenIG đang lưu session ở đâu (JSESSIONID local)
 - OpenIG không biết Keycloak đã logout ai (2 hệ thống tách biệt)
 - Redis là nơi cả 2 phía đều có thể đọc/ghi
+
+Step 5 verification (2026-03-17) reconfirmed điều này trên toàn bộ lab: 5/5 clients đều ghi được `blacklist:<sid>` vào Redis khi logout.
 
 ## Cross-stack hoạt động vì Keycloak gửi đến TẤT CẢ client
 

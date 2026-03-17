@@ -3,13 +3,13 @@
 **Agent:** architect (Opus, READ-ONLY)
 **Date:** 2026-03-16
 
-> Update 2026-03-17: Recommendation 4 is now resolved by Pattern Consolidation Step 4 (`3b8a6d8`), which added try-catch protection to the consolidated SloHandler flow across the affected stacks.
+> Update 2026-03-17: Pattern Consolidation Steps 1-5 are complete. Recommendation 4 was resolved in Step 4 (`3b8a6d8`), and Step 5 resolved Recommendation 2 (`aaf66d5`) plus Recommendation 5 (`aaf66d5`) while also removing the old Redmine direct-host exposure. Step 6 is the current document-sync pass.
 
 ---
 
 ## Summary
 
-Architecture is fundamentally sound for a reference solution. Stack C diverges significantly from A/B. The most impactful issues are cross-stack inconsistencies that undermine reproducibility as a template.
+Architecture is fundamentally sound for a reference solution. Stack C still diverges from A/B, but Step 5 reduced that drift by aligning proxy buffers and the `CANONICAL_ORIGIN_*` env-var rollout. The remaining impactful issues are the cross-stack inconsistencies that still undermine reproducibility as a template.
 
 ---
 
@@ -26,15 +26,15 @@ Architecture is fundamentally sound for a reference solution. Stack C diverges s
 | `server.xml` mount | Yes | Yes | **Missing** |
 | Healthchecks on OpenIG | Missing | Yes | **Missing** |
 | `KEYCLOAK_INTERNAL_URL` env | Yes | Yes | **Missing** |
-| `CANONICAL_ORIGIN_*` env | **Missing** | **Missing** | Yes |
+| `CANONICAL_ORIGIN_*` env | Yes | Yes | Yes |
 | `OPENIG_NODE_NAME` env | Yes | Yes | **Missing** |
 
 ### nginx.conf Divergences
 
 | Feature | Stack A | Stack B | Stack C |
 |---------|---------|---------|---------|
-| `proxy_buffer_size` 128k | Yes | Yes | **Missing** |
-| `proxy_buffers` 4 256k | Yes | Yes | **Missing** |
+| `proxy_buffer_size` 128k | Yes | Yes | Yes |
+| `proxy_buffers` 4 256k | Yes | Yes | Yes |
 | `proxy_connect_timeout` 3s | Yes | Yes | **Missing** (default 60s) |
 | `proxy_next_upstream` | Yes | Yes | **Only backchannel** |
 | `fail_timeout` upstream | 10s | 10s | **30s** |
@@ -113,9 +113,9 @@ Redis per-stack isolation is correct — cross-stack SLO handled by Keycloak sen
 | # | Action | Effort | Impact |
 |---|--------|--------|--------|
 | 1 | Normalize Stack C docker-compose to match A/B | LOW | HIGH |
-| 2 | Add proxy_buffer_size to Stack C nginx | LOW | HIGH |
+| 2 | Add proxy_buffer_size to Stack C nginx | RESOLVED in Step 5 (`aaf66d5`) | HIGH |
 | 3 | Externalize Keycloak URLs in BackchannelLogoutHandler | LOW | MEDIUM |
 | 4 | Add SloHandler try-catch (Stack A + C) | RESOLVED in Step 4 (`3b8a6d8`) | MEDIUM |
-| 5 | Add CANONICAL_ORIGIN env vars to A/B docker-compose | LOW | MEDIUM |
+| 5 | Add CANONICAL_ORIGIN env vars to A/B docker-compose | RESOLVED in Step 5 (`aaf66d5`) | MEDIUM |
 | 6 | Externalize Keycloak URLs in Stack A+C routes | MEDIUM | MEDIUM |
 | 7 | Document Keycloak SPOF + host.docker.internal portability | LOW | LOW |

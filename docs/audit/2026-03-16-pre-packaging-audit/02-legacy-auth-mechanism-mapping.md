@@ -3,6 +3,8 @@
 **Agent:** document-specialist (Sonnet)
 **Date:** 2026-03-16
 
+> Update 2026-03-17: Pattern Consolidation Steps 1-5 are complete. The OpenIG mapping verdict is unchanged; Step 5 only closed config/deployment quick wins and Step 6 is the current document-sync pass.
+
 ---
 
 ## Part 1: Legacy Login Mechanisms Inventory

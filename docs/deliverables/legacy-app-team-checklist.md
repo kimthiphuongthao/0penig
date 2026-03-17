@@ -3,6 +3,8 @@
 **Dành cho:** Team phát triển và vận hành ứng dụng legacy cần tích hợp vào hệ thống SSO.
 **Không dành cho:** Gateway team — xem `standalone-legacy-app-integration-guide.md`.
 
+> Update 2026-03-17: Pattern Consolidation Steps 1-5 are complete; Step 6 is the current deliverable-sync pass. Step 5 resolved the remaining quick wins around `vault/keys/` repo hygiene, Redmine direct-host exposure, Stack C nginx proxy buffers, Stack A/B `CANONICAL_ORIGIN_APP*`, and dead-code cleanup.
+
 ---
 
 ## 1. Cách SSO/SLO hoạt động (30 giây)

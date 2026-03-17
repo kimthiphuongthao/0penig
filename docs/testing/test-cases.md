@@ -1,6 +1,8 @@
 ## 0. Test Environment
 Thông tin cấu hình môi trường phục vụ việc kiểm thử hệ thống SSO Lab.
 
+> Update 2026-03-17: Pattern Consolidation Steps 1-5 are complete. The Step 5 validation run passed for all 5 backchannel logout clients, all 5 logout-capable apps, and the phpMyAdmin inline `failureHandler` path.
+
 ### URLs truy cập từ Browser (Host Machine)
 Cần cấu hình file `/etc/hosts` trên máy host trỏ các domain sau về `127.0.0.1`.
 
@@ -146,7 +148,7 @@ Kiểm chứng các cấu hình bảo mật nâng cao.
 **Nguồn tham khảo (Confirmed Facts):**
 - Cấu hình route: `stack-a/openig_home/config/routes/01-wordpress.json`
 - Logic tiêm credentials: `stack-a/openig_home/scripts/groovy/CredentialInjector.groovy`
-- Cơ chế SLO: `docs/why-redis-slo.md` và `BackchannelLogoutHandler.groovy`
+- Cơ chế SLO: `docs/reference/why-redis-slo.md` và `BackchannelLogoutHandler.groovy`
 - Cấu hình HA: `stack-a/nginx/nginx.conf` và `stack-a/docker-compose.yml`
 - Route Grafana & phpMyAdmin: `stack-c/openig_home/config/routes/10-grafana.json`, `11-phpmyadmin.json`
 - Logic Token Jellyfin: `stack-b/openig_home/scripts/groovy/JellyfinTokenInjector.groovy`

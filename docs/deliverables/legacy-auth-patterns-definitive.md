@@ -3,6 +3,8 @@
 **Purpose:** Tài liệu reference để đối chiếu với hiện trạng triển khai và tìm gaps
 **Sources:** Claude (Exa MCP) + Codex (web search) + Gemini (deep research)
 
+> Update 2026-03-17: Pattern Consolidation Steps 1-5 are complete; the live lab now uses consolidated SessionBlacklistFilter / BackchannelLogoutHandler / SloHandler templates, and Step 5 quick wins are resolved. Step 6 is the document-sync phase.
+
 ---
 
 ## Executive Summary

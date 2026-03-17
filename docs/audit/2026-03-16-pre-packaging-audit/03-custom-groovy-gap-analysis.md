@@ -3,7 +3,7 @@
 **Agent:** analyst (Opus, READ-ONLY)
 **Date:** 2026-03-16
 
-> Update 2026-03-17: the `ScriptableHandler` `args` prerequisite was confirmed during Step 1; SessionBlacklistFilter consolidation `6 -> 1` is complete (Steps 1+2, `a76e194`, `832bbae`); BackchannelLogoutHandler consolidation `3 -> 1` is complete (Step 3, `4d8f065`); and the missing SloHandler try-catch plus SloHandler consolidation `5 -> 2` are complete (Step 4, `3b8a6d8`).
+> Update 2026-03-17: the `ScriptableHandler` `args` prerequisite was confirmed during Step 1; SessionBlacklistFilter consolidation `6 -> 1` is complete (Steps 1+2, `a76e194`, `832bbae`); BackchannelLogoutHandler consolidation `3 -> 1` is complete (Step 3, `4d8f065`); the missing SloHandler try-catch plus SloHandler consolidation `5 -> 2` are complete (Step 4, `3b8a6d8`); and Step 5 deleted `App1ResponseRewriter.groovy` dead code (`aaf66d5`). Step 6 is the current document-sync pass.
 
 ---
 
@@ -40,7 +40,7 @@ Of 24 Groovy files across 3 stacks, **none can be fully replaced by OpenIG 6.0.2
 | SloHandlerGrafana.groovy | C | Same for Grafana | **KEEP** | Missing try-catch at audit time, resolved in Step 4 (`3b8a6d8`) |
 | SloHandlerPhpMyAdmin.groovy | C | Same for phpMyAdmin | **KEEP** | Missing try-catch at audit time, resolved in Step 4 (`3b8a6d8`) |
 | PhpMyAdminCookieFilter.groovy | C | Track cookie ownership (INACTIVE) | **KEEP (dead)** | WONT_FIX — phpMyAdmin CSRF incompatible |
-| App1ResponseRewriter.groovy | A | Empty file (0 bytes) | **REMOVE** | Dead code |
+| App1ResponseRewriter.groovy | A | Empty file (0 bytes) | **REMOVED** | Dead code deleted in Step 5 (`aaf66d5`) |
 
 ---
 
@@ -80,4 +80,4 @@ Same reasoning applies to Redmine (CSRF extraction + GET-then-POST flow).
 1. `ScriptableHandler` `args` binding? Resolved 2026-03-16 by the Step 1 smoke test; Steps 3 and 4 now use it.
 2. Can OpenIG 6 load shared Groovy utilities from classpath / `evaluate()`? Still open (prerequisite for Vault utility consolidation only).
 3. JWKS cache TTL unit difference (Stack C millis vs A/B seconds)? Resolved 2026-03-17 in Step 3 by standardizing to seconds (`4d8f065`).
-4. Should `App1ResponseRewriter.groovy` (0 bytes) be deleted?
+4. `App1ResponseRewriter.groovy` (0 bytes) should be deleted? Resolved 2026-03-17 in Step 5 (`aaf66d5`).

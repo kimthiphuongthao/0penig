@@ -58,13 +58,14 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] Workaround: admin "Logout all sessions" — session timeout 30min + access token 5min (max 5min delay)
 - [x] Pattern Consolidation Step 3: BackchannelLogoutHandler 3→1, `globals.compute()` JWKS cache fix (C-1), TTL seconds fix (H-6), args binding (`4d8f065`)
 - [x] Pattern Consolidation Step 4: SloHandler 5→2, try-catch fix (H-1), phpMyAdmin inline failureHandler update (`3b8a6d8`)
+- [x] Pattern Consolidation Step 5: Quick-win fixes complete - H-2 `.gitignore` for `vault/keys/` (`5ae657e`), H-3 Redmine port 3000 removed, H-9 Stack C proxy buffers aligned, M-2 `CANONICAL_ORIGIN_APP*` added to Stack A/B docker-compose, M-14 dead code deleted; validation PASS for all 5 backchannel clients, all 5 logout redirects, phpMyAdmin inline failureHandler (`aaf66d5`, `f86c7eb`)
 - [x] Vault keys purged from git history and branch force-pushed after cleanup
 
 ### Phase tiếp theo
 - [x] **Fix phase COMPLETE**: 15 fixes (11 implemented, 2 WONT_FIX, 2 verified-no-action) — tracking: `docs/fix-phase/checklist.md`
 - [x] Phase 3: Vault Production Hardening — 6/9 RESOLVED, 1 PARTIAL (CIDR), 2 deferred (TLS, Raft)
 - [x] Post-Stack C docs: OpenIG built-in filter selection guide — covered by audit
-- [x] Pattern Consolidation Step 5: Quick-win fixes (H-2 .gitignore, H-3 Redmine port, H-9 nginx buffers, M-2 CANONICAL_ORIGIN A+B, M-14 dead code) — commits aaf66d5, f86c7eb
+- [x] Pattern Consolidation Steps 1-5 complete - Step 5 quick wins (H-2 .gitignore, H-3 Redmine port, H-9 nginx buffers, M-2 CANONICAL_ORIGIN A+B, M-14 dead code) are done and validated
 - [ ] Pattern Consolidation Step 6: Update deliverable documents. Plan: `.omc/plans/pattern-consolidation.md`
 - [x] Redis persistence (appendonly yes) — đảm bảo SLO blacklist survive restart
 - [x] Vault audit logging

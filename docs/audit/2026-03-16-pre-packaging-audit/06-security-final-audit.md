@@ -5,7 +5,7 @@
 **Scope:** All OpenIG gateway code, nginx, docker-compose, Vault across 3 stacks
 **Risk Level:** MEDIUM
 
-> Update 2026-03-17: HIGH finding S-6 is now resolved by Pattern Consolidation Step 4 (`3b8a6d8`). Historical severity counts below remain the original audit snapshot.
+> Update 2026-03-17: Pattern Consolidation Steps 1-5 are complete. HIGH finding S-6 was resolved in Step 4 (`3b8a6d8`), and Step 5 resolved S-4 (`5ae657e`), S-5 (`aaf66d5`), S-15 (`aaf66d5`), and S-16 (`aaf66d5`). Historical severity counts below remain the original audit snapshot. Step 6 is the current document-sync pass.
 
 ---
 
@@ -47,12 +47,14 @@
 **Category:** A02
 **Risk:** One `git add .` commits unseal keys + admin tokens.
 **Fix:** Add `**/vault/keys/` to .gitignore.
+**Status:** RESOLVED 2026-03-17 in Step 5 (`5ae657e`).
 
 ### S-5: Redmine Port 3000 Exposed to Host (Stack B)
 **Category:** A01
 **File:** `stack-b/docker-compose.yml:163-164`
 **Blast radius:** Direct Redmine access bypasses all SSO/SLO controls.
 **Fix:** Remove `ports: - "3000:3000"`.
+**Status:** RESOLVED 2026-03-17 in Step 5 (`aaf66d5`).
 
 ### S-6: SloHandler Missing try-catch (Stacks A + C)
 **Category:** A04 + A07
@@ -82,8 +84,8 @@
 | # | Finding |
 |---|---------|
 | S-14 | Stack C nginx missing proxy timeout configuration |
-| S-15 | Stack C nginx missing proxy buffer configuration |
-| S-16 | Empty dead code file (App1ResponseRewriter.groovy) |
+| S-15 | Stack C nginx missing proxy buffer configuration - RESOLVED in Step 5 (`aaf66d5`) |
+| S-16 | Empty dead code file (App1ResponseRewriter.groovy) - RESOLVED in Step 5 (`aaf66d5`) |
 | S-17 | Inconsistent Keycloak URL configuration (Stack C hardcoded vs B env var) |
 
 ---
@@ -92,11 +94,11 @@
 
 | Category | Status | Notes |
 |----------|--------|-------|
-| A01 - Broken Access Control | 1 FINDING | Redmine port 3000 exposed |
-| A02 - Cryptographic Failures | 4 FINDINGS | Secrets in git, Vault TLS, vault/keys, session tokens |
+| A01 - Broken Access Control | 1 historical finding | Redmine port 3000 exposure is now resolved in Step 5 |
+| A02 - Cryptographic Failures | 4 historical findings | Secrets in git, Vault TLS, session tokens remain; `vault/keys/` gitignore is resolved |
 | A03 - Injection | **PASS** | RESP length-prefixed, XSS escaped |
 | A04 - Insecure Design | 2 FINDINGS | Session tokens in cookie, SloHandler try-catch |
-| A05 - Security Misconfiguration | 5 FINDINGS | Headers, root, Vault UI, timeouts, dead code |
+| A05 - Security Misconfiguration | 5 historical findings | Headers, root, Vault UI remain; Stack C proxy buffers and dead code item are resolved |
 | A06 - Vulnerable Components | NOT AUDITED | No package manager |
 | A07 - Auth Failures | 2 FINDINGS | Weak secrets, cookie flags |
 | A08 - Integrity Failures | **PASS** | Idempotent bootstraps |
@@ -109,12 +111,12 @@
 
 - [x] No hardcoded secrets in Groovy scripts or route files (FIX-06)
 - [ ] Secrets in docker-compose.yml committed to git
-- [ ] vault/keys/ not in .gitignore
+- [x] `vault/keys/` gitignored via Step 5 (`5ae657e`)
 - [x] Backchannel logout JWT fully validated (RS256, iss, aud, exp, iat, events, sid)
 - [x] Redis RESP commands use parameterized key sizes
 - [x] Fail-closed on Redis errors (FIX-03/04)
 - [x] OAuth2ClientFilter on all routes
-- [ ] Redmine port 3000 bypasses SSO
+- [x] Redmine port 3000 removed in Step 5 (`aaf66d5`)
 - [x] /openig admin endpoint returns 403
 - [x] Untrusted headers stripped at nginx
 - [x] Vault audit logging enabled

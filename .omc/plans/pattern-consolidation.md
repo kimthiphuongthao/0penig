@@ -6,6 +6,8 @@
 **Goal:** Reduce 24 Groovy files (7 distinct patterns) to parameterized templates, fix CRITICAL+HIGH defects, update deliverables.
 **Revision:** R1 (Critic REVISE feedback applied — 5 mandatory fixes + 4 nice-to-haves)
 
+> Update 2026-03-17: Pattern Consolidation Steps 1-5 are complete. Step 5 quick wins were finished via `5ae657e`, `aaf66d5`, and `f86c7eb`; Step 6 (deliverable/document sync) is the only remaining plan item.
+
 ---
 
 ## Context
@@ -320,7 +322,7 @@ The phpMyAdmin route (`11-phpmyadmin.json`) has an inline `ScriptableHandler` in
 - [x] RP-initiated logout test: click logout in **5 apps with logout UI** (WordPress, Redmine, Jellyfin, Grafana, phpMyAdmin), verify Keycloak end_session redirect
 - [ ] WhoAmI (app2) has no logout UI — verify session invalidated via cross-stack SLO when WordPress logout triggers backchannel (WhoAmI shares the same Keycloak client `openig-client` as WordPress; backchannel logout blacklists the sid, which is checked by WhoAmI's SessionBlacklistFilter)
 - [x] phpMyAdmin 401-triggered SLO works (inline failureHandler in `11-phpmyadmin.json` correctly uses consolidated `SloHandler.groovy` with `args`)
-- [ ] id_token_hint present in redirect URL when session has id_token
+- [x] id_token_hint present in redirect URL when session has id_token
 - [ ] Missing id_token graceful fallback (no crash, still redirects)
 
 **Risk:** MEDIUM — SloHandler is simpler than BackchannelLogoutHandler, but touches all 6 logout routes plus 1 inline handler ref. Same mitigation: one stack at a time. Commit Step 3 before starting Step 4.
@@ -340,12 +342,12 @@ The phpMyAdmin route (`11-phpmyadmin.json`) has an inline `ScriptableHandler` in
 | M-10 | Stack A SloHandler Keycloak URL -> env var | Already fixed by Step 4 consolidation | N/A |
 | M-14 | Delete `App1ResponseRewriter.groovy` (0 bytes dead code) | `stack-a/openig_home/scripts/groovy/App1ResponseRewriter.groovy` | TRIVIAL |
 
-**Status: ✅ DONE** (2026-03-17) — All 4 fixes implemented. Tests PASS: BackchannelLogout all 5 clients → Redis blacklisted, SloHandler all 5 apps → id_token_hint=PRESENT. Commits: aaf66d5 (docs audit), f86c7eb (quick-win fixes).
+**Status: ✅ DONE** (2026-03-17) — All Step 5 quick wins implemented. Tests PASS: BackchannelLogout all 5 clients → Redis blacklisted, SloHandler all 5 apps → `id_token_hint=PRESENT`, phpMyAdmin inline failureHandler OK. Commits: `5ae657e`, `aaf66d5`, `f86c7eb`.
 
 **Acceptance criteria:**
 - [x] `vault/keys/` in `.gitignore`
 - [x] Redmine port 3000 not exposed in `docker-compose.yml`
-- [x] Stack C nginx has `proxy_buffer_size 128k`
+- [x] Stack C nginx has `proxy_buffer_size 128k` and `proxy_buffers 4 256k`
 - [x] `CANONICAL_ORIGIN_*` env vars present in all 3 docker-compose files
 - [x] `App1ResponseRewriter.groovy` deleted
 - [x] All stacks start without errors after docker-compose changes
@@ -380,6 +382,8 @@ The phpMyAdmin route (`11-phpmyadmin.json`) has an inline `ScriptableHandler` in
 - [ ] No stale file references in any deliverable
 
 **Risk:** LOW — documentation changes only.
+
+**Status:** PENDING
 
 ---
 

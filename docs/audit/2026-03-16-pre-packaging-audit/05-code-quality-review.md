@@ -4,7 +4,7 @@
 **Date:** 2026-03-16
 **Files Reviewed:** 24 Groovy scripts across 3 stacks
 
-> Update 2026-03-17: C-1 was resolved in Pattern Consolidation Step 3 (`4d8f065`), H-1 was resolved in Step 4 (`3b8a6d8`), H-3 was resolved in Step 3 (`4d8f065`), M-1/M-2 were resolved by the completed BackchannelLogoutHandler / SessionBlacklistFilter consolidation tracks (`4d8f065`, `a76e194`, `832bbae`), and L-7 was resolved in Step 4 (`3b8a6d8`).
+> Update 2026-03-17: C-1 was resolved in Pattern Consolidation Step 3 (`4d8f065`), H-1 was resolved in Step 4 (`3b8a6d8`), H-3 was resolved in Step 3 (`4d8f065`), M-1/M-2 were resolved by the completed BackchannelLogoutHandler / SessionBlacklistFilter consolidation tracks (`4d8f065`, `a76e194`, `832bbae`), M-9 was resolved in Step 5 (`aaf66d5`), and L-7 was resolved in Step 4 (`3b8a6d8`). Step 6 is the current document-sync pass.
 
 ---
 
@@ -70,7 +70,7 @@
 | M-6 | Vault 403 status inconsistency (502 vs 500) | 4 VaultCredentialFilter files |
 | M-7 | base64UrlDecode unnecessary manual padding | 3 BackchannelLogoutHandler files |
 | M-8 | Stack B SessionBlacklistFilter shared oidc_sid key | SessionBlacklistFilter.groovy:40 |
-| M-9 | App1ResponseRewriter.groovy empty dead code | 0 bytes |
+| M-9 | App1ResponseRewriter.groovy empty dead code | RESOLVED in Step 5 (`aaf66d5`) |
 | M-10 | Socket per request for Redis (no connection pooling) | 9 files |
 
 ---
@@ -117,4 +117,4 @@ Historical audit snapshot at review time. Current live state after consolidation
 6. Well-structured error responses with meaningful HTML
 7. Defensive null checking (Groovy `?.` and `?:`)
 8. Good timeout discipline (200ms-5000ms, no unbounded waits)
-9. Stack C SessionBlacklistFilter parameterization via `args` — best pattern in codebase
+9. Consolidated SessionBlacklistFilter template now uses the same `args`-based pattern across all stacks

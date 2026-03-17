@@ -38,6 +38,13 @@ Keycloak shared: `http://auth.sso.local:8080`, realm `sso-realm`.
 - `JwtSession` → session mã hóa trong cookie, stateless, mọi node đọc được
 - Vault credentials shared mount → cả 2 node dùng chung `role_id`/`secret_id`
 
+## Pinned canonical origins
+- Stack A: `CANONICAL_ORIGIN_APP1`, `CANONICAL_ORIGIN_APP2` trên `sso-openig-1` và `sso-openig-2`
+- Stack B: `CANONICAL_ORIGIN_APP3`, `CANONICAL_ORIGIN_APP4` trên `sso-b-openig-1` và `sso-b-openig-2`
+- Stack C: `CANONICAL_ORIGIN_APP5`, `CANONICAL_ORIGIN_APP6` trên `stack-c-openig-c1-1` và `stack-c-openig-c2-1`
+- Tất cả logic redirect/logout/session re-entry PHẢI dùng pinned origin từ env var này, không dùng inbound `Host`
+- Stack B Redmine không còn public host port `3000`; browser chỉ truy cập qua `http://redmine-b.sso.local:9080`
+
 ## Cookie session
 - Stack A: `IG_SSO`, `cookieDomain: ".sso.local"`
 - Stack B: `IG_SSO_B`, `cookieDomain: ".sso.local"`
