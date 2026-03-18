@@ -7,7 +7,7 @@ tags:
   - redmine
   - jellyfin
   - security-hardening
-date: 2026-03-17
+date: 2026-03-18
 status: complete
 ---
 
@@ -27,7 +27,7 @@ Related: [[Stack A]] [[Stack C]] [[OpenIG]] [[Keycloak]] [[Vault]]
 | `nginx-b` | `nginx-b` / `sso-b-nginx` | `9080:80` |
 | `openig-b1` | `openig-b1` / `sso-b-openig-1` | `8080` (internal) |
 | `openig-b2` | `openig-b2` / `sso-b-openig-2` | `8080` (internal) |
-| `redmine-b` | `redmine` / `sso-b-redmine` | `3000:3000` |
+| `redmine-b` | `redmine` / `sso-b-redmine` | `3000` (internal) |
 | `jellyfin-b` | `jellyfin` / `sso-b-jellyfin` | `8096` (internal) |
 | `redis-b` | `redis-b` / `sso-redis-b` | `6379` (internal) |
 | `vault-b` | `vault-b` / `sso-b-vault` | `8200` (internal) |
@@ -41,14 +41,14 @@ Related: [[Stack A]] [[Stack C]] [[OpenIG]] [[Keycloak]] [[Vault]]
 
 | Route file | Purpose |
 |---|---|
-| `00-backchannel-logout-app3.json` | Handles Keycloak `POST /openid/app3/backchannel_logout` and runs `BackchannelLogoutHandler.groovy`. |
-| `00-backchannel-logout-app4.json` | Handles Keycloak `POST /openid/app4/backchannel_logout` and runs `BackchannelLogoutHandler.groovy`. |
+| `00-backchannel-logout-app3.json` | Handles Keycloak `POST /openid/app3/backchannel_logout` for Redmine and runs `BackchannelLogoutHandler.groovy`. |
+| `00-backchannel-logout-app4.json` | Handles Keycloak `POST /openid/app4/backchannel_logout` for Jellyfin and runs `BackchannelLogoutHandler.groovy`. |
 | `00-dotnet-logout.json` (DELETED) | Legacy `/app3/Account/Logout` intercept on `openigb.sso.local`, handled by `DotnetSloHandler.groovy`. |
 | `00-jellyfin-logout.json` | Intercepts Jellyfin logout requests and delegates to `SloHandlerJellyfin.groovy`. |
 | `00-redmine-logout.json` | Intercepts Redmine `POST /logout` and delegates to the consolidated `SloHandler.groovy`; the old `SloHandlerRedmine.groovy` file was leftover only and has been deleted. |
 | `01-dotnet.json` (DELETED) | Legacy .NET SSO chain for `/app3*` and `/openid/app3*` to `dotnet-app:5000`, with OAuth2 + blacklist + credential injection. |
-| `01-jellyfin.json` | Main Jellyfin SSO chain to `jellyfin:8096`: OAuth2 (`/openid/app3`) + app3 blacklist + Vault creds + token injector + response rewrite. |
-| `02-redmine.json` | Main Redmine SSO chain to `redmine:3000`: OAuth2 (`/openid/app4`) + app4 blacklist + Vault creds + form-login credential injector. |
+| `01-jellyfin.json` | Main Jellyfin SSO chain to `jellyfin:8096`: OAuth2 (`/openid/app4`) + app4 blacklist + Vault creds + token injector + response rewrite. |
+| `02-redmine.json` | Main Redmine SSO chain to `redmine:3000`: OAuth2 (`/openid/app3`) + app3 blacklist + Vault creds + form-login credential injector. |
 
 ## Groovy Scripts
 
@@ -60,9 +60,7 @@ Related: [[Stack A]] [[Stack C]] [[OpenIG]] [[Keycloak]] [[Vault]]
 | `JellyfinResponseRewriter.groovy` | Rewrites Jellyfin HTML to seed `localStorage` credentials and steer browser flow away from local login. |
 | `JellyfinTokenInjector.groovy` | Calls Jellyfin auth API, stores token/user/device in session, injects MediaBrowser `Authorization`, clears on `401`. |
 | `RedmineCredentialInjector.groovy` | Performs Redmine `/login` GET+POST (CSRF + credentials), caches `_redmine_session`, injects cookies, retries on `/login` redirect. |
-| `SessionBlacklistFilter.groovy` | Generic blacklist filter (legacy/shared) resolving sid from OIDC token and checking Redis blacklist. |
-| `SessionBlacklistFilterApp3.groovy` | App3-specific blacklist check for Jellyfin session keys and host-aware OAuth2 session lookup. |
-| `SessionBlacklistFilterApp4.groovy` | App4-specific blacklist check for Redmine session keys and host-aware OAuth2 session lookup. |
+| `SessionBlacklistFilter.groovy` | Shared blacklist filter used by both Stack B routes via `args` (`clientEndpoint`, `sessionCacheKey`, `canonicalOrigin`, `canonicalOriginEnvVar`). |
 | `SloHandlerJellyfin.groovy` | Calls Jellyfin `/Sessions/Logout` when token exists, clears OpenIG session, redirects to Keycloak logout with `id_token_hint` if found. |
 | `SloHandler.groovy` | Consolidated Redmine/logout handler shared after Step 4 parameterization. |
 | `VaultCredentialFilterJellyfin.groovy` | AppRole login to Vault and fetch `secret/data/jellyfin-creds/{email}` into `attributes.jellyfin_credentials`. |
@@ -74,7 +72,8 @@ Related: [[Stack A]] [[Stack C]] [[OpenIG]] [[Keycloak]] [[Vault]]
 > [!warning]
 > Known pending:
 > - Jellyfin WebSocket `http://` -> `ws://` bug (`01-jellyfin.json`)
-> - Missing `cookieDomain` in Stack B `config.json` (LOW priority)
+> - STEP-13: model `SameSite`/`Secure` cookie flags for `IG_SSO_B` in the nginx layer
+> - STEP-14: remove `user: root` from `openig-b1` and `openig-b2` after host-volume compatibility validation
 
 ## 2026-03-17 Security Hardening
 
@@ -103,3 +102,16 @@ Related: [[Stack A]] [[Stack C]] [[OpenIG]] [[Keycloak]] [[Vault]]
 
 > [!success]
 > Validation on `2026-03-18`: `docker logs sso-b-openig-1 2>&1 | grep 'Loaded the route'` returned route load entries after the restart, and `docker exec sso-redis-b redis-cli PING` returned `NOAUTH Authentication required.`
+
+> [!success]
+> Stack B `JwtSession` now matches the shared cookie-domain baseline: `stack-b/openig_home/config/config.json` sets `cookieDomain: ".sso.local"` for `IG_SSO_B`.
+
+## 2026-03-18 Phase 2b hardening batch
+
+- `STEP-07` / `[M-9/Code-M6]`: `VaultCredentialFilterRedmine.groovy` and `VaultCredentialFilterJellyfin.groovy` now return `502 BAD_GATEWAY` for Vault auth/read upstream failures, aligning Stack B with the shared [[OpenIG]] contract.
+- `STEP-08` / `[M-11]`: `BackchannelLogoutHandler.groovy` now throws `IOException("EOF")` on unexpected Redis socket closure so backchannel logout fails closed instead of silently continuing.
+- `STEP-11` / `[A-4]`: `openig-b1` and `openig-b2` now declare `extra_hosts: host.docker.internal:host-gateway`, so `KEYCLOAK_INTERNAL_URL` remains portable on Linux Docker hosts as well as Docker Desktop.
+- `STEP-12` / `[M-3/S-7]`: `stack-b/nginx/nginx.conf` now sets `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, and `Referrer-Policy: strict-origin-when-cross-origin`; `Content-Security-Policy` stays app-specific and HSTS remains deferred until TLS exists.
+
+> [!success]
+> Stack B now matches the post-audit baseline for Vault error handling, fail-closed backchannel logout behavior, Linux `host.docker.internal` portability, and lab-safe nginx security headers.

@@ -172,6 +172,7 @@ Bạn có thể tìm thông tin này bằng cách: mở DevTools (F12) > tab App
 - [ ] Không commit file `.env` vào Git.
 - [ ] Pin container image bằng version cụ thể; với OpenIG 6, không dùng `:latest`.
 - [ ] Nếu app dùng OIDC client secret qua OpenIG, secret phải là strong random alphanumeric-only (không chứa `+`, `/`, `=`).
+- [ ] Nếu deploy trên Linux Docker (không phải Docker Desktop), thêm `extra_hosts: host.docker.internal:host-gateway` vào tất cả service OpenIG trong `docker-compose.yml`; Docker Desktop tự resolve `host.docker.internal`, còn Linux Docker thì không.
 
 Ghi chú về deployment hiện tại (port, reverse proxy đang dùng, v.v.):
 
