@@ -92,7 +92,7 @@ Mục tiêu: dùng checklist này để khảo sát kỹ thuật **trước khi*
 - [ ] Container image có thể customize (Dockerfile/entrypoint/config mount):
 - [ ] Không thể customize image (ràng buộc vendor/platform):
 - [ ] Gateway image tags sẽ được pin explicit version (không dùng `:latest`)
-- [ ] Nếu dùng Base64 secrets trong `.env` / secret store, team vận hành có quy trình copy giữ nguyên trailing `=` padding
+- [ ] Nếu app đi qua OpenIG `OAuth2ClientFilter`, OIDC client secret dùng giá trị strong random alphanumeric-only (không chứa `+`, `/`, `=`)
 
 Ghi chú triển khai:
 - Public host/port chuẩn hóa:

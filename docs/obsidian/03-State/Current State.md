@@ -17,7 +17,7 @@ Last updated: **2026-03-17**
 |-------|------|-----|-----|
 | **A** | WordPress, WhoAmI | ✅ | ✅ |
 | **B** | Redmine, Jellyfin | ✅ | ✅ |
-| **C** | Grafana, phpMyAdmin | ⚠️ Grafana pending fix; phpMyAdmin OK | ⚠️ Grafana login re-test pending |
+| **C** | Grafana, phpMyAdmin | ✅ Grafana + phpMyAdmin OK | ✅ Grafana + phpMyAdmin OK |
 
 > [!success]
 > Pattern Consolidation is COMPLETE across all 6 steps. Post-audit fixes and Phase 2 STEP-01/02/03 are also applied: `PhpMyAdminCookieFilter.groovy` deleted (`20d523f`), Stack C OIDC secrets rotated (`37672ed`), and compose secrets moved into gitignored `.env` files while OpenIG stays pinned to `6.0.1` (`b738577`).
@@ -26,7 +26,7 @@ Last updated: **2026-03-17**
 > Production-readiness audit is COMPLETE, but the lab is NOT READY yet: `37 STILL OPEN`, `6 PARTIAL`, `38 RESOLVED`.
 
 > [!warning]
-> Current blocker: Stack C Grafana SSO is under investigation. Working session finding: `OIDC_CLIENT_SECRET_APP5` must match exactly across `stack-c/.env`, Keycloak, and the running OpenIG containers; trailing `=` padding is significant for Base64 secrets.
+> Update 2026-03-18: Stack C Grafana SSO/SLO re-validation passed. The prior APP5 padding theory was superseded; OpenIG `OAuth2ClientFilter` does not URL-encode `client_secret`, so APP5 now uses a strong alphanumeric-only secret and both Stack C OpenIG containers were recreated.
 
 ## Program State
 
@@ -34,7 +34,7 @@ Last updated: **2026-03-17**
 - Production readiness audit: COMPLETE — NOT READY
 - Gap report: [2026-03-17-production-readiness-gap-report.md](../../audit/2026-03-17-production-readiness-gap-report.md)
 - Master backlog: [master-backlog.md](../../fix-tracking/master-backlog.md)
-- Active follow-up: Stack C Grafana secret-sync fix + P1 production-readiness backlog
+- Active follow-up: P1 production-readiness backlog (`H-4/S-2`, `H-7/A-1`, `A-6/A-7/M-13/S-17`)
 
 ## Recent Commits
 
@@ -44,7 +44,7 @@ Last updated: **2026-03-17**
 
 ## Last Verified
 
-**2026-03-17** — Stacks A and B verified working for SSO/SLO; Stack C phpMyAdmin verified; Grafana SSO currently pending re-validation after APP5 secret-sync debugging
+**2026-03-18** — Stack C Grafana SSO/SLO re-validation PASS after rotating APP5 to a strong alphanumeric-only secret and recreating both Stack C OpenIG containers
 
 ## Related Notes
 

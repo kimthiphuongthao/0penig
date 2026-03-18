@@ -5,7 +5,7 @@
 **Derived from:** Code and security review of 3 integration stacks (WordPress, Redmine+Jellyfin, Grafana+phpMyAdmin)
 **Scope:** OpenIG 6 + Keycloak + Vault + Redis
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. The lab implementation now also matches more of this pattern operationally: Redmine no longer exposes host port `3000`, Stack C nginx carries the same proxy buffer settings as A/B, all 3 stacks declare app-specific `CANONICAL_ORIGIN_APP*` env vars, Stack C OIDC secrets were rotated, and compose secrets now live in gitignored `.env` files while OpenIG stays pinned to `6.0.1`.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. The lab implementation now also matches more of this pattern operationally: Redmine no longer exposes host port `3000`, Stack C nginx carries the same proxy buffer settings as A/B, all 3 stacks declare app-specific `CANONICAL_ORIGIN_APP*` env vars, Stack C OIDC secrets were rotated, and compose secrets now live in gitignored `.env` files while OpenIG stays pinned to `6.0.1`. Follow-up 2026-03-18: APP5 was re-rotated to a strong alphanumeric-only secret after confirming OpenIG `OAuth2ClientFilter` does not URL-encode `client_secret`.
 
 ---
 
@@ -91,6 +91,8 @@ Why: All three stacks exposed gateway or OIDC secrets in repo-managed config, wh
 How to implement in OpenIG: Use a `VaultCredentialFilter`-style runtime secret source and inject the resulting values into route/filter configuration without serializing them into `JwtSession`. An implementation pattern inferred from the reviewed Vault-backed adapters is: fetch at startup, cache with TTL, and refresh before expiry rather than storing fetched secrets in browser-bound session state. Derived from: Stack A `§4`; Stack C `§3`; Stack C `§4 F5`.
 
 Deployment rule: compose-managed secrets MUST live in gitignored `.env` files or an equivalent runtime secret source. Commit `.env.example` as the contract, never commit `.env`, and never hardcode secret literals in `docker-compose.yml`.
+
+OpenIG compatibility rule: when an OIDC `clientSecret` is consumed by `OAuth2ClientFilter`, it MUST be a strong random alphanumeric-only value. Do not use Base64 strings containing `+`, `/`, or `=` for this path, because OpenIG 6 sends `client_secret` raw in the `application/x-www-form-urlencoded` token request body.
 
 Image rule: OpenIG containers MUST use an explicit image tag and MUST NOT use `:latest`. The validated lab baseline is `openidentityplatform/openig:6.0.1`; the mutable `latest` tag moved to a Tomcat 11 build and broke OpenIG 6 startup.
 
@@ -238,8 +240,8 @@ Derived from: Cross-Stack Summary "Recommended Standard Pattern" and "Next Steps
 
 - [ ] `JwtSession.sharedSecret`, OIDC `clientSecret`, and keystore passwords come from Vault or environment at runtime and do not appear in config, routes, or Groovy.
 - [ ] Any Vault-backed secret retrieval is cached with bounded TTL and refreshed before expiry without writing the fetched secret into `JwtSession`.
-- [ ] OIDC client secrets use strong random values only. Minimum baseline: 32+ random bytes encoded as Base64. Trivially guessable values such as `secret-c` are a P1 security issue. Generate with `openssl rand -base64 32`.
-- [ ] When copying Base64 secrets into `.env`, Keycloak, or another secret store, preserve the full value including any trailing `=` padding. Do not trim or re-wrap generated secrets.
+- [ ] OIDC client secrets used by OpenIG `OAuth2ClientFilter` use strong random alphanumeric-only values. Trivially guessable values such as `secret-c` are a P1 security issue, and Base64 values containing `+`, `/`, `=` are unsafe for this path. Generate with `openssl rand -hex 24` or equivalent.
+- [ ] For non-`OAuth2ClientFilter` secrets that remain Base64, preserve the full value including any trailing `=` padding when copying into `.env` or another secret store. Do not trim or re-wrap generated secrets.
 
 ### Session and revocation
 

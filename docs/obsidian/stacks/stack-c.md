@@ -19,7 +19,7 @@ Related: [[OpenIG]] [[Keycloak]] [[Vault]] [[Stack C]]
 
 - SSO: ✅
 - SLO: ✅
-- OIDC_CLIENT_SECRET_APP5 and OIDC_CLIENT_SECRET_APP6 rotated to strong 44-char secrets (Phase 2 STEP-02, M-5/S-9). Keycloak clients openig-client-c-app5 and openig-client-c-app6 updated to match.
+- Stack C OIDC clients were rotated away from weak literal `secret-c` in Phase 2 STEP-02 (M-5/S-9). APP5 was re-rotated on 2026-03-18 to a strong alphanumeric-only secret because OpenIG `OAuth2ClientFilter` does not URL-encode `client_secret`.
 - Phase 2 hardening `[H-5/S-3]`: secret-bearing Compose values moved out of `stack-c/docker-compose.yml` into local `stack-c/.env`; committed `stack-c/.env.example` documents the required variables and K8s Secret bootstrap flow.
 - `openig-c1` and `openig-c2` are pinned to `openidentityplatform/openig:6.0.1`; `openidentityplatform/openig:latest` moved to a Tomcat 11 build that breaks OpenIG 6 startup.
 
@@ -72,7 +72,7 @@ Related: [[OpenIG]] [[Keycloak]] [[Vault]] [[Stack C]]
 ### Backchannel (both apps)
 
 1. Keycloak sends `POST /openid/app5/backchannel_logout` or `/openid/app6/backchannel_logout`.
-2. `BackchannelLogoutHandler.groovy` parses `logout_token`, extracts `sid`, sets `blacklist:<sid>` in Redis (TTL 3600s).
+2. `BackchannelLogoutHandler.groovy` parses `logout_token`, extracts `sid`, sets `blacklist:<sid>` in Redis (TTL 1800s, aligned to `JwtSession.sessionTimeout: "30 minutes"`).
 3. `SessionBlacklistFilter.groovy` checks Redis each request; if blacklisted, session is cleared and request is redirected to same URL for fresh OIDC flow.
 
 ## Key files
@@ -111,8 +111,11 @@ Related: [[OpenIG]] [[Keycloak]] [[Vault]] [[Stack C]]
 ## Credentials and secrets
 
 - Keycloak client secrets:
-  - `openig-client-c-app5` -> strong 44-char secret via local `OIDC_CLIENT_SECRET_APP5` in `stack-c/.env`
-  - `openig-client-c-app6` -> strong 44-char secret via local `OIDC_CLIENT_SECRET_APP6` in `stack-c/.env`
+  - `openig-client-c-app5` -> strong alphanumeric-only secret via local `OIDC_CLIENT_SECRET_APP5` in `stack-c/.env`
+  - `openig-client-c-app6` -> strong env-backed secret via local `OIDC_CLIENT_SECRET_APP6` in `stack-c/.env`
+
+> [!warning]
+> For OpenIG OIDC clients, secret format is a compatibility requirement, not only a strength requirement. Avoid `+`, `/`, and `=` in `clientSecret` values consumed by `OAuth2ClientFilter`.
 - OpenIG JWT session:
   - Cookie: `IG_SSO_C` on domain `.sso.local`
   - Stack-C specific `sharedSecret` configured in `stack-c/openig_home/config/config.json`, with Compose passing `JWT_SHARED_SECRET` from local env instead of a committed literal

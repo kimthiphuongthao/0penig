@@ -302,7 +302,7 @@ Stack C dùng chuỗi (Header Injection):
 
 Không cần `VaultCredentialFilter` vì Grafana dùng auth proxy — username từ `preferred_username` trong OIDC được inject qua header. Grafana được cấu hình `GF_AUTH_PROXY_ENABLED=true`, `GF_AUTH_PROXY_HEADER_NAME=X-WEBAUTH-USER`.
 
-Lưu ý vận hành 2026-03-17: nếu Grafana trả `invalid_client` sau khi rotate secret, kiểm tra `OIDC_CLIENT_SECRET_APP5` khớp tuyệt đối giữa `stack-c/.env`, Keycloak client `openig-client-c-app5`, và env thực tế của các container OpenIG. Giá trị Base64 phải giữ nguyên cả dấu `=` cuối chuỗi.
+Lưu ý vận hành 2026-03-18: nếu Grafana (hoặc app mới dùng OpenIG `OAuth2ClientFilter`) trả `invalid_client_credentials` sau khi rotate secret, đừng dùng secret kiểu Base64 có `+`, `/`, `=`. OpenIG gửi `client_secret` raw trong POST body, nên Keycloak sẽ decode `+` thành space. Dùng strong random alphanumeric-only value, sync giữa `stack-c/.env` + Keycloak + env runtime, rồi recreate các container OpenIG.
 
 Nginx phải strip `X-WEBAUTH-USER` từ client trước khi forward:
 

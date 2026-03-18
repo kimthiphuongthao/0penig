@@ -38,6 +38,7 @@
 | 2b | config.json + 01-jellyfin.json + 02-redmine.json — sharedSecret + clientSecrets → Vault/env | B | [x] | ✅ Done 2026-03-15. Route files use native ${env['VAR']}. Commit f677d9f |
 | 2c | config.json + 10-grafana.json + 11-phpmyadmin.json — sharedSecret + clientSecrets → Vault/env | C | [x] | ✅ Done 2026-03-15. Same pattern as A+B. Commit f677d9f |
 | 2d | Rotate tất cả exposed secrets + invalidate existing sessions | A, B, C | [x] | ✅ Done 2026-03-15. sharedSecret + PKCS12 rotated; clientSecret externalized only (must match Keycloak). Commit f677d9f |
+| 2e | Re-validate Stack C Grafana SSO after APP5 secret compatibility fix | C | [x] | ✅ Done 2026-03-18. Root cause confirmed: OpenIG `OAuth2ClientFilter` does not URL-encode `client_secret`, so Base64 APP5 secret containing `+` failed. Rotated APP5 to strong alphanumeric-only value, synced `.env` + Keycloak, recreated Stack C OpenIG containers, user confirmed SSO+SLO PASS. |
 
 ---
 
@@ -99,13 +100,13 @@
 | Group | Total | Done | WONT_FIX | Pending (deferred) |
 |-------|-------|------|----------|-------------------|
 | 1 — Revocation | 5 | 5 | 0 | 0 |
-| 2 — Secrets | 4 | 4 | 0 | 0 |
+| 2 — Secrets | 5 | 5 | 0 | 0 |
 | 3 — Transport/Origin | 4 | 1 | 0 | 3 (deferred to Vault Hardening) |
 | 4 — Session Storage | 3 | 2 | 1 | 0 |
 | 5 — Logout/Observability | 2 | 2 | 0 | 0 |
 | 6 — Adapter Contract | 3 | 2 | 1 | 0 |
 | 7 — Unsafe Method | 1 | 1 | 0 | 0 |
-| **Total** | **22** | **17** | **2** | **3** |
+| **Total** | **23** | **18** | **2** | **3** |
 
 ---
 
@@ -118,6 +119,7 @@
 | 2026-03-15 | 1b+1c | FIX-03+04: fail-closed 500 + socket timeout 200/500ms | PASS — tested Redis stop/start A+B+C | 278a29c |
 | 2026-03-15 | 1d | FIX-05: backchannel error code 400→500 for infra errors | PASS — tested Redis down→500, normal SLO→200 | 9b770cd |
 | 2026-03-15 | 2a+2b+2c+2d | FIX-06: externalize secrets to env vars + rotate sharedSecret/PKCS12 | PASS — 16 files, 3 entrypoint scripts, all routes loaded, SSO/SLO verified | f677d9f |
+| 2026-03-18 | 2e | Grafana SSO re-validation after APP5 compatibility rotation | PASS — confirmed OpenIG does not URL-encode `client_secret`; rotated APP5 to alphanumeric-only value, recreated Stack C OpenIG containers, user confirmed SSO+SLO working | a403b3d |
 | 2026-03-15 | — | FIX-07 Phase 7a: Lab Exception notes in standard-gateway-pattern.md | PASS — docs only, no code change | 38a3f7e |
 | 2026-03-15 | 3a | FIX-08: pin redirect origins via CANONICAL_ORIGIN_APPx | PASS — 11 Groovy files, all routes loaded, no Host-header redirects remaining | 7fc73ba |
 | 2026-03-15 | — | Stack B PKCS12 keystore config (pattern consistency) | PASS — JWT session warning gone, all 3 stacks identical pattern | daa0af0 |

@@ -3,7 +3,7 @@
 **Date:** 2026-03-16
 **Source:** 6 audit reports (Tasks 1A through 4)
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. Post-audit cleanup also fixed Stack A `BackchannelLogoutHandler` and deleted leftover `SloHandler*` files.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. Post-audit cleanup also fixed Stack A `BackchannelLogoutHandler` and deleted leftover `SloHandler*` files. Operational follow-up 2026-03-18: Stack C Grafana SSO/SLO re-validation passed after rotating APP5 to an alphanumeric-only secret and confirming the OpenIG `client_secret` URL-encoding limitation.
 
 ---
 
@@ -40,7 +40,7 @@
 | M-2 | Missing CANONICAL_ORIGIN_* env vars in A/B docker-compose | Architecture | RESOLVED 2026-03-17 by commit `aaf66d5` (`CANONICAL_ORIGIN_*` env vars A+B) |
 | M-3 | No security response headers on nginx (all stacks) | Security | LOW — add_header directives |
 | M-4 | JwtSession cookies lack SameSite flag | Security | LOW — nginx proxy_cookie_flags |
-| M-5 | Weak OIDC client secrets Stack C ("secret-c") | Security | RESOLVED 2026-03-17 by STEP-02 (`37672ed`) — rotated to strong 44-character values |
+| M-5 | Weak OIDC client secrets Stack C ("secret-c") | Security | RESOLVED 2026-03-17 by STEP-02 (`37672ed`); APP5 re-validated 2026-03-18 via `a403b3d` with a strong alphanumeric-only secret compatible with OpenIG |
 | M-6 | OpenIG containers run as root (Stacks A/B) | Security | MEDIUM — fix volume permissions |
 | M-7 | Vault TLS disabled + UI enabled | Security | MEDIUM — deferred to TLS phase |
 | M-8 | Hardcoded passwords in vault-bootstrap.sh | Security | MEDIUM — .env sourcing |

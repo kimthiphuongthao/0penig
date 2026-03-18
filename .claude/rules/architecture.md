@@ -47,7 +47,8 @@ Keycloak shared: `http://auth.sso.local:8080`, realm `sso-realm`.
 
 ## Runtime secret + image pattern
 - Secret runtime của từng stack nằm trong file `.env` cục bộ (gitignored); chỉ commit `.env.example`
-- Giá trị Base64 phải được copy nguyên vẹn. Dấu `=` cuối chuỗi là dữ liệu hợp lệ, không phải ký tự thừa
+- OIDC client secrets đi qua `OAuth2ClientFilter` PHẢI dùng strong random alphanumeric-only values; không dùng Base64 có `+`, `/`, `=` vì OpenIG 6 không URL-encode `client_secret` trong POST body
+- Với các secret Base64 khác (không đi qua `OAuth2ClientFilter`), phải copy nguyên vẹn. Dấu `=` cuối chuỗi là dữ liệu hợp lệ, không phải ký tự thừa
 - Tất cả OpenIG containers PHẢI pin `openidentityplatform/openig:6.0.1`
 - KHÔNG dùng `openidentityplatform/openig:latest` vì `latest=6.0.2` chuyển sang Tomcat 11 và làm OpenIG 6 không khởi động được
 

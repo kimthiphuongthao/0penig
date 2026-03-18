@@ -1,6 +1,6 @@
 # SSO/SLO Workflow Security Assessment
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. Step 5 removed the remaining quick wins around `vault/keys/` repo hygiene, Redmine direct-host exposure, Stack C nginx proxy buffers, and Stack A/B `CANONICAL_ORIGIN_APP*`; STEP-02 rotated Stack C OIDC secrets; STEP-03 moved compose secrets into gitignored `.env` files and pinned OpenIG to `6.0.1`.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. Step 5 removed the remaining quick wins around `vault/keys/` repo hygiene, Redmine direct-host exposure, Stack C nginx proxy buffers, and Stack A/B `CANONICAL_ORIGIN_APP*`; STEP-02 rotated Stack C OIDC secrets; STEP-03 moved compose secrets into gitignored `.env` files and pinned OpenIG to `6.0.1`. Follow-up 2026-03-18: Stack C Grafana SSO/SLO re-validation passed after rotating APP5 to an alphanumeric-only secret because OpenIG `OAuth2ClientFilter` does not URL-encode `client_secret`.
 
 ## 1. Workflow Overview
 

@@ -8,7 +8,7 @@
 > [!warning]
 > Gateway-team handoff notes:
 > - Pin `openidentityplatform/openig:6.0.1`; do not use `openidentityplatform/openig:latest` because `latest=6.0.2` moved to Tomcat 11 and breaks OpenIG 6 startup.
-> - Treat generated Base64 secrets as opaque values. If a secret ends with `=`, keep it exactly as-is in `.env`, Keycloak, or any secret store. Truncating a 44-character value to 43 characters will break OIDC client authentication.
+> - If an OIDC client secret is consumed by OpenIG `OAuth2ClientFilter`, use a strong random alphanumeric-only value. Avoid `+`, `/`, and `=` because OpenIG does not URL-encode `client_secret` in the token request body.
 
 ---
 
@@ -171,6 +171,7 @@ Bạn có thể tìm thông tin này bằng cách: mở DevTools (F12) > tab App
 - [ ] Tạo file `.env` local từ `.env.example` trước lần deploy đầu tiên.
 - [ ] Không commit file `.env` vào Git.
 - [ ] Pin container image bằng version cụ thể; với OpenIG 6, không dùng `:latest`.
+- [ ] Nếu app dùng OIDC client secret qua OpenIG, secret phải là strong random alphanumeric-only (không chứa `+`, `/`, `=`).
 
 Ghi chú về deployment hiện tại (port, reverse proxy đang dùng, v.v.):
 

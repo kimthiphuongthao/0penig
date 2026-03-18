@@ -5,9 +5,10 @@
 > **Môi trường:** Docker Compose local, macOS host
 
 > Update 2026-03-17: Historical baseline below is retained. Pattern Consolidation Steps 1-6 are now complete, and a supplemental Step 5 verification block is appended at the end of this report.
+> Update 2026-03-18: Stack C Grafana SSO/SLO re-validation passed after rotating APP5 to an alphanumeric-only secret and recreating the Stack C OpenIG containers. The earlier Base64-padding theory is superseded: the verified root cause was OpenIG `OAuth2ClientFilter` not URL-encoding `client_secret`, so `+` in the secret broke client authentication.
 
-> [!warning]
-> Current end-of-session status (2026-03-17): Stack C Grafana SSO is BROKEN / pending fix. The working session finding is an APP5 OIDC secret mismatch caused by losing the trailing `=` padding during secret copy/sync. Historical PASS entries below are preserved for traceability, but they are not the current live verdict for Grafana.
+> [!success]
+> Current live verdict (2026-03-18): Stack C Grafana is PASS. Historical PASS/FAIL entries below are preserved for traceability; use the 2026-03-18 addendum at the end as the authoritative current-state result for APP5.
 
 ---
 
@@ -418,9 +419,10 @@ docker exec sso-redis-a redis-cli get "blacklist:<SESSION_ID>"
 - **Kết quả:** Inline path hoạt động đúng, không có regression sau Step 4/5 consolidation.
 - **Đánh giá:** Stack C logout path vẫn tương thích với `HttpBasicAuthFilter` I/O dispatcher flow.
 
-### TC-STEP5-04 — Grafana SSO re-validation ⚠️ BLOCKED / FIX PENDING
+### TC-STEP5-04 — Grafana SSO re-validation ✅ PASS
 
-- **Ngày phát hiện:** 2026-03-17 cuối phiên.
-- **Triệu chứng:** Grafana App5 trả lỗi `invalid_client` / `Invalid client credentials`.
-- **Kết luận làm việc:** `OIDC_CLIENT_SECRET_APP5` đã từng bị copy/sync sai do mất dấu `=` cuối chuỗi Base64, làm giá trị 44 ký tự bị rút còn 43 ký tự.
-- **Trạng thái:** Chưa đóng. Cần re-verify cùng một giá trị bí mật trên `stack-c/.env`, Keycloak client `openig-client-c-app5`, và environment thực tế của các container `openig-c1` / `openig-c2`.
+- **Ngày đóng:** 2026-03-18.
+- **Triệu chứng ban đầu:** Grafana App5 trả lỗi `invalid_client` / `invalid_client_credentials`.
+- **Root cause confirmed:** OpenIG `OAuth2ClientFilter` gửi `client_secret` raw trong `application/x-www-form-urlencoded` body. Khi APP5 secret chứa `+`, Keycloak decode `+` thành space. Giả thuyết cũ về mất dấu `=` đã bị thay thế bởi kết luận này.
+- **Fix:** Rotate `OIDC_CLIENT_SECRET_APP5` sang giá trị strong random alphanumeric-only, đồng bộ `stack-c/.env` + Keycloak client `openig-client-c-app5`, rồi recreate `stack-c-openig-c1-1` và `stack-c-openig-c2-1` (fix commit `a403b3d`).
+- **Kết quả:** User confirmed Grafana SSO + SLO hoạt động end-to-end sau fix.

@@ -3,7 +3,7 @@
 **Purpose:** Tài liệu reference để đối chiếu với hiện trạng triển khai và tìm gaps
 **Sources:** Claude (Exa MCP) + Codex (web search) + Gemini (deep research)
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. The live lab now uses consolidated SessionBlacklistFilter / BackchannelLogoutHandler / SloHandler templates; STEP-02 rotated Stack C OIDC secrets; STEP-03 moved compose secrets into gitignored `.env` files and pinned OpenIG to `6.0.1`.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. The live lab now uses consolidated SessionBlacklistFilter / BackchannelLogoutHandler / SloHandler templates; STEP-02 rotated Stack C OIDC secrets; STEP-03 moved compose secrets into gitignored `.env` files and pinned OpenIG to `6.0.1`. Operational follow-up 2026-03-18: Stack C Grafana re-validation passed after rotating APP5 to an alphanumeric-only secret because OpenIG `OAuth2ClientFilter` does not URL-encode `client_secret`.
 
 ---
 
@@ -331,6 +331,8 @@ Score per control: `0 = missing`, `1 = partial`, `2 = adequate`
 As of 2026-03-17 (Pattern Consolidation Steps 1-6), all gateway Groovy scripts follow a parameterized template architecture. New app integrations should copy these templates and configure via route JSON args.
 
 Runtime note: pin OpenIG images to `openidentityplatform/openig:6.0.1`. Do not use the mutable `latest` tag, because `latest=6.0.2` moved to a Tomcat 11 build that breaks OpenIG 6 startup.
+
+OpenIG compatibility note: when `OAuth2ClientFilter` consumes an OIDC `clientSecret`, generate a strong random alphanumeric-only value. Avoid Base64 secrets containing `+`, `/`, or `=` because OpenIG 6 sends `client_secret` without URL-encoding in the token request body.
 
 ### Available Templates (per stack)
 

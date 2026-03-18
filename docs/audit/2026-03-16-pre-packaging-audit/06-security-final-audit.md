@@ -5,7 +5,7 @@
 **Scope:** All OpenIG gateway code, nginx, docker-compose, Vault across 3 stacks
 **Risk Level:** MEDIUM
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. HIGH finding S-6 was resolved in Step 4 (`3b8a6d8`), Step 5 resolved S-4 (`5ae657e`), S-5 (`aaf66d5`), S-15 (`aaf66d5`), and S-16 (`aaf66d5`), STEP-02 resolved S-9 (`37672ed`), and STEP-03 resolved S-3 (`b738577`). Historical severity counts below remain the original audit snapshot.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. HIGH finding S-6 was resolved in Step 4 (`3b8a6d8`), Step 5 resolved S-4 (`5ae657e`), S-5 (`aaf66d5`), S-15 (`aaf66d5`), and S-16 (`aaf66d5`), STEP-02 resolved S-9 (`37672ed`), and STEP-03 resolved S-3 (`b738577`). Follow-up 2026-03-18: APP5 was re-rotated to a strong alphanumeric-only secret after confirming OpenIG `OAuth2ClientFilter` does not URL-encode `client_secret`. Historical severity counts below remain the original audit snapshot.
 
 ---
 
@@ -72,7 +72,7 @@
 |---|---------|----------|
 | S-7 | No security response headers on nginx (X-Frame-Options, CSP, etc.) | A05 |
 | S-8 | JwtSession cookies lack Secure/SameSite flags | A07 |
-| S-9 | Weak OIDC client secrets Stack C ("secret-c") — RESOLVED in STEP-02 (`37672ed`) | A07 |
+| S-9 | Weak OIDC client secrets Stack C ("secret-c") — RESOLVED in STEP-02 (`37672ed`); APP5 re-validated 2026-03-18 with an OpenIG-compatible alphanumeric-only secret | A07 |
 | S-10 | OpenIG containers run as root (Stacks A/B) | A05 |
 | S-11 | Vault TLS disabled + UI enabled | A02 |
 | S-12 | Vault UI enabled (accessible from Docker network) | A05 |

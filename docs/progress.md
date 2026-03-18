@@ -78,10 +78,10 @@
 - [x] Gap report written: `docs/audit/2026-03-17-production-readiness-gap-report.md` (`26e8e69`)
 - [x] 64-file maintenance inventory completed
 - [x] STEP-01 (L-5): xóa `PhpMyAdminCookieFilter.groovy` dead code (`20d523f`)
-- [x] STEP-02 (M-5/S-9): rotate Stack C OIDC client secrets sang giá trị mạnh 44 ký tự (`37672ed`)
+- [x] STEP-02 (M-5/S-9): rotate Stack C OIDC client secrets away from weak literal `secret-c` (`37672ed`)
 - [x] STEP-03 (H-5/S-3): externalize secret sang `.env` + pin toàn bộ OpenIG images về `openidentityplatform/openig:6.0.1` (`b738577`)
 - [x] End-of-session doc audit sync: roadmap, audit docs, test docs, rules, và state notes đã phản ánh STEP-01/02/03
-- [ ] Current blocker: Grafana SSO re-validation pending — `OIDC_CLIENT_SECRET_APP5` cần được verify end-to-end, bao gồm trailing `=` padding
-- [ ] Next: xử lý Grafana SSO blocker rồi tiếp tục P1 backlog (`H-4/S-2`, `H-7/A-1`, `A-6/A-7/M-13/S-17`)
+- [x] Stack C Grafana SSO/SLO re-validation PASS: confirmed OpenIG `OAuth2ClientFilter` does not URL-encode `client_secret`; APP5 rotated to alphanumeric-only secret, Stack C OpenIG containers recreated, user confirmed end-to-end flow (`a403b3d`)
+- [ ] Next: tiếp tục P1 backlog (`H-4/S-2`, `H-7/A-1`, `A-6/A-7/M-13/S-17`)
 
 ---

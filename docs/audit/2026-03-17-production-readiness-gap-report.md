@@ -10,7 +10,7 @@ This report captures the 2026-03-17 production-readiness gap assessment for SSO 
 
 Resolved work now covers 38 findings and materially improved the gateway baseline. The resolved work includes the JWKS cache race, `SloHandler` try-catch hardening, TTL unit standardization, consolidation of `SessionBlacklistFilter` / `BackchannelLogoutHandler` / `SloHandler`, `vault/keys/` repo hygiene, Redmine direct-port exposure removal, Stack C nginx buffer alignment, `CANONICAL_ORIGIN_*` environment variables, dead-code cleanup, Stack C OIDC client secret rotation, and STEP-03 secret externalization plus OpenIG image pinning.
 
-Operational follow-up outside the scorecard: Stack C Grafana SSO is currently blocked pending APP5 secret re-validation. Generated Base64 secrets must remain byte-for-byte identical across `.env`, Keycloak, and the running containers; losing the trailing `=` padding creates an `invalid_client` failure.
+Operational follow-up after the scorecard: Stack C Grafana SSO/SLO was re-validated successfully on 2026-03-18. The earlier APP5 padding theory was superseded; the verified root cause was OpenIG `OAuth2ClientFilter` not URL-encoding `client_secret`, so APP5 now uses a strong alphanumeric-only secret and the recreated Stack C OpenIG containers are confirmed working.
 
 The remaining 37 open findings are concentrated in three categories that matter for a reusable reference solution:
 
@@ -47,9 +47,9 @@ These items block production-reference status because they either leave an activ
 
 ### M-5/S-9: Stack C weak OIDC client secrets [RESOLVED]
 - Files: `stack-c/docker-compose.yml`
-- Finding: RESOLVED — `OIDC_CLIENT_SECRET_APP5` and `OIDC_CLIENT_SECRET_APP6` were rotated away from the trivially guessable value `secret-c` to strong 44-character secrets, and the Keycloak client configuration was updated to match.
+- Finding: RESOLVED — Stack C clients were rotated away from the trivially guessable value `secret-c` in STEP-02, and APP5 was re-rotated on 2026-03-18 to a strong alphanumeric-only secret after confirming OpenIG `OAuth2ClientFilter` does not URL-encode `client_secret`.
 - Impact: Stack C no longer ships trivially guessable OIDC client credentials in a production-readiness reference path.
-- Fix approach: Completed. Keep the strong-random secret generation requirement documented in the gateway pattern.
+- Fix approach: Completed. Keep the strong-random secret generation requirement documented in the gateway pattern, and require alphanumeric-only values whenever OpenIG `OAuth2ClientFilter` consumes the secret.
 - Effort: LOW
 
 ### A-6/A-7/M-13/S-17: Keycloak URLs hardcoded in Stack A and Stack C routes
@@ -193,7 +193,7 @@ These items remain acceptable only as explicitly documented lab constraints. The
 | H-8 | `SessionBlacklistFilterApp2` divergent Base64 | File deleted in consolidation (commit `832bbae`) |
 | H-9 | Stack C nginx proxy buffer missing | Added `proxy_buffer_size 128k` (commit `f86c7eb`) |
 | M-2 | `CANONICAL_ORIGIN_*` env vars missing A/B | Added to docker-compose A+B (commit `aaf66d5`) |
-| M-5/S-9 | Stack C weak OIDC client secrets | Rotated `OIDC_CLIENT_SECRET_APP5` and `OIDC_CLIENT_SECRET_APP6` to strong 44-character values and updated Keycloak clients to match (commit `37672ed`) |
+| M-5/S-9 | Stack C weak OIDC client secrets | Rotated away from `secret-c` in STEP-02 (`37672ed`); APP5 re-validated 2026-03-18 with an alphanumeric-only secret compatible with OpenIG (`a403b3d`) |
 | M-4 | Stack A `SloHandler` hardcoded Keycloak URL | Parameterized via `KEYCLOAK_BROWSER_URL` env (commit `3b8a6d8`) |
 | M-14 | `App1ResponseRewriter.groovy` dead code | Deleted (commit `f86c7eb`) |
 | Pattern | `SessionBlacklistFilter` 6 copies -> 1 template | Three per-stack parameterized copies via args (commits `a76e194`, `832bbae`) |

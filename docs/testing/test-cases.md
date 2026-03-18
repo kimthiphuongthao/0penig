@@ -3,8 +3,8 @@ Thông tin cấu hình môi trường phục vụ việc kiểm thử hệ thố
 
 > Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. The Step 5 validation run passed for all 5 backchannel logout clients, all 5 logout-capable apps, and the phpMyAdmin inline `failureHandler` path.
 
-> [!warning]
-> Current end-of-session blocker (2026-03-17): Stack C Grafana SSO is pending re-test after the APP5 OIDC secret sync issue. `OIDC_CLIENT_SECRET_APP5` must match exactly across `stack-c/.env`, Keycloak, and the running OpenIG containers; generated Base64 values can legitimately end with `=` and must stay 44 characters, not 43.
+> [!success]
+> Current live status (2026-03-18): Stack C Grafana SSO/SLO re-validation passed. Root cause was OpenIG `OAuth2ClientFilter` sending `client_secret` without URL-encoding; APP5 now uses a strong alphanumeric-only secret and Stack C OpenIG containers were recreated after the rotation.
 
 ### URLs truy cập từ Browser (Host Machine)
 Cần cấu hình file `/etc/hosts` trên máy host trỏ các domain sau về `127.0.0.1`.
@@ -115,7 +115,7 @@ Kiểm chứng tính bảo mật của gateway.
 ## 9. Stack C — App5 Grafana (Header-based Auth)
 Kiểm chứng cơ chế xác thực dựa trên trusted headers.
 
-**Precondition (2026-03-17):** verify `OIDC_CLIENT_SECRET_APP5` is identical in `.env`, Keycloak, and the running Stack C OpenIG containers before executing TC-901 through TC-903.
+**Operational note (2026-03-18):** APP5 is working with an alphanumeric-only OIDC client secret. If `invalid_client_credentials` returns, verify `OIDC_CLIENT_SECRET_APP5` matches exactly across `stack-c/.env`, Keycloak, and the running Stack C OpenIG containers, then recreate both Stack C OpenIG containers after any secret change.
 
 | ID | Tên | Stack | Mô tả | Expected Result | Lý giải |
 |:---|:---|:---|:---|:---|:---|

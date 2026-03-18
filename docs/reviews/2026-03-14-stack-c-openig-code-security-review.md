@@ -16,7 +16,7 @@ Stack C carries the same core gateway weaknesses already seen in earlier stacks:
 - F7 resolved in FIX-03/04 (`278a29c`) — Redis socket timeouts added.
 - F8 resolved in FIX-05 (`9b770cd`) — internal backchannel failures now return `500`.
 - F9 resolved in FIX-08 (`7fc73ba`) plus Step 5 env rollout (`aaf66d5`) — redirects now use pinned origins.
-- F4 remains an explicit lab exception (HTTP transport). Current operational blocker outside this review: Grafana SSO still needs APP5 secret re-validation after the Base64-padding mismatch investigation.
+- F4 remains an explicit lab exception (HTTP transport). Operational follow-up closed 2026-03-18: Grafana SSO/SLO re-validation passed after rotating APP5 to a strong alphanumeric-only secret; the prior padding theory was superseded by the confirmed OpenIG `client_secret` URL-encoding limitation.
 
 The strongest implementation in Stack C is still the backchannel logout token validator. It performs explicit `alg` pinning, JWKS lookup, RSA signature verification, and `iss`/`aud`/`events`/`iat`/`exp` checks before writing revocation state. The problem is not token validation correctness; it is the surrounding session, transport, and failure-mode design.
 
