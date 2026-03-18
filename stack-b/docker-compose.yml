@@ -68,6 +68,8 @@ services:
     networks:
       - backend-b
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/openig/api/info"]
       interval: 30s
@@ -109,6 +111,8 @@ services:
     networks:
       - backend-b
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/openig/api/info"]
       interval: 30s

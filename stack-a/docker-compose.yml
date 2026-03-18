@@ -77,6 +77,14 @@ services:
     networks:
       - backend
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/openig/api/info"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   # ----------------------------------------------------------
   # OpenIG node 2 — identical config to node 1
@@ -111,6 +119,14 @@ services:
     networks:
       - backend
     restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/openig/api/info"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
   # ----------------------------------------------------------
   # WordPress — Legacy App (simulated)

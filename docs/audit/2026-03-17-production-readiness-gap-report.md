@@ -6,17 +6,17 @@ Status: NOT READY
 
 ## Executive Summary
 
-This report captures the 2026-03-17 production-readiness gap assessment for SSO Lab, cross-referencing the 2026-03-16 pre-packaging audit against the current codebase. The current state is **NOT READY** for release as a production reference solution: **35 findings remain open, 6 are partial, and 40 are resolved** out of 81 checks.
+This report captures the 2026-03-17 production-readiness gap assessment for SSO Lab, cross-referencing the 2026-03-16 pre-packaging audit against the current codebase. The current state is **NOT READY** for release as a production reference solution: **20 findings remain open, 6 are partial, and 55 are resolved** out of 81 checks.
 
-Resolved work now covers 40 findings and materially improved the gateway baseline. The resolved work includes the JWKS cache race, `SloHandler` try-catch hardening, TTL unit standardization, consolidation of `SessionBlacklistFilter` / `BackchannelLogoutHandler` / `SloHandler`, `vault/keys/` repo hygiene, Redmine direct-port exposure removal, Stack C nginx buffer alignment, `CANONICAL_ORIGIN_*` environment variables, dead-code cleanup, Stack C OIDC client secret rotation, STEP-03 secret externalization plus OpenIG image pinning, and STEP-04 Redis authentication hardening.
+Resolved work now covers 55 findings and materially improved the gateway baseline. The resolved work includes the JWKS cache race, `SloHandler` try-catch hardening, TTL unit standardization, consolidation of `SessionBlacklistFilter` / `BackchannelLogoutHandler` / `SloHandler`, `vault/keys/` repo hygiene, Redmine direct-port exposure removal, Stack C nginx buffer alignment, `CANONICAL_ORIGIN_*` environment variables, dead-code cleanup, Stack C OIDC client secret rotation, STEP-03 secret externalization plus OpenIG image pinning, STEP-04 Redis authentication hardening, STEP-05 Keycloak URL externalization, STEP-06 Stack C compose parity plus Stack A OpenIG healthchecks, STEP-07 Vault `502` alignment, STEP-08 EOF fail-closed behavior, STEP-09 Base64 URL decoding simplification, STEP-10 Stack C timeout alignment, STEP-11 Linux `extra_hosts` portability, and STEP-12 nginx baseline security headers.
 
 Operational follow-up after the scorecard: Stack C Grafana SSO/SLO was re-validated successfully on 2026-03-18. The earlier APP5 padding theory was superseded; the verified root cause was OpenIG `OAuth2ClientFilter` not URL-encoding `client_secret`, so APP5 now uses a strong alphanumeric-only secret and the recreated Stack C OpenIG containers are confirmed working.
 
-The remaining 35 open findings are concentrated in three categories that matter for a reusable reference solution:
+The remaining 20 open findings are concentrated in three categories that matter for a reusable reference solution:
 
-- Security: browser security headers and cookie flags are incomplete, and transport-hardening work remains deferred outside the HTTP-only lab exception.
-- Architecture: Stack C is not yet parity-aligned with the Stack A/B reference pattern, Keycloak endpoint configuration is still hardcoded in Stack A/C routes, and Linux portability remains incomplete because `host.docker.internal` is assumed.
-- Code quality and operational consistency: several low-effort Groovy and nginx fixes remain open, including EOF handling, Base64 decoding simplification, and inconsistent upstream error semantics.
+- Security: cookie flags are still incomplete, transport hardening remains deferred outside the HTTP-only lab exception, and OpenIG still runs as root in Stack A and Stack B.
+- Architecture and documentation: the lab still needs explicit Keycloak single-point-of-failure guidance in the deliverables, and the documented lab exceptions must remain visible so the HTTP and Vault deferments are not mistaken for production defaults.
+- Code quality and operational consistency: several low-effort cleanup items remain open, including hardcoded Redis literals, Groovy log-prefix consistency, Jellyfin-specific logout/device-ID edge cases, and duplicated Vault AppRole logic.
 
 The most important conclusion is that the lab now demonstrates a strong reference pattern shape, but it is not yet publishable as a copy-paste production reference. The blocking work is concentrated in gateway-side assets only: `docker-compose.yml`, OpenIG route JSON, Groovy scripts, and `nginx.conf`.
 
@@ -38,11 +38,11 @@ These items block production-reference status because they either leave an activ
 - Fix approach: Completed. Keep `.env.example` as the committed contract, never commit `.env`, and always pin OpenIG image versions explicitly.
 - Effort: MEDIUM
 
-### H-7/A-1: Stack C docker-compose parity gap vs Stack A/B reference
-- Files: `stack-c/docker-compose.yml`
-- Finding: Stack C is still materially behind Stack A/B in production-shape compose controls. It is missing items such as `platform`, health checks, `KEYCLOAK_INTERNAL_URL`, `OPENIG_NODE_NAME`, explicit `container_name`, and restart-policy consistency.
-- Impact: Stack C is not a faithful instance of the consolidated reference pattern. That breaks the core goal of SSO Lab as a reusable copy-paste reference across multiple legacy-integration styles.
-- Fix approach: Align `stack-c/docker-compose.yml` with `stack-a/docker-compose.yml` as the reference baseline, then keep only the stack-specific service differences that are intentional.
+### H-7/A-1: Stack C docker-compose parity gap vs Stack A/B reference [RESOLVED]
+- Files: `stack-a/docker-compose.yml`, `stack-c/docker-compose.yml`
+- Finding: RESOLVED on 2026-03-18 — Stack C now carries the same compose baseline controls as the Stack A/B reference pattern, including explicit `container_name`, `restart`, `platform`, `OPENIG_NODE_NAME`, `KEYCLOAK_INTERNAL_URL`, and `/openig/api/info` healthchecks. The same batch also aligned Stack A OpenIG services to the same healthcheck contract.
+- Impact: Stack C is now a faithful instance of the consolidated reference pattern, and all three stacks share the same OpenIG health probe shape for operations and smoke testing.
+- Fix approach: Completed on 2026-03-18. Keep future Stack C compose drift intentional and documented, and retain the shared `/openig/api/info` healthcheck baseline across all OpenIG services.
 - Effort: MEDIUM
 
 ### M-5/S-9: Stack C weak OIDC client secrets [RESOLVED]
@@ -52,11 +52,11 @@ These items block production-reference status because they either leave an activ
 - Fix approach: Completed. Keep the strong-random secret generation requirement documented in the gateway pattern, and require alphanumeric-only values whenever OpenIG `OAuth2ClientFilter` consumes the secret.
 - Effort: LOW
 
-### A-6/A-7/M-13/S-17: Keycloak URLs hardcoded in Stack A and Stack C routes
+### A-6/A-7/M-13/S-17: Keycloak URLs hardcoded in Stack A and Stack C routes [RESOLVED]
 - Files: `stack-a/openig_home/config/routes/01-wordpress.json`, `stack-a/openig_home/config/routes/02-app2.json`, `stack-a/openig_home/config/routes/00-backchannel-logout-app1.json`, `stack-c/openig_home/config/routes/10-grafana.json`, `stack-c/openig_home/config/routes/11-phpmyadmin.json`, `stack-c/openig_home/config/routes/00-backchannel-logout-app5.json`, `stack-c/openig_home/config/routes/00-backchannel-logout-app6.json`
-- Finding: `issuer`, `jwksUri`, `authorize`, `token`, `userinfo`, and `endSession` endpoints remain hardcoded in Stack A and Stack C route JSON. Stack B already uses the env-driven reference pattern.
-- Impact: Keycloak endpoint changes still require multi-file route edits in two stacks. That undermines the parameterized reference pattern and makes rollout, reuse, and portability error-prone.
-- Fix approach: Align Stack A and Stack C with the Stack B route pattern by sourcing browser-facing and internal Keycloak endpoints from `KEYCLOAK_BROWSER_URL` and `KEYCLOAK_INTERNAL_URL` route args or environment-backed expressions.
+- Finding: RESOLVED on 2026-03-18 — Stack A and Stack C route JSON now externalize browser-facing Keycloak values through `KEYCLOAK_BROWSER_URL` and server-to-server token, userinfo, and JWKS calls through `KEYCLOAK_INTERNAL_URL`. The hardcoded route literals and route-level `endSession` wiring were removed.
+- Impact: Keycloak endpoint changes are now environment-only updates rather than multi-file route edits, and all three stacks share the same env-driven route pattern.
+- Fix approach: Completed on 2026-03-18. Keep `issuer` and browser-facing authorize/logout semantics on `KEYCLOAK_BROWSER_URL`, and keep `tokenEndpoint`, `userInfoEndpoint`, and `jwksUri` on `KEYCLOAK_INTERNAL_URL`.
 - Effort: MEDIUM
 
 ### L-5: PhpMyAdminCookieFilter.groovy dead code [RESOLVED]
@@ -70,25 +70,25 @@ These items block production-reference status because they either leave an activ
 
 These items are not the primary blockers, but they should be completed before calling the lab production-quality and operationally consistent.
 
-### M-11: readRespLine does not throw on EOF in BackchannelLogoutHandler
+### M-11: readRespLine does not throw on EOF in BackchannelLogoutHandler [RESOLVED]
 - Files: `stack-a/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy`, `stack-b/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy`, `stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy`
-- Finding: The `readRespLine` helper returns silently on `-1` instead of throwing `IOException` when Redis closes the connection unexpectedly.
-- Impact: Backchannel logout can fail silently on connection drops, which weakens revocation correctness and makes failures harder to detect.
-- Fix approach: Throw `new IOException("EOF")` on `-1`, matching the already-hardened behavior in `SessionBlacklistFilter.groovy`.
+- Finding: RESOLVED on 2026-03-18 — `readRespLine` now throws `IOException("EOF")` on unexpected Redis socket closure in all three `BackchannelLogoutHandler` copies.
+- Impact: Backchannel logout now fails closed on unexpected connection termination instead of swallowing the failure, which improves revocation correctness and operator visibility.
+- Fix approach: Completed on 2026-03-18. Keep EOF handling identical to the hardened `SessionBlacklistFilter.groovy` behavior.
 - Effort: LOW
 
-### M-12: base64UrlDecode manual padding in BackchannelLogoutHandler
+### M-12: base64UrlDecode manual padding in BackchannelLogoutHandler [RESOLVED]
 - Files: `stack-a/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy`, `stack-b/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy`, `stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy`
-- Finding: The helper manually calculates Base64 URL padding before decoding.
-- Impact: The current code works, but the extra logic is unnecessary and increases maintenance risk in a security-sensitive parsing path.
-- Fix approach: Replace the helper implementation with `java.util.Base64.getUrlDecoder().decode(input)` and rely on the standard decoder behavior.
+- Finding: RESOLVED on 2026-03-18 — all three `BackchannelLogoutHandler` copies now rely directly on `java.util.Base64.getUrlDecoder().decode(input)` without manual padding logic.
+- Impact: The logout-token parsing path is simpler and lower-risk while preserving the same Java 8+ decoding behavior.
+- Fix approach: Completed on 2026-03-18. Keep the helper thin and rely on the standard URL-safe decoder rather than duplicating padding logic in gateway code.
 - Effort: LOW
 
-### M-3/S-7: No security response headers on nginx
+### M-3/S-7: No security response headers on nginx [RESOLVED]
 - Files: `stack-a/nginx/nginx.conf`, `stack-b/nginx/nginx.conf`, `stack-c/nginx/nginx.conf`
-- Finding: nginx does not set security headers such as HSTS, `X-Frame-Options`, `X-Content-Type-Options`, or `Content-Security-Policy`.
-- Impact: The reference gateway omits basic browser hardening controls that production consumers will expect as table-stakes.
-- Fix approach: Add `add_header` directives in the nginx `http` block and document which headers are lab-safe over HTTP versus production-required with TLS.
+- Finding: RESOLVED on 2026-03-18 — all three nginx configs now set `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, and `Referrer-Policy: strict-origin-when-cross-origin`. `Content-Security-Policy` remains intentionally omitted pending app-specific tuning, and HSTS remains deferred until TLS exists.
+- Impact: The reference gateway now includes the baseline browser hardening headers that are safe in the current HTTP lab without shipping a misleading shared CSP policy.
+- Fix approach: Completed on 2026-03-18. Keep these headers in the nginx `http` block, add CSP only per application after validation, and enable HSTS only when real TLS termination is in place.
 - Effort: LOW
 
 ### M-4/S-8: JwtSession cookies lack Secure and SameSite flags
@@ -105,25 +105,25 @@ These items are not the primary blockers, but they should be completed before ca
 - Fix approach: Remove `user: root` or switch to a dedicated non-root UID after validating mounted-volume and entrypoint compatibility with the OpenIG image.
 - Effort: LOW
 
-### M-9/Code-M6: Vault error status inconsistency
+### M-9/Code-M6: Vault error status inconsistency [RESOLVED]
 - Files: `stack-a/openig_home/scripts/groovy/VaultCredentialFilter.groovy`, `stack-b/openig_home/scripts/groovy/VaultCredentialFilterRedmine.groovy`, `stack-c/openig_home/scripts/groovy/VaultCredentialFilter.groovy`
-- Finding: Stack A returns `502 BAD_GATEWAY` when Vault auth fails, while Stack B and Stack C return `500`.
-- Impact: The same upstream dependency failure yields different API contracts across stacks, which makes troubleshooting and pattern reuse inconsistent.
-- Fix approach: Standardize all Vault auth/read upstream failures to `502 BAD_GATEWAY`.
+- Finding: RESOLVED on 2026-03-18 — Stack B and Stack C Vault credential filters now return `502 BAD_GATEWAY` for Vault auth/read upstream failures, matching Stack A.
+- Impact: Vault dependency failures now yield one consistent gateway contract across all three stacks, which improves troubleshooting and pattern reuse.
+- Fix approach: Completed on 2026-03-18. Keep Vault auth/read failures mapped to `502 BAD_GATEWAY` everywhere the gateway depends on Vault as an upstream service.
 - Effort: LOW
 
-### A-3/S-14: Stack C nginx proxy timeout missing
+### A-3/S-14: Stack C nginx proxy timeout missing [RESOLVED]
 - Files: `stack-c/nginx/nginx.conf`
-- Finding: Stack C does not explicitly set `proxy_connect_timeout` or `proxy_read_timeout`, unlike Stack A/B.
-- Impact: Stack C depends on nginx defaults instead of the standardized gateway tuning already present in the other stacks.
-- Fix approach: Add timeout directives matching Stack A/B.
+- Finding: RESOLVED on 2026-03-18 — Stack C now explicitly sets `proxy_connect_timeout 3s`, `proxy_read_timeout 60s`, and `proxy_send_timeout 60s` on the same user-facing and backchannel proxy paths as the other stacks.
+- Impact: Stack C now uses the same standardized gateway timeout profile as the reference baseline instead of relying on nginx defaults.
+- Fix approach: Completed on 2026-03-18. Keep Stack C timeout values aligned with Stack A/B unless a stack-specific variance is documented and tested.
 - Effort: LOW
 
-### A-4: host.docker.internal not portable on Linux
+### A-4: host.docker.internal not portable on Linux [RESOLVED]
 - Files: `stack-a/docker-compose.yml`, `stack-c/docker-compose.yml`, `stack-a/openig_home/config/routes/00-backchannel-logout-app1.json`, `stack-c/openig_home/config/routes/00-backchannel-logout-app5.json`, `stack-c/openig_home/config/routes/00-backchannel-logout-app6.json`, `stack-c/openig_home/config/routes/10-grafana.json`, `stack-c/openig_home/config/routes/11-phpmyadmin.json`
-- Finding: Stack A and Stack C route or compose wiring assumes `host.docker.internal`, which resolves automatically on Docker Desktop but not on Linux without explicit host-gateway mapping.
-- Impact: The reference solution is not portable across the most common Docker host environments.
-- Fix approach: Add `extra_hosts: host.docker.internal:host-gateway` to the relevant compose services and call the Linux portability requirement out in the integration guide.
+- Finding: RESOLVED on 2026-03-18 — all six OpenIG services now declare `extra_hosts: host.docker.internal:host-gateway`, so Stack A and Stack C no longer depend on Docker Desktop-only hostname magic for internal Keycloak reachability.
+- Impact: The reference solution is now portable across Linux and Docker Desktop hosts without route or compose rewrites.
+- Fix approach: Completed on 2026-03-18. Keep the host-gateway mapping on every OpenIG service that uses `host.docker.internal` in env-backed route configuration.
 - Effort: LOW
 
 ## Lab Exceptions (Acceptable with documentation)
@@ -165,18 +165,18 @@ These items remain acceptable only as explicitly documented lab constraints. The
 |----------|----|---------|--------|
 | P1-MUST | H-4/S-2 | Redis authentication [RESOLVED 2026-03-18] | MEDIUM |
 | P1-MUST | H-5/S-3 | Secrets out of docker-compose to `.env` + OpenIG image pin [RESOLVED] | MEDIUM |
-| P1-MUST | H-7/A-1 | Stack C docker-compose parity | MEDIUM |
-| P1-MUST | A-6/A-7 | Keycloak URL externalization Stack A+C | MEDIUM |
+| P1-MUST | H-7/A-1 | Stack C docker-compose parity + Stack A healthcheck baseline [RESOLVED 2026-03-18] | MEDIUM |
+| P1-MUST | A-6/A-7 | Keycloak URL externalization Stack A+C [RESOLVED 2026-03-18] | MEDIUM |
 | P1-MUST | M-5/S-9 | Stack C weak OIDC secrets [RESOLVED] | LOW |
 | P1-MUST | L-5 | `PhpMyAdminCookieFilter` dead code | LOW |
-| P2-SHOULD | M-11 | `readRespLine` EOF in `BackchannelLogoutHandler` | LOW |
-| P2-SHOULD | M-12 | `base64UrlDecode` manual padding | LOW |
-| P2-SHOULD | M-3/S-7 | nginx security headers | LOW |
+| P2-SHOULD | M-11 | `readRespLine` EOF in `BackchannelLogoutHandler` [RESOLVED 2026-03-18] | LOW |
+| P2-SHOULD | M-12 | `base64UrlDecode` manual padding [RESOLVED 2026-03-18] | LOW |
+| P2-SHOULD | M-3/S-7 | nginx security headers [RESOLVED 2026-03-18] | LOW |
 | P2-SHOULD | M-4/S-8 | Cookie `Secure` / `SameSite` flags | LOW |
 | P2-SHOULD | M-6/S-10 | OpenIG non-root user | LOW |
-| P2-SHOULD | M-9 | Vault error status `502` consistency | LOW |
-| P2-SHOULD | A-3 | Stack C nginx timeouts | LOW |
-| P2-SHOULD | A-4 | `host.docker.internal` Linux portability | LOW |
+| P2-SHOULD | M-9 | Vault error status `502` consistency [RESOLVED 2026-03-18] | LOW |
+| P2-SHOULD | A-3 | Stack C nginx timeouts [RESOLVED 2026-03-18] | LOW |
+| P2-SHOULD | A-4 | `host.docker.internal` Linux portability [RESOLVED 2026-03-18] | LOW |
 | P3-NICE | L-1, L-2, L-3, L-4, L-6, A-10 | Low severity improvements | LOW |
 | P3-NICE | Code-M3 | `VaultCredentialFilter` consolidation | MEDIUM |
 
@@ -193,10 +193,18 @@ These items remain acceptable only as explicitly documented lab constraints. The
 | H-6 | JWKS TTL unit inconsistency | Standardized to seconds (commit `4d8f065`) |
 | H-8 | `SessionBlacklistFilterApp2` divergent Base64 | File deleted in consolidation (commit `832bbae`) |
 | H-9 | Stack C nginx proxy buffer missing | Added `proxy_buffer_size 128k` (commit `f86c7eb`) |
+| H-7/A-1 | Stack C compose parity + Stack A healthcheck baseline | Stack C compose now matches the shared OpenIG baseline for names, restart policy, platform, node identity, and healthchecks; Stack A OpenIG now uses the same `/openig/api/info` healthcheck contract (2026-03-18) |
+| A-6/A-7/M-13/S-17 | Keycloak URLs externalized in Stack A/C | Routes now use `KEYCLOAK_BROWSER_URL` for browser-facing issuer/authorize semantics and `KEYCLOAK_INTERNAL_URL` for token, userinfo, and JWKS calls (2026-03-18) |
 | M-2 | `CANONICAL_ORIGIN_*` env vars missing A/B | Added to docker-compose A+B (commit `aaf66d5`) |
 | M-5/S-9 | Stack C weak OIDC client secrets | Rotated away from `secret-c` in STEP-02 (`37672ed`); APP5 re-validated 2026-03-18 with an alphanumeric-only secret compatible with OpenIG (`a403b3d`) |
+| M-9/Code-M6 | Vault upstream failures standardized to `502` | Stack B/C Vault credential filters now return `502 BAD_GATEWAY` for Vault auth/read failures, matching Stack A (2026-03-18) |
+| M-11 | EOF handling in `readRespLine` | Unexpected Redis EOF now throws `IOException` and fails closed in all three backchannel handlers (2026-03-18) |
+| M-12 | Base64 URL decoder simplification | Manual padding logic removed; Java's standard URL decoder now handles the logout-token decode path (2026-03-18) |
 | M-4 | Stack A `SloHandler` hardcoded Keycloak URL | Parameterized via `KEYCLOAK_BROWSER_URL` env (commit `3b8a6d8`) |
 | M-14 | `App1ResponseRewriter.groovy` dead code | Deleted (commit `f86c7eb`) |
+| A-3/S-14 | Stack C nginx timeouts aligned | Stack C now uses the standardized `3s` connect and `60s` read/send timeout profile on user-facing and backchannel proxy paths (2026-03-18) |
+| A-4 | Linux portability for `host.docker.internal` | `extra_hosts: host.docker.internal:host-gateway` added to all six OpenIG services (2026-03-18) |
+| M-3/S-7 | nginx security headers | Added `X-Frame-Options`, `X-Content-Type-Options`, and `Referrer-Policy`; CSP intentionally omitted pending app-specific tuning, HSTS deferred until TLS (2026-03-18) |
 | Pattern | `SessionBlacklistFilter` 6 copies -> 1 template | Three per-stack parameterized copies via args (commits `a76e194`, `832bbae`) |
 | Pattern | `BackchannelLogoutHandler` 3 copies -> 1 template | Three per-stack parameterized copies via args (commit `4d8f065`) |
 | Pattern | `SloHandler` 5 copies -> 2 templates | Standard + Jellyfin-specific (commit `3b8a6d8`) |

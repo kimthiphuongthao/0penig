@@ -99,7 +99,7 @@ try {
     if (credsStatus == 403) {
         // Token rejected — invalidate globals cache, will re-login on next request
         globals.remove('vault_token')
-        def r = new Response(Status.INTERNAL_SERVER_ERROR)
+        def r = new Response(Status.BAD_GATEWAY)
         r.headers.put('Content-Type', ['text/html'])
         r.entity.setString('<html><body><h2>Vault token expired. Please retry.</h2></body></html>')
         return r
@@ -119,7 +119,7 @@ try {
     return next.handle(context, request)
 } catch (Exception e) {
     logger.error('[VaultCredentialFilterRedmine] Failed to fetch Redmine credentials from Vault', e)
-    def errorResponse = new Response(Status.INTERNAL_SERVER_ERROR)
+    def errorResponse = new Response(Status.BAD_GATEWAY)
     errorResponse.headers.put('Content-Type', ['text/html'])
     errorResponse.entity.setString('<html><body><h2>Unable to retrieve Redmine credentials from Vault. Please try again later.</h2></body></html>')
     return errorResponse

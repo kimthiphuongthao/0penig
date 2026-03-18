@@ -34,6 +34,31 @@ Related: [[OpenIG]] [[Keycloak]] [[Vault]] [[Stack C]]
 > [!success]
 > Validation on `2026-03-17`: Stack C started cleanly with the pinned image and loaded all 6 routes.
 
+## 2026-03-18 Compose baseline alignment
+
+- Context:
+  - Implemented confirmed Phase 2 item `[H-7/A-1]` directly for [[Stack C]] with Stack B as the Compose baseline reference.
+- What done:
+  - Added `platform: linux/amd64`, fixed `container_name`, `user: root   # lab only`, `restart: unless-stopped`, `OPENIG_NODE_NAME`, and `/openig/api/info` healthchecks to `openig-c1` and `openig-c2`.
+  - Added fixed `container_name` and `restart: unless-stopped` to `nginx-c`, `grafana`, `mariadb`, `phpmyadmin`, and `vault-c`.
+  - Added `backend-c` to the `nginx-c` networks list.
+  - Added a MariaDB healthcheck using `mariadb-admin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD}`.
+  - Left `redis-c` unchanged because it already had `restart: unless-stopped`.
+- Decisions:
+  - Kept all existing images, environment variables, volumes, and network definitions intact, adding only the missing Compose fields requested for the lab baseline.
+- Current state:
+  - Ran `docker compose down` and `docker compose up -d` in `stack-c/`, then waited 10 seconds before bringing [[Stack A]] back up.
+  - `docker ps --filter 'name=stack-c' --format 'table {{.Names}}\t{{.Status}}'` showed `stack-c-openig-c1-1` and `stack-c-openig-c2-1` healthy, and `stack-c-mariadb-1` healthy.
+  - `docker logs stack-c-openig-c1-1 2>&1 | grep 'Loaded the route'` confirmed route load for `00-backchannel-logout-app5`, `00-phpmyadmin-logout`, `00-backchannel-logout-app6`, `00-grafana-logout`, `11-phpmyadmin`, and `10-grafana`.
+- Files changed:
+  - `stack-c/docker-compose.yml`
+
+> [!success]
+> Validation on `2026-03-18`: Stack C restarted cleanly with the new fixed container names and healthchecks, and the OpenIG route set loaded without errors.
+
+> [!tip]
+> Keep the `stack-c-openig-c1-1` and `stack-c-openig-c2-1` names stable now that health and log checks reference them directly in runbooks and automation.
+
 ## Architecture
 
 - Ingress:
@@ -159,3 +184,52 @@ Related: [[OpenIG]] [[Keycloak]] [[Vault]] [[Stack C]]
 
 > [!tip]
 > For SLO regressions, verify route order first (`00-*` logout routes must run before `10/11-*` app routes).
+
+## 2026-03-18 Keycloak browser/internal URL split
+
+- Context:
+  - Implemented Phase 2 hardening item `[A-6/A-7/M-13/S-17]` directly for [[Stack C]] after confirmation in `.omc/plans/phase2-security-hardening.md`.
+- What done:
+  - Added `KEYCLOAK_INTERNAL_URL=http://host.docker.internal:8080` to both `openig-c1` and `openig-c2` in `stack-c/docker-compose.yml`, immediately after `KEYCLOAK_BROWSER_URL`.
+  - Updated `stack-c/openig_home/config/routes/10-grafana.json` and `stack-c/openig_home/config/routes/11-phpmyadmin.json` so `issuer` and `authorizeEndpoint` stay browser-facing via `KEYCLOAK_BROWSER_URL`, while `tokenEndpoint`, `userInfoEndpoint`, and `jwksUri` use `KEYCLOAK_INTERNAL_URL`.
+  - Removed `registrationEndpoint`, `endSessionEndpoint`, and `defaultLogoutGoto` only from the two requested app routes.
+  - Updated `stack-c/openig_home/config/routes/00-backchannel-logout-app5.json` and `stack-c/openig_home/config/routes/00-backchannel-logout-app6.json` so backchannel JWT verification uses env-backed `jwksUri` and browser-facing `issuer`.
+- Decisions:
+  - Kept issuer validation tied to [[Keycloak]] browser URL so external redirect and token issuer expectations remain aligned with `http://auth.sso.local:8080`.
+  - Moved only server-to-server endpoints to `KEYCLOAK_INTERNAL_URL`; no [[OpenIG]] Groovy scripts or app container configs were changed.
+- Current state:
+  - `docker compose up -d` recreated `stack-c-openig-c1-1` and `stack-c-openig-c2-1`; explicit `docker restart stack-c-openig-c1-1 stack-c-openig-c2-1` completed successfully afterward.
+  - `docker logs stack-c-openig-c1-1 2>&1 | grep 'Loaded the route'` showed `00-backchannel-logout-app5`, `00-backchannel-logout-app6`, `10-grafana`, and `11-phpmyadmin` loading after restart.
+  - Route verification is clean: no remaining `auth.sso.local:8080` or `host.docker.internal:8080` literals under `stack-c/openig_home/config/routes/`.
+- Next steps:
+  - Keep future Stack C OIDC route edits on the same env-backed browser/internal split and avoid reintroducing literal Keycloak hostnames into route JSON.
+- Files changed:
+  - `stack-c/docker-compose.yml`
+  - `stack-c/openig_home/config/routes/10-grafana.json`
+  - `stack-c/openig_home/config/routes/11-phpmyadmin.json`
+  - `stack-c/openig_home/config/routes/00-backchannel-logout-app5.json`
+  - `stack-c/openig_home/config/routes/00-backchannel-logout-app6.json`
+
+> [!success]
+> The Stack C route set reloaded cleanly after the restart, and the requested literal-host cleanup in `stack-c/openig_home/config/routes/` is complete.
+
+## 2026-03-18 nginx proxy timeout hardening
+
+- Context:
+  - Implemented Phase 2 item `[A-3/S-14]` directly for [[Stack C]] after it was already confirmed in `.omc/plans/phase2-security-hardening.md`.
+- What done:
+  - Updated `stack-c/nginx/nginx.conf` so both `location /` blocks for Grafana and phpMyAdmin now set `proxy_connect_timeout 3s`, `proxy_read_timeout 60s`, `proxy_send_timeout 60s`, `proxy_next_upstream error timeout http_502 http_503 http_504`, and `proxy_next_upstream_tries 2` before proxying to `openig_c_pool`.
+  - Updated both backchannel logout exact-match locations to add `proxy_connect_timeout 3s`, `proxy_read_timeout 60s`, and `proxy_send_timeout 60s`.
+  - Left the `upstream openig_c_pool`, `server_name` values, and existing `proxy_set_header` directives unchanged.
+- Current state:
+  - `docker exec stack-c-nginx-c-1 nginx -t` returned syntax OK and configuration test successful.
+  - `docker restart stack-c-nginx-c-1` completed successfully.
+  - `curl -s -o /dev/null -w '%{http_code}' http://grafana-c.sso.local:18080/` returned `302`.
+- Files changed:
+  - `stack-c/nginx/nginx.conf`
+
+> [!success]
+> [[OpenIG]] ingress timeout hardening for [[Stack C]] is active and nginx accepted the updated config without errors.
+
+> [!tip]
+> Keep timeout and upstream retry behavior only on the user-facing `location /` proxy paths; leave backchannel logout endpoints without upstream retry directives so logout POST handling stays single-attempt and predictable.

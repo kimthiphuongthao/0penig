@@ -52,6 +52,11 @@ Keycloak shared: `http://auth.sso.local:8080`, realm `sso-realm`.
 - Tất cả OpenIG containers PHẢI pin `openidentityplatform/openig:6.0.1`
 - KHÔNG dùng `openidentityplatform/openig:latest` vì `latest=6.0.2` chuyển sang Tomcat 11 và làm OpenIG 6 không khởi động được
 
+## Keycloak URL + compose baseline
+- Cả 3 stacks giờ dùng env-driven Keycloak URLs trong route JSON: `KEYCLOAK_BROWSER_URL` cho browser-facing `issuer`/authorize/logout semantics, `KEYCLOAK_INTERNAL_URL` cho OpenIG -> Keycloak `token`/`userinfo`/`jwks`
+- Stack C `docker-compose.yml` giờ parity-aligned với Stack B baseline về `container_name`, `restart`, `platform`, healthcheck, và OpenIG node naming; nếu lệch nữa phải là chủ ý và documented
+- Tất cả 6 OpenIG services đã thêm `extra_hosts: host.docker.internal:host-gateway` để Linux portability không phụ thuộc Docker Desktop magic hostname
+
 ## Cookie session
 - Stack A: `IG_SSO`, `cookieDomain: ".sso.local"`
 - Stack B: `IG_SSO_B`, `cookieDomain: ".sso.local"`

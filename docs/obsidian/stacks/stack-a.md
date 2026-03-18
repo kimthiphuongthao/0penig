@@ -65,6 +65,42 @@ Related: [[Stack B]] [[Stack C]] [[OpenIG]] [[Keycloak]] [[Vault]]
 > [!tip]
 > This closes the prior Stack A note that Redis auth was intentionally deferred. Current Stack A state assumes a non-empty `REDIS_PASSWORD` is provided at runtime.
 
+## 2026-03-18 Keycloak URL externalization and logout cleanup
+
+- Updated `stack-a/openig_home/config/routes/01-wordpress.json` and `stack-a/openig_home/config/routes/02-app2.json` so `KeycloakIssuer` now uses `${env['KEYCLOAK_BROWSER_URL']}` for `issuer` and `authorizeEndpoint`.
+- Switched `tokenEndpoint`, `userInfoEndpoint`, and `jwksUri` in those same routes to `${env['KEYCLOAK_INTERNAL_URL']}` so OpenIG resolves backend OIDC traffic on the container-reachable address.
+- Removed `registrationEndpoint` and `endSessionEndpoint` from both issuer blocks.
+- Removed `defaultLogoutGoto` from both `OAuth2ClientFilter` configs because `SloHandler.groovy` remains the single frontchannel logout path for [[OpenIG]] in [[Stack A]].
+- Updated `stack-a/openig_home/config/routes/00-backchannel-logout-app1.json` args so logout-token validation uses internal JWKS lookup and the browser-facing [[Keycloak]] issuer value.
+
+> [!success]
+> Validation on `2026-03-18`: `docker restart sso-openig-1 sso-openig-2` completed successfully and `docker logs sso-openig-1 2>&1 | grep 'Loaded the route'` showed `00-wp-logout`, `00-backchannel-logout-app1`, `01-wordpress`, and `02-app2`.
+
+> [!success]
+> Verification on `2026-03-18`: `grep -r 'auth.sso.local:8080' stack-a/openig_home/config/routes/` and `grep -r 'host.docker.internal:8080' stack-a/openig_home/config/routes/` both returned empty results.
+
+## 2026-03-18 OpenIG healthcheck baseline
+
+- Context:
+  - Implemented confirmed Phase 2 item `[H-7/A-1]` directly for [[Stack A]].
+- What done:
+  - Added Docker healthchecks to `openig-1` and `openig-2` in `stack-a/docker-compose.yml`.
+  - Used `curl -f http://localhost:8080/openig/api/info` with `interval: 30s`, `timeout: 10s`, `retries: 5`, and `start_period: 60s`.
+- Decisions:
+  - Kept the Stack A change surface limited to the two [[OpenIG]] services only.
+  - Left existing images, environment variables, volumes, networks, and the existing MySQL healthcheck unchanged.
+- Current state:
+  - `docker compose up -d` recreated `sso-openig-1` and `sso-openig-2`.
+  - `docker ps --filter 'name=sso-openig-' --format 'table {{.Names}}\t{{.Status}}'` showed both OpenIG nodes `healthy`.
+- Files changed:
+  - `stack-a/docker-compose.yml`
+
+> [!success]
+> Validation on `2026-03-18`: both [[OpenIG]] nodes in [[Stack A]] came back healthy immediately after the compose update.
+
+> [!tip]
+> Keep future Stack A Compose hardening aligned with the Stack B and Stack C OpenIG healthcheck contract so restart and smoke-test automation can use the same `/openig/api/info` probe.
+
 ## Auth Mechanism
 
 - Form-based login intercept via OpenIG:

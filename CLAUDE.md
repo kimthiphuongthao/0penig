@@ -69,6 +69,14 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] Phase 3: Vault Production Hardening — 6/9 RESOLVED, 1 PARTIAL (CIDR), 2 deferred (TLS, Raft)
 - [x] STEP-03 (H-5/S-3): Secrets externalization to `.env` files + pin OpenIG image to `6.0.1`
 - [x] STEP-04 (H-4/S-2): Redis authentication — requirepass + AUTH command (all 3 stacks)
+- [x] STEP-05 (A-6/A-7/M-13/S-17): Keycloak URL externalization Stack A + C
+- [x] STEP-06 (H-7/A-1): Stack C docker-compose parity + Stack A healthcheck
+- [x] STEP-07 (M-9/Code-M6): Vault error 502 consistency Stack B + C
+- [x] STEP-08 (M-11): BackchannelLogoutHandler readRespLine EOF fail-closed
+- [x] STEP-09 (M-12): base64UrlDecode simplification (all 3 stacks)
+- [x] STEP-10 (A-3/S-14): Stack C nginx proxy timeouts alignment
+- [x] STEP-11 (A-4): extra_hosts host.docker.internal Linux portability (all 3 stacks)
+- [x] STEP-12 (M-3/S-7): nginx security headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy)
 - [x] Post-Stack C docs: OpenIG built-in filter selection guide — covered by audit
 - [x] Pattern Consolidation Steps 1-5 complete - Step 5 quick wins (H-2 .gitignore, H-3 Redmine port, H-9 nginx buffers, M-2 CANONICAL_ORIGIN A+B, M-14 dead code) are done and validated
 - [x] Pattern Consolidation Step 6: Update deliverable documents. Plan: `.omc/plans/pattern-consolidation.md`

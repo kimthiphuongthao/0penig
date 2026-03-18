@@ -48,7 +48,7 @@ def readRespLine = { InputStream input ->
     int previous = -1
     while (true) {
         int current = input.read()
-        if (current == -1) break
+        if (current == -1) throw new IOException('Unexpected EOF from Redis')
         if (previous == '\r' as char && current == '\n' as char) break
         if (previous != -1) buffer.write(previous)
         previous = current
@@ -58,10 +58,7 @@ def readRespLine = { InputStream input ->
 
 // --- Helper: Decode base64url ---
 def base64UrlDecode = { String input ->
-    // Add padding if missing
-    int padding = 4 - (input.length() % 4)
-    String padded = (padding < 4) ? input + ('=' * padding) : input
-    Base64.getUrlDecoder().decode(padded)
+    Base64.getUrlDecoder().decode(input)
 }
 
 // --- Helper: Fetch JWKS from Keycloak ---

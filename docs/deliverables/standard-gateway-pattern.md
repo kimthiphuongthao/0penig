@@ -1,11 +1,11 @@
 ---
 # Standard OpenIG SSO/SLO Gateway Pattern
 **Version:** 1.1
-**Date:** 2026-03-15
+**Date:** 2026-03-18
 **Derived from:** Code and security review of 3 integration stacks (WordPress, Redmine+Jellyfin, Grafana+phpMyAdmin)
 **Scope:** OpenIG 6 + Keycloak + Vault + Redis
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. The lab implementation now also matches more of this pattern operationally: Redmine no longer exposes host port `3000`, Stack C nginx carries the same proxy buffer settings as A/B, all 3 stacks declare app-specific `CANONICAL_ORIGIN_APP*` env vars, Stack C OIDC secrets were rotated, and compose secrets now live in gitignored `.env` files while OpenIG stays pinned to `6.0.1`. Follow-up 2026-03-18: APP5 was re-rotated to a strong alphanumeric-only secret after confirming OpenIG `OAuth2ClientFilter` does not URL-encode `client_secret`.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. The lab implementation now also matches more of this pattern operationally: Redmine no longer exposes host port `3000`, Stack C nginx carries the same proxy buffer settings as A/B, all 3 stacks declare app-specific `CANONICAL_ORIGIN_APP*` env vars, Stack C OIDC secrets were rotated, and compose secrets now live in gitignored `.env` files while OpenIG stays pinned to `6.0.1`. Follow-up 2026-03-18: APP5 was re-rotated to a strong alphanumeric-only secret after confirming OpenIG `OAuth2ClientFilter` does not URL-encode `client_secret`, Stack A/C Keycloak routes now use env-driven browser/internal URLs, Stack C compose and timeout settings are aligned to the baseline, all 6 OpenIG nodes are Linux-portable via `extra_hosts`, and all three nginx configs ship the shared HTTP-safe response-header baseline.
 
 ---
 
@@ -96,6 +96,8 @@ OpenIG compatibility rule: when an OIDC `clientSecret` is consumed by `OAuth2Cli
 
 Image rule: OpenIG containers MUST use an explicit image tag and MUST NOT use `:latest`. The validated lab baseline is `openidentityplatform/openig:6.0.1`; the mutable `latest` tag moved to a Tomcat 11 build and broke OpenIG 6 startup.
 
+Keycloak endpoint externalization rule: route JSON MUST split Keycloak configuration into `KEYCLOAK_BROWSER_URL` and `KEYCLOAK_INTERNAL_URL`. Use `KEYCLOAK_BROWSER_URL` for browser-facing semantics such as `issuer`, `authorizeEndpoint`, and any frontchannel/logout redirect construction tied to the public origin. Use `KEYCLOAK_INTERNAL_URL` for server-to-server calls such as `tokenEndpoint`, `userInfoEndpoint`, and `jwksUri`. Hardcoded Keycloak hostnames do not belong in route JSON.
+
 ### 3. Transport Security
 [Derived from: B F4, C F4, A §6]
 
@@ -104,6 +106,12 @@ What it is: All OIDC flows, Vault API calls, and downstream app proxying MUST us
 Why: Stack B and Stack C explicitly allow plaintext HTTP for OIDC, logout, Vault, and session traffic, and Stack A's additional review notes the same problem on Vault, JWKS, logout, and credential paths. That makes token theft, credential interception, and cookie interception part of the gateway design rather than a deployment mistake. Derived from: Stack B `F4`; Stack C `§4 F4`; Stack A `§6` Codex-only additions; Cross-Stack Summary Universal Findings.
 
 How to implement in OpenIG: Use HTTPS `baseURI` and endpoint values in route config, set `requireHttps: true` on `OAuth2ClientFilter`, and issue only `Secure` cookies from `JwtSession`. If lab scaffolding remains HTTP-only, it is not a reference implementation. Derived from: Stack B `F4`; Stack C `§4 F4`.
+
+Reverse-proxy header baseline: nginx MUST set `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, and `Referrer-Policy: strict-origin-when-cross-origin` on all browser-facing responses. These headers are safe in the current HTTP lab and form the minimum reverse-proxy browser-hardening baseline for every stack.
+
+`Content-Security-Policy` is intentionally omitted from the shared gateway baseline because Grafana, phpMyAdmin, WordPress, and similar legacy apps require app-specific tuning. A copied shared CSP is more likely to break working integrations or create a false sense of coverage than to help. Define CSP per application after validating the full UI and auth flow.
+
+`Strict-Transport-Security` remains deferred until TLS termination exists. Do not emit HSTS on the current HTTP-only lab; enable it only when nginx is terminating real HTTPS traffic.
 
 > **Lab Exception (FIX-07 Phase 7a):** All traffic in this lab runs over plaintext HTTP. `requireHttps: false` is intentional — setting it to `true` without TLS infrastructure in place causes every OIDC flow to fail immediately. Full HTTPS requires: a self-signed CA distributed to all containers, nginx TLS termination configured per stack, Docker networking changes to route port 443, and the CA cert trusted by the JVM inside OpenIG. Phase 7b (actual TLS with self-signed CA and nginx termination) is deferred to the Vault Production Hardening phase. Until Phase 7b is complete, this lab is not a production reference for transport security.
 
@@ -242,6 +250,7 @@ Derived from: Cross-Stack Summary "Recommended Standard Pattern" and "Next Steps
 - [ ] Any Vault-backed secret retrieval is cached with bounded TTL and refreshed before expiry without writing the fetched secret into `JwtSession`.
 - [ ] OIDC client secrets used by OpenIG `OAuth2ClientFilter` use strong random alphanumeric-only values. Trivially guessable values such as `secret-c` are a P1 security issue, and Base64 values containing `+`, `/`, `=` are unsafe for this path. Generate with `openssl rand -hex 24` or equivalent.
 - [ ] For non-`OAuth2ClientFilter` secrets that remain Base64, preserve the full value including any trailing `=` padding when copying into `.env` or another secret store. Do not trim or re-wrap generated secrets.
+- [ ] Route JSON externalizes Keycloak endpoints with `KEYCLOAK_BROWSER_URL` for browser-facing issuer/authorize/logout semantics and `KEYCLOAK_INTERNAL_URL` for OpenIG-to-Keycloak token, userinfo, and JWKS calls.
 
 ### Session and revocation
 
@@ -256,6 +265,8 @@ Derived from: Cross-Stack Summary "Recommended Standard Pattern" and "Next Steps
 
 - [ ] All OIDC endpoints, Vault calls, and downstream proxy targets use HTTPS in production.
 - [ ] Every `OAuth2ClientFilter` has `requireHttps: true`, and `JwtSession` cookies are `Secure`.
+- [ ] nginx adds `X-Frame-Options`, `X-Content-Type-Options`, and `Referrer-Policy` on every browser-facing response path.
+- [ ] `Content-Security-Policy` is validated per application instead of copied blindly across unlike apps, and HSTS is enabled only after TLS termination is live.
 
 ### Adapter contract
 

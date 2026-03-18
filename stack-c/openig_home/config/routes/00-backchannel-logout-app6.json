@@ -9,8 +9,8 @@
       "args": {
         "audiences": ["openig-client-c-app6"],
         "redisHost": "redis-c",
-        "jwksUri": "http://host.docker.internal:8080/realms/sso-realm/protocol/openid-connect/certs",
-        "issuer": "http://auth.sso.local:8080/realms/sso-realm"
+        "jwksUri": "${env['KEYCLOAK_INTERNAL_URL']}/realms/sso-realm/protocol/openid-connect/certs",
+        "issuer": "${env['KEYCLOAK_BROWSER_URL']}/realms/sso-realm"
       }
     }
   }

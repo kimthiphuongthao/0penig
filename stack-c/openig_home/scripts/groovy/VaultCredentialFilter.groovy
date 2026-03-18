@@ -153,7 +153,7 @@ try {
     return next.handle(context, request)
 } catch (Exception e) {
     logger.error('[VaultCredentialFilter] Failed to fetch phpMyAdmin credentials from Vault', e)
-    Response errorResponse = new Response(Status.INTERNAL_SERVER_ERROR)
+    Response errorResponse = new Response(Status.BAD_GATEWAY)
     errorResponse.headers.put('Content-Type', ['text/html'])
     errorResponse.entity.setString('<html><body><h2>Unable to retrieve phpMyAdmin credentials from Vault. Please try again later.</h2></body></html>')
     return errorResponse
