@@ -73,7 +73,7 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] Pattern Consolidation Step 6: Update deliverable documents. Plan: `.omc/plans/pattern-consolidation.md`
 - [x] Redis persistence (appendonly yes) — đảm bảo SLO blacklist survive restart
 - [x] Vault audit logging
-- [ ] Stack C Grafana SSO re-validation/fix — current session finding: `OIDC_CLIENT_SECRET_APP5` must match exactly across `.env`, Keycloak, and running containers; trailing `=` padding is significant
+- [x] Stack C Grafana SSO re-validation/fix — root cause: OpenIG OAuth2ClientFilter không URL-encode client_secret; Base64 secret chứa '+' → Keycloak decode thành space → invalid_client_credentials. Fix: rotate secret alphanumeric-only (commit a403b3d)
 - [ ] Đóng gói: OVA / Docker Compose bundle — single-command deploy
 - [ ] Slide + tài liệu báo cáo phương án giải pháp
 
