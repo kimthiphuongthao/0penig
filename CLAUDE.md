@@ -77,6 +77,8 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] STEP-10 (A-3/S-14): Stack C nginx proxy timeouts alignment
 - [x] STEP-11 (A-4): extra_hosts host.docker.internal Linux portability (all 3 stacks)
 - [x] STEP-12 (M-3/S-7): nginx security headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy)
+- [x] STEP-13 (M-4/S-8): Cookie SameSite=Lax flags via proxy_cookie_flags (all 3 stacks nginx.conf)
+- [x] STEP-14 (M-6/S-10): OpenIG non-root — macOS vault permission constraint, comment added (PARTIAL)
 - [x] Post-Stack C docs: OpenIG built-in filter selection guide — covered by audit
 - [x] Pattern Consolidation Steps 1-5 complete - Step 5 quick wins (H-2 .gitignore, H-3 Redmine port, H-9 nginx buffers, M-2 CANONICAL_ORIGIN A+B, M-14 dead code) are done and validated
 - [x] Pattern Consolidation Step 6: Update deliverable documents. Plan: `.omc/plans/pattern-consolidation.md`

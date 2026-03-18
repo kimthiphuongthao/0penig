@@ -38,7 +38,7 @@ services:
     image: openidentityplatform/openig:6.0.1
     platform: linux/amd64
     container_name: sso-b-openig-1
-    user: root
+    user: root   # lab macOS exception: non-root requires chmod on host volumes; production MUST use non-root (UID 11111)
     entrypoint: ["/docker-entrypoint.sh"]
     volumes:
       - ./openig_home:/opt/openig
@@ -81,7 +81,7 @@ services:
     image: openidentityplatform/openig:6.0.1
     platform: linux/amd64
     container_name: sso-b-openig-2
-    user: root
+    user: root   # lab macOS exception: non-root requires chmod on host volumes; production MUST use non-root (UID 11111)
     entrypoint: ["/docker-entrypoint.sh"]
     volumes:
       - ./openig_home:/opt/openig

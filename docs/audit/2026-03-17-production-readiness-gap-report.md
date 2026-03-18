@@ -6,15 +6,15 @@ Status: NOT READY
 
 ## Executive Summary
 
-This report captures the 2026-03-17 production-readiness gap assessment for SSO Lab, cross-referencing the 2026-03-16 pre-packaging audit against the current codebase. The current state is **NOT READY** for release as a production reference solution: **20 findings remain open, 6 are partial, and 55 are resolved** out of 81 checks.
+This report captures the 2026-03-17 production-readiness gap assessment for SSO Lab, cross-referencing the 2026-03-16 pre-packaging audit against the current codebase. The current state is **NOT READY** for release as a production reference solution: **18 findings remain open, 7 are partial, and 56 are resolved** out of 81 checks.
 
-Resolved work now covers 55 findings and materially improved the gateway baseline. The resolved work includes the JWKS cache race, `SloHandler` try-catch hardening, TTL unit standardization, consolidation of `SessionBlacklistFilter` / `BackchannelLogoutHandler` / `SloHandler`, `vault/keys/` repo hygiene, Redmine direct-port exposure removal, Stack C nginx buffer alignment, `CANONICAL_ORIGIN_*` environment variables, dead-code cleanup, Stack C OIDC client secret rotation, STEP-03 secret externalization plus OpenIG image pinning, STEP-04 Redis authentication hardening, STEP-05 Keycloak URL externalization, STEP-06 Stack C compose parity plus Stack A OpenIG healthchecks, STEP-07 Vault `502` alignment, STEP-08 EOF fail-closed behavior, STEP-09 Base64 URL decoding simplification, STEP-10 Stack C timeout alignment, STEP-11 Linux `extra_hosts` portability, and STEP-12 nginx baseline security headers.
+Resolved work now covers 56 findings, and one additional finding is now explicitly documented as a partial macOS lab exception. The resolved work includes the JWKS cache race, `SloHandler` try-catch hardening, TTL unit standardization, consolidation of `SessionBlacklistFilter` / `BackchannelLogoutHandler` / `SloHandler`, `vault/keys/` repo hygiene, Redmine direct-port exposure removal, Stack C nginx buffer alignment, `CANONICAL_ORIGIN_*` environment variables, dead-code cleanup, Stack C OIDC client secret rotation, STEP-03 secret externalization plus OpenIG image pinning, STEP-04 Redis authentication hardening, STEP-05 Keycloak URL externalization, STEP-06 Stack C compose parity plus Stack A OpenIG healthchecks, STEP-07 Vault `502` alignment, STEP-08 EOF fail-closed behavior, STEP-09 Base64 URL decoding simplification, STEP-10 Stack C timeout alignment, STEP-11 Linux `extra_hosts` portability, STEP-12 nginx baseline security headers, and STEP-13 nginx cookie `SameSite=Lax` flags.
 
 Operational follow-up after the scorecard: Stack C Grafana SSO/SLO was re-validated successfully on 2026-03-18. The earlier APP5 padding theory was superseded; the verified root cause was OpenIG `OAuth2ClientFilter` not URL-encoding `client_secret`, so APP5 now uses a strong alphanumeric-only secret and the recreated Stack C OpenIG containers are confirmed working.
 
-The remaining 20 open findings are concentrated in three categories that matter for a reusable reference solution:
+The remaining 18 open findings are concentrated in three categories that matter for a reusable reference solution:
 
-- Security: cookie flags are still incomplete, transport hardening remains deferred outside the HTTP-only lab exception, and OpenIG still runs as root in Stack A and Stack B.
+- Security: the `Secure` cookie flag remains deferred until TLS is enabled, and OpenIG non-root remains partially blocked by macOS host-mount constraints.
 - Architecture and documentation: the lab still needs explicit Keycloak single-point-of-failure guidance in the deliverables, and the documented lab exceptions must remain visible so the HTTP and Vault deferments are not mistaken for production defaults.
 - Code quality and operational consistency: several low-effort cleanup items remain open, including hardcoded Redis literals, Groovy log-prefix consistency, Jellyfin-specific logout/device-ID edge cases, and duplicated Vault AppRole logic.
 
@@ -91,18 +91,18 @@ These items are not the primary blockers, but they should be completed before ca
 - Fix approach: Completed on 2026-03-18. Keep these headers in the nginx `http` block, add CSP only per application after validation, and enable HSTS only when real TLS termination is in place.
 - Effort: LOW
 
-### M-4/S-8: JwtSession cookies lack Secure and SameSite flags
-- Files: `stack-a/openig_home/config/config.json`, `stack-b/openig_home/config/config.json`, `stack-c/openig_home/config/config.json`
-- Finding: OpenIG session cookies are not assigned `Secure` or `SameSite` flags.
-- Impact: Browser session handling is weaker than the intended production pattern and does not model the final cookie posture expected for a reference deployment.
-- Fix approach: Add cookie flag handling with `proxy_cookie_flags` in nginx. `Secure` remains a documented lab exception until TLS is enabled, but the production requirement must be explicit.
+### M-4/S-8: JwtSession cookies lack Secure and SameSite flags [RESOLVED]
+- Files: `stack-a/nginx/nginx.conf`, `stack-b/nginx/nginx.conf`, `stack-c/nginx/nginx.conf`
+- Finding: RESOLVED on 2026-03-18 — all three nginx configs now apply `proxy_cookie_flags` to the OpenIG session cookies (`IG_SSO`, `IG_SSO_B`, `IG_SSO_C`) with `SameSite=Lax`. `Secure` remains intentionally deferred until TLS because browsers ignore `Secure` cookies on plain HTTP.
+- Impact: The lab now models the intended `SameSite` baseline without breaking the current HTTP-only cookie flow.
+- Fix approach: Completed on 2026-03-18. Keep `SameSite=Lax` at nginx, and add `Secure` only when TLS termination is enabled.
 - Effort: LOW
 
-### M-6/S-10: OpenIG runs as root in Stack A and Stack B
-- Files: `stack-a/docker-compose.yml`, `stack-b/docker-compose.yml`
-- Finding: `user: root` is explicitly configured for the OpenIG containers.
-- Impact: The current setup violates least privilege and weakens the credibility of the stack as a production reference, even if the current lab justification is host-volume compatibility on macOS.
-- Fix approach: Remove `user: root` or switch to a dedicated non-root UID after validating mounted-volume and entrypoint compatibility with the OpenIG image.
+### M-6/S-10: OpenIG runs as root in Stack A and Stack B [PARTIAL]
+- Files: `stack-a/docker-compose.yml`, `stack-b/docker-compose.yml`, `stack-c/docker-compose.yml`
+- Finding: PARTIAL on 2026-03-18 — `user: root` remains on all six OpenIG services, but the compose files now carry an explicit macOS lab-exception comment. Non-root is not currently viable with the mounted Vault/AppRole files on macOS (`-rw-------` owner-only), and Stack C still mutates `config.json` in place at startup.
+- Impact: Least privilege is still not achieved in the lab, but the constraint and the production requirement are now explicit in the deployment contract.
+- Fix approach: Partial on 2026-03-18. Keep `user: root` only as a documented macOS lab exception. Production should move to non-root with copied writable config plus injected secrets instead of host mounts.
 - Effort: LOW
 
 ### M-9/Code-M6: Vault error status inconsistency [RESOLVED]
@@ -172,8 +172,8 @@ These items remain acceptable only as explicitly documented lab constraints. The
 | P2-SHOULD | M-11 | `readRespLine` EOF in `BackchannelLogoutHandler` [RESOLVED 2026-03-18] | LOW |
 | P2-SHOULD | M-12 | `base64UrlDecode` manual padding [RESOLVED 2026-03-18] | LOW |
 | P2-SHOULD | M-3/S-7 | nginx security headers [RESOLVED 2026-03-18] | LOW |
-| P2-SHOULD | M-4/S-8 | Cookie `Secure` / `SameSite` flags | LOW |
-| P2-SHOULD | M-6/S-10 | OpenIG non-root user | LOW |
+| P2-SHOULD | M-4/S-8 | Cookie `Secure` / `SameSite` flags [RESOLVED 2026-03-18] | LOW |
+| P2-SHOULD | M-6/S-10 | OpenIG non-root user [PARTIAL 2026-03-18] | LOW |
 | P2-SHOULD | M-9 | Vault error status `502` consistency [RESOLVED 2026-03-18] | LOW |
 | P2-SHOULD | A-3 | Stack C nginx timeouts [RESOLVED 2026-03-18] | LOW |
 | P2-SHOULD | A-4 | `host.docker.internal` Linux portability [RESOLVED 2026-03-18] | LOW |
@@ -201,6 +201,7 @@ These items remain acceptable only as explicitly documented lab constraints. The
 | M-11 | EOF handling in `readRespLine` | Unexpected Redis EOF now throws `IOException` and fails closed in all three backchannel handlers (2026-03-18) |
 | M-12 | Base64 URL decoder simplification | Manual padding logic removed; Java's standard URL decoder now handles the logout-token decode path (2026-03-18) |
 | M-4 | Stack A `SloHandler` hardcoded Keycloak URL | Parameterized via `KEYCLOAK_BROWSER_URL` env (commit `3b8a6d8`) |
+| M-4/S-8 | Cookie `SameSite` flags via nginx | `proxy_cookie_flags` now sets `SameSite=Lax` on `IG_SSO`, `IG_SSO_B`, and `IG_SSO_C`; `Secure` remains deferred until TLS so the HTTP lab cookie flow keeps working (2026-03-18) |
 | M-14 | `App1ResponseRewriter.groovy` dead code | Deleted (commit `f86c7eb`) |
 | A-3/S-14 | Stack C nginx timeouts aligned | Stack C now uses the standardized `3s` connect and `60s` read/send timeout profile on user-facing and backchannel proxy paths (2026-03-18) |
 | A-4 | Linux portability for `host.docker.internal` | `extra_hosts: host.docker.internal:host-gateway` added to all six OpenIG services (2026-03-18) |

@@ -41,6 +41,8 @@
 | SloHandler thiếu `try/catch` quanh logout flow (H-1) | Stack A và Stack C handlers cũ để exception bubble lên trực tiếp, dễ làm logout path fail không đồng nhất khi config/env/network lỗi | Thêm `try/catch` trong `SloHandler.groovy` template dùng cho all stacks cần pattern chung. **RESOLVED** — Pattern Consolidation Step 4, commit `3b8a6d8` |
 | Backchannel logout TTL unit mismatch (H-6, Stack C) | Handler cũ mix seconds/millis khi set Redis blacklist TTL, làm thời gian revoke sai lệch | Chuẩn hóa TTL route arg theo giây và dùng `28800` seconds nhất quán trên all 3 stacks. **RESOLVED** — Pattern Consolidation Step 3, commit `4d8f065` |
 | ScriptableHandler không support args? (SAI) | Giả định sai — cả ScriptableHandler và ScriptableFilter đều inherit args từ `AbstractScriptableHeapObject` | Confirmed từ OpenIG 6.0.2 source + runtime smoke test. args = top-level Groovy vars via `binding.hasVariable("key")`. **CẢNH BÁO**: `args as Map` pattern KHÔNG hoạt động — Stack C cũ chạy bằng hardcoded fallback, không phải args. Đã consolidate sang đúng pattern (Step 2) |
+| `proxy_cookie_flags` Secure flag NOT added in HTTP lab | Adding `Secure` over HTTP breaks cookies because browsers ignore them on plain HTTP | Dùng `SameSite=Lax` only. Add `Secure` only after TLS enabled. Production: bật `Secure` cùng lúc với TLS termination |
+| OpenIG non-root blocked by Vault file permissions | `vault/file/openig-role-id` is `-rw-------` (root-only) on macOS host mounts, and `entrypoint.sh` writes `config.json` in place | Lab: keep `user: root` with macOS exception comment. Production: use K8s init container + Vault Agent sidecar, no host mounts |
 
 ## Decision log
 

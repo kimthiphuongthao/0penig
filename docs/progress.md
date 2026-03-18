@@ -83,6 +83,6 @@
 - [x] 2026-03-18: hoàn thành STEP-04 Redis auth (`8c11916`) + STEP-05..12 Phase 2b hardening batch (`ecbca5d`) (9 P1-MUST + nhiều P2-SHOULD fixes, parallel Codex execution)
 - [x] End-of-session doc audit sync: roadmap, audit docs, test docs, rules, và state notes đã phản ánh STEP-01/02/03
 - [x] Stack C Grafana SSO/SLO re-validation PASS: confirmed OpenIG `OAuth2ClientFilter` does not URL-encode `client_secret`; APP5 rotated to alphanumeric-only secret, Stack C OpenIG containers recreated, user confirmed end-to-end flow (`a403b3d`)
-- [ ] Next: STEP-13 cookie SameSite flags + STEP-14 non-root user (Phase 2b remaining)
+- [x] 2026-03-18: STEP-13 (proxy_cookie_flags SameSite=Lax, all 3 stacks) + STEP-14 (non-root: macOS vault permission constraint, comment added). Phase 2b complete.
 
 ---
