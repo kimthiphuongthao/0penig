@@ -48,6 +48,23 @@ Related: [[Stack B]] [[Stack C]] [[OpenIG]] [[Keycloak]] [[Vault]]
 > [!tip]
 > For Kubernetes migration, keep `stack-a/.env.example` as the committed contract and create the runtime secret with `kubectl create secret generic stack-a-secrets --from-env-file=.env`.
 
+## 2026-03-18 Redis auth hardening
+
+- Added `REDIS_PASSWORD` to the Stack A runtime env contract and example file.
+- Updated `redis-a` to start with `--requirepass ${REDIS_PASSWORD}`.
+- Passed `REDIS_PASSWORD` into both OpenIG nodes so Groovy Redis clients can authenticate.
+- Added RESP `AUTH` before blacklist `GET` in `SessionBlacklistFilter.groovy`.
+- Added RESP `AUTH` before blacklist `SET` in `BackchannelLogoutHandler.groovy`.
+
+> [!success]
+> Validation on `2026-03-18`: unauthenticated `redis-cli PING` returned `NOAUTH Authentication required.` and authenticated `PING` returned `PONG`.
+
+> [!success]
+> Runtime verification on `2026-03-18`: `docker compose up -d` completed, `docker restart sso-openig-1 sso-openig-2` completed, and both OpenIG logs showed all 4 routes loaded (`00-wp-logout`, `00-backchannel-logout-app1`, `01-wordpress`, `02-app2`).
+
+> [!tip]
+> This closes the prior Stack A note that Redis auth was intentionally deferred. Current Stack A state assumes a non-empty `REDIS_PASSWORD` is provided at runtime.
+
 ## Auth Mechanism
 
 - Form-based login intercept via OpenIG:

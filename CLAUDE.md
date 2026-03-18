@@ -68,6 +68,7 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] **Fix phase COMPLETE**: 15 fixes (11 implemented, 2 WONT_FIX, 2 verified-no-action) — tracking: `docs/fix-phase/checklist.md`
 - [x] Phase 3: Vault Production Hardening — 6/9 RESOLVED, 1 PARTIAL (CIDR), 2 deferred (TLS, Raft)
 - [x] STEP-03 (H-5/S-3): Secrets externalization to `.env` files + pin OpenIG image to `6.0.1`
+- [x] STEP-04 (H-4/S-2): Redis authentication — requirepass + AUTH command (all 3 stacks)
 - [x] Post-Stack C docs: OpenIG built-in filter selection guide — covered by audit
 - [x] Pattern Consolidation Steps 1-5 complete - Step 5 quick wins (H-2 .gitignore, H-3 Redmine port, H-9 nginx buffers, M-2 CANONICAL_ORIGIN A+B, M-14 dead code) are done and validated
 - [x] Pattern Consolidation Step 6: Update deliverable documents. Plan: `.omc/plans/pattern-consolidation.md`

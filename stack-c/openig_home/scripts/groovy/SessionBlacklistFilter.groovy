@@ -99,14 +99,25 @@ try {
 
     String redisHost = System.getenv('REDIS_HOST') ?: 'redis-a'
     int redisPort = 6379
+    String redisPassword = System.getenv('REDIS_PASSWORD') ?: ''
     String key = "blacklist:${sid}"
     int keySize = key.getBytes('UTF-8').length
+    String authCommand = redisPassword ? "*2\r\n\$4\r\nAUTH\r\n\$${redisPassword.getBytes('UTF-8').length}\r\n${redisPassword}\r\n" : null
     String command = "*2\r\n\$3\r\nGET\r\n\$${keySize}\r\n${key}\r\n"
 
     boolean blacklisted = false
     new Socket().withCloseable { socket ->
         socket.connect(new InetSocketAddress(redisHost, redisPort), 200)
         socket.setSoTimeout(500)
+        if (authCommand) {
+            socket.outputStream.write(authCommand.getBytes('UTF-8'))
+            socket.outputStream.flush()
+
+            String authReply = readRespLine(socket.inputStream)
+            if (!authReply?.startsWith('+OK')) {
+                throw new IOException("Redis AUTH failed: ${authReply}")
+            }
+        }
         socket.outputStream.write(command.getBytes('UTF-8'))
         socket.outputStream.flush()
 

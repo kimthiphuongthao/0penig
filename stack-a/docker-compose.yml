@@ -66,6 +66,7 @@ services:
       KEYCLOAK_INTERNAL_URL: "http://host.docker.internal:8080"
       KEYCLOAK_BROWSER_URL: "http://auth.sso.local:8080"
       REDIS_HOST: "redis-a"
+      REDIS_PASSWORD: "${REDIS_PASSWORD}"
       OPENIG_PUBLIC_URL: "http://openiga.sso.local:80"
       CANONICAL_ORIGIN_APP1: "http://wp-a.sso.local"
       CANONICAL_ORIGIN_APP2: "http://whoami-a.sso.local"
@@ -99,6 +100,7 @@ services:
       KEYCLOAK_INTERNAL_URL: "http://host.docker.internal:8080"
       KEYCLOAK_BROWSER_URL: "http://auth.sso.local:8080"
       REDIS_HOST: "redis-a"
+      REDIS_PASSWORD: "${REDIS_PASSWORD}"
       OPENIG_PUBLIC_URL: "http://openiga.sso.local:80"
       CANONICAL_ORIGIN_APP1: "http://wp-a.sso.local"
       CANONICAL_ORIGIN_APP2: "http://whoami-a.sso.local"
@@ -150,7 +152,7 @@ services:
   redis-a:
     image: redis:7-alpine
     container_name: sso-redis-a
-    command: redis-server --appendonly yes --appendfsync everysec
+    command: redis-server --appendonly yes --appendfsync everysec --requirepass ${REDIS_PASSWORD}
     volumes:
       - redis_a_data:/data
     networks:

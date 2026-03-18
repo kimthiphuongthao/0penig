@@ -21,6 +21,7 @@ Related: [[OpenIG]] [[Keycloak]] [[Vault]] [[Stack C]]
 - SLO: ✅
 - Stack C OIDC clients were rotated away from weak literal `secret-c` in Phase 2 STEP-02 (M-5/S-9). APP5 was re-rotated on 2026-03-18 to a strong alphanumeric-only secret because OpenIG `OAuth2ClientFilter` does not URL-encode `client_secret`.
 - Phase 2 hardening `[H-5/S-3]`: secret-bearing Compose values moved out of `stack-c/docker-compose.yml` into local `stack-c/.env`; committed `stack-c/.env.example` documents the required variables and K8s Secret bootstrap flow.
+- Phase 2 hardening `[H-4/S-2]`: `redis-c` now enforces `--requirepass ${REDIS_PASSWORD}`; `openig-c1` and `openig-c2` receive `REDIS_PASSWORD`; both `SessionBlacklistFilter.groovy` and `BackchannelLogoutHandler.groovy` send RESP `AUTH` before the existing Redis `GET`/`SET` calls. Validation on 2026-03-18: unauthenticated `redis-cli PING` returned `NOAUTH Authentication required.` and `openig-c1` reloaded all routes after restart.
 - `openig-c1` and `openig-c2` are pinned to `openidentityplatform/openig:6.0.1`; `openidentityplatform/openig:latest` moved to a Tomcat 11 build that breaks OpenIG 6 startup.
 
 > [!success]
@@ -130,6 +131,28 @@ Related: [[OpenIG]] [[Keycloak]] [[Vault]] [[Stack C]]
 
 > [!warning]
 > Do not reuse `JwtSession.sharedSecret` across stacks sharing `.sso.local` cookie domain.
+
+## 2026-03-18 implementation note
+
+- Context:
+  - Implemented Phase 2 hardening item `[H-4/S-2]` directly for [[Stack C]] after the plan item was already confirmed in `.omc/plans/phase2-security-hardening.md`.
+- What done:
+  - Generated and set a new Stack C `REDIS_PASSWORD` distinct from Stack A and Stack B.
+  - Reused the already-present Compose and Groovy hardening changes that pass `REDIS_PASSWORD` into [[OpenIG]] and require Redis `AUTH` before blacklist `GET` and `SET`.
+  - Ran `docker compose up -d`, waited 5 seconds, then restarted `stack-c-openig-c1-1` and `stack-c-openig-c2-1`.
+- Decisions:
+  - Kept the Groovy change surface limited to Redis connection setup so request flow and blacklist logic stayed unchanged.
+- Current state:
+  - `stack-c-openig-c1-1` logs show all Stack C routes loading after restart.
+  - Unauthenticated `docker exec stack-c-redis-c-1 redis-cli PING` now returns `NOAUTH Authentication required.`.
+- Next steps:
+  - Keep future Stack C Redis consumers on the same env-driven auth pattern.
+- Files changed:
+  - `stack-c/.env`
+  - `stack-c/.env.example`
+  - `stack-c/docker-compose.yml`
+  - `stack-c/openig_home/scripts/groovy/SessionBlacklistFilter.groovy`
+  - `stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy`
 
 > [!tip]
 > For Kubernetes deployment, generate the stack secret bundle from `stack-c/.env.example` and load it with `envFrom.secretRef` rather than reintroducing literals into `docker-compose.yml` or Helm values.

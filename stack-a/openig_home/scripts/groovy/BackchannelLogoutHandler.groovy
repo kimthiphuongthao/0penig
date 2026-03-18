@@ -17,6 +17,7 @@ import java.util.Base64
 // --- JWT Validation Configuration ---
 List expectedAudiences = binding.hasVariable('audiences') ? (audiences as List) : []
 String configuredRedisHost = binding.hasVariable('redisHost') ? (redisHost as String) : (System.getenv('REDIS_HOST') ?: 'redis-b')
+String configuredRedisPassword = System.getenv('REDIS_PASSWORD') ?: ''
 String configuredJwksUri = binding.hasVariable('jwksUri') ? (jwksUri as String) : null
 String configuredIssuer = binding.hasVariable('issuer') ? (issuer as String) : null
 final long CLOCK_SKEW_SECONDS = 60
@@ -338,11 +339,24 @@ try {
     int keySize = key.getBytes('UTF-8').length
     // TTL must be >= JwtSession.sessionTimeout (1800s = 30min)
     String ttl = String.valueOf(REDIS_BLACKLIST_TTL_SECONDS)
+    String authCommand = null
+    if (!configuredRedisPassword.isEmpty()) {
+        int redisPasswordSize = configuredRedisPassword.getBytes('UTF-8').length
+        authCommand = "*2\r\n\$4\r\nAUTH\r\n\$${redisPasswordSize}\r\n${configuredRedisPassword}\r\n"
+    }
     String command = "*5\r\n\$3\r\nSET\r\n\$${keySize}\r\n${key}\r\n\$1\r\n1\r\n\$2\r\nEX\r\n\$${ttl.length()}\r\n${ttl}\r\n"
 
     new Socket().withCloseable { socket ->
         socket.connect(new InetSocketAddress(configuredRedisHost, redisPort), 200)  // 200ms connect timeout
         socket.setSoTimeout(500)  // 500ms read timeout
+        if (authCommand != null) {
+            socket.outputStream.write(authCommand.getBytes('UTF-8'))
+            socket.outputStream.flush()
+            String authReply = readRespLine(socket.inputStream)
+            if (!authReply?.startsWith('+OK')) {
+                throw new IOException("Redis AUTH failed: ${authReply}")
+            }
+        }
         socket.outputStream.write(command.getBytes('UTF-8'))
         socket.outputStream.flush()
         String reply = readRespLine(socket.inputStream)

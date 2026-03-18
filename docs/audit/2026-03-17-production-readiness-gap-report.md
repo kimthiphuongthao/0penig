@@ -6,15 +6,15 @@ Status: NOT READY
 
 ## Executive Summary
 
-This report captures the 2026-03-17 production-readiness gap assessment for SSO Lab, cross-referencing the 2026-03-16 pre-packaging audit against the current codebase. The current state is **NOT READY** for release as a production reference solution: **37 findings remain open, 6 are partial, and 38 are resolved** out of 81 checks.
+This report captures the 2026-03-17 production-readiness gap assessment for SSO Lab, cross-referencing the 2026-03-16 pre-packaging audit against the current codebase. The current state is **NOT READY** for release as a production reference solution: **35 findings remain open, 6 are partial, and 40 are resolved** out of 81 checks.
 
-Resolved work now covers 38 findings and materially improved the gateway baseline. The resolved work includes the JWKS cache race, `SloHandler` try-catch hardening, TTL unit standardization, consolidation of `SessionBlacklistFilter` / `BackchannelLogoutHandler` / `SloHandler`, `vault/keys/` repo hygiene, Redmine direct-port exposure removal, Stack C nginx buffer alignment, `CANONICAL_ORIGIN_*` environment variables, dead-code cleanup, Stack C OIDC client secret rotation, and STEP-03 secret externalization plus OpenIG image pinning.
+Resolved work now covers 40 findings and materially improved the gateway baseline. The resolved work includes the JWKS cache race, `SloHandler` try-catch hardening, TTL unit standardization, consolidation of `SessionBlacklistFilter` / `BackchannelLogoutHandler` / `SloHandler`, `vault/keys/` repo hygiene, Redmine direct-port exposure removal, Stack C nginx buffer alignment, `CANONICAL_ORIGIN_*` environment variables, dead-code cleanup, Stack C OIDC client secret rotation, STEP-03 secret externalization plus OpenIG image pinning, and STEP-04 Redis authentication hardening.
 
 Operational follow-up after the scorecard: Stack C Grafana SSO/SLO was re-validated successfully on 2026-03-18. The earlier APP5 padding theory was superseded; the verified root cause was OpenIG `OAuth2ClientFilter` not URL-encoding `client_secret`, so APP5 now uses a strong alphanumeric-only secret and the recreated Stack C OpenIG containers are confirmed working.
 
-The remaining 37 open findings are concentrated in three categories that matter for a reusable reference solution:
+The remaining 35 open findings are concentrated in three categories that matter for a reusable reference solution:
 
-- Security: Redis revocation state is unauthenticated, and security headers and cookie flags are incomplete.
+- Security: browser security headers and cookie flags are incomplete, and transport-hardening work remains deferred outside the HTTP-only lab exception.
 - Architecture: Stack C is not yet parity-aligned with the Stack A/B reference pattern, Keycloak endpoint configuration is still hardcoded in Stack A/C routes, and Linux portability remains incomplete because `host.docker.internal` is assumed.
 - Code quality and operational consistency: several low-effort Groovy and nginx fixes remain open, including EOF handling, Base64 decoding simplification, and inconsistent upstream error semantics.
 
@@ -24,11 +24,11 @@ The most important conclusion is that the lab now demonstrates a strong referenc
 
 These items block production-reference status because they either leave an active security gap open or prevent one of the three stacks from acting as a faithful implementation of the consolidated pattern.
 
-### H-4/S-2: Redis no authentication
+### H-4/S-2: Redis no authentication [RESOLVED]
 - Files: `stack-a/docker-compose.yml`, `stack-b/docker-compose.yml`, `stack-c/docker-compose.yml`, `stack-a/openig_home/scripts/groovy/SessionBlacklistFilter.groovy`, `stack-b/openig_home/scripts/groovy/SessionBlacklistFilter.groovy`, `stack-c/openig_home/scripts/groovy/SessionBlacklistFilter.groovy`, `stack-a/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy`, `stack-b/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy`, `stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy`
-- Finding: Redis runs without `requirepass`, and the Groovy revocation read/write paths do not issue `AUTH` before blacklist commands. Any container on the Docker network can read or modify revocation entries.
-- Impact: Session blacklist state can be tampered with. An attacker who can reach Redis from the Docker network can delete or overwrite `blacklist:{sid}` entries and effectively un-revoke sessions.
-- Fix approach: Add Redis password protection in all three compose stacks, pass the password through environment variables, and update all revocation Groovy templates to authenticate before issuing Redis commands.
+- Finding: RESOLVED on 2026-03-18 — all three Redis services now enforce `requirepass`, and the Groovy revocation read/write paths authenticate with `AUTH` before issuing `GET` or `SET`.
+- Impact: Redis blacklist tampering from other containers on the Docker network is no longer a default path in the reference stacks.
+- Fix approach: Completed on 2026-03-18. Keep Redis passwords externalized via environment variables, require `AUTH` on every revocation connection, and retain the verified SSO/SLO regression check across all six apps.
 - Effort: MEDIUM
 
 ### H-5/S-3: Live secrets in docker-compose committed to git [RESOLVED]
@@ -163,7 +163,7 @@ These items remain acceptable only as explicitly documented lab constraints. The
 
 | Priority | ID | Finding | Effort |
 |----------|----|---------|--------|
-| P1-MUST | H-4/S-2 | Redis authentication | MEDIUM |
+| P1-MUST | H-4/S-2 | Redis authentication [RESOLVED 2026-03-18] | MEDIUM |
 | P1-MUST | H-5/S-3 | Secrets out of docker-compose to `.env` + OpenIG image pin [RESOLVED] | MEDIUM |
 | P1-MUST | H-7/A-1 | Stack C docker-compose parity | MEDIUM |
 | P1-MUST | A-6/A-7 | Keycloak URL externalization Stack A+C | MEDIUM |
@@ -188,6 +188,7 @@ These items remain acceptable only as explicitly documented lab constraints. The
 | H-1 | `SloHandler` missing try-catch | Consolidated `SloHandler` template (commit `3b8a6d8`) |
 | H-2 | `vault/keys/` not in `.gitignore` | Added `**/vault/keys/` (commit `5ae657e`) |
 | H-3 | Redmine port `3000` exposed | Removed `3000:3000` mapping (commit `f86c7eb`) |
+| H-4/S-2 | Redis authentication | Redis `requirepass` enabled in all three stacks and OpenIG revocation sockets now send `AUTH` before blacklist `GET`/`SET` (2026-03-18) |
 | H-5/S-3 | Secrets externalized from compose files | `.env` files are gitignored, `.env.example` files are committed, and all three stacks pin `openidentityplatform/openig:6.0.1` (commit `b738577`) |
 | H-6 | JWKS TTL unit inconsistency | Standardized to seconds (commit `4d8f065`) |
 | H-8 | `SessionBlacklistFilterApp2` divergent Base64 | File deleted in consolidation (commit `832bbae`) |

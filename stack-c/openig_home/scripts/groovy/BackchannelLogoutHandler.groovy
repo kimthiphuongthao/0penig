@@ -334,15 +334,26 @@ try {
 
     // 8. Write to Redis blacklist
     int redisPort = 6379
+    String redisPassword = System.getenv('REDIS_PASSWORD') ?: ''
     String key = "blacklist:${sid}"
     int keySize = key.getBytes('UTF-8').length
     // TTL must be >= JwtSession.sessionTimeout (1800s = 30min)
     String ttl = String.valueOf(REDIS_BLACKLIST_TTL_SECONDS)
+    String authCommand = redisPassword ? "*2\r\n\$4\r\nAUTH\r\n\$${redisPassword.getBytes('UTF-8').length}\r\n${redisPassword}\r\n" : null
     String command = "*5\r\n\$3\r\nSET\r\n\$${keySize}\r\n${key}\r\n\$1\r\n1\r\n\$2\r\nEX\r\n\$${ttl.length()}\r\n${ttl}\r\n"
 
     new Socket().withCloseable { socket ->
         socket.connect(new InetSocketAddress(configuredRedisHost, redisPort), 200)  // 200ms connect timeout
         socket.setSoTimeout(500)  // 500ms read timeout
+        if (authCommand) {
+            socket.outputStream.write(authCommand.getBytes('UTF-8'))
+            socket.outputStream.flush()
+
+            String authReply = readRespLine(socket.inputStream)
+            if (!authReply?.startsWith('+OK')) {
+                throw new IOException("Redis AUTH failed: ${authReply}")
+            }
+        }
         socket.outputStream.write(command.getBytes('UTF-8'))
         socket.outputStream.flush()
         String reply = readRespLine(socket.inputStream)

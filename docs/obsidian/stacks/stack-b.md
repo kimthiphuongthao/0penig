@@ -93,3 +93,13 @@ Related: [[Stack A]] [[Stack C]] [[OpenIG]] [[Keycloak]] [[Vault]]
 
 > [!warning]
 > `stack-b/.env` was not covered by existing ignore rules. Root `.gitignore` now includes `stack-b/.env` so Stack B lab secrets stay out of Git.
+
+## 2026-03-18 Redis Auth Hardening
+
+- Implemented `[H-4/S-2]` for [[Stack B]] from `.omc/plans/phase2-security-hardening.md`.
+- Generated a Stack B-only `REDIS_PASSWORD` in local `stack-b/.env` and added the matching placeholder to `stack-b/.env.example`.
+- Updated `redis-b` to start with `--requirepass ${REDIS_PASSWORD}`.
+- Passed `REDIS_PASSWORD` into both [[OpenIG]] nodes and added RESP `AUTH` before blacklist Redis `GET` and `SET`.
+
+> [!success]
+> Validation on `2026-03-18`: `docker logs sso-b-openig-1 2>&1 | grep 'Loaded the route'` returned route load entries after the restart, and `docker exec sso-redis-b redis-cli PING` returned `NOAUTH Authentication required.`
