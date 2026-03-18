@@ -1,11 +1,10 @@
 #!/bin/sh
-# Entrypoint: substitute secret placeholders in config.json before OpenIG starts.
-# Copies /opt/openig to /tmp/openig so config.json can be written without
-# touching the shared host-mounted volume.
+# Entrypoint: render secret placeholders into the mounted OpenIG config before
+# Tomcat starts. OpenIG resolves config from /opt/openig inside this stack.
 
 set -e
 
-# Validate required env vars before proceeding
+# Validate required env vars before proceeding.
 for var in JWT_SHARED_SECRET KEYSTORE_PASSWORD; do
   eval val=\$$var
   if [ -z "$val" ]; then
@@ -14,20 +13,25 @@ for var in JWT_SHARED_SECRET KEYSTORE_PASSWORD; do
   fi
 done
 
-SRC=/opt/openig
-DST=/tmp/openig
+OPENIG_BASE_DIR="${OPENIG_BASE:-/opt/openig}"
+CONFIG_FILE="${OPENIG_BASE_DIR}/config/config.json"
 
-# Copy entire openig home to writable tmpfs location (clean first to avoid stale config on restart)
-rm -rf "$DST"
-cp -r "$SRC" "$DST"
+if [ ! -f "$CONFIG_FILE" ]; then
+  echo "FATAL: expected OpenIG config at $CONFIG_FILE. Aborting." >&2
+  exit 1
+fi
 
-# Substitute placeholders in config.json
+escape_sed_replacement() {
+  printf '%s' "$1" | sed 's/[&|\\]/\\&/g'
+}
+
+JWT_SHARED_SECRET_ESCAPED=$(escape_sed_replacement "$JWT_SHARED_SECRET")
+KEYSTORE_PASSWORD_ESCAPED=$(escape_sed_replacement "$KEYSTORE_PASSWORD")
+
+# Render secrets into the mounted config OpenIG actually reads.
 sed -i \
-  -e "s|__JWT_SHARED_SECRET__|${JWT_SHARED_SECRET}|g" \
-  -e "s|__KEYSTORE_PASSWORD__|${KEYSTORE_PASSWORD}|g" \
-  "$DST/config/config.json"
-
-# Point OpenIG at the processed copy
-export OPENIG_BASE="$DST"
+  -e "s|__JWT_SHARED_SECRET__|${JWT_SHARED_SECRET_ESCAPED}|g" \
+  -e "s|__KEYSTORE_PASSWORD__|${KEYSTORE_PASSWORD_ESCAPED}|g" \
+  "$CONFIG_FILE"
 
 exec /usr/local/tomcat/bin/catalina.sh run
