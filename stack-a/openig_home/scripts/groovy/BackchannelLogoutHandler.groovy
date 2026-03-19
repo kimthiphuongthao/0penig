@@ -9,8 +9,12 @@ import java.net.InetSocketAddress
 import java.net.Socket
 import java.net.URL
 import java.net.URLDecoder
+import java.security.AlgorithmParameters
 import java.security.KeyFactory
 import java.security.Signature
+import java.security.spec.ECGenParameterSpec
+import java.security.spec.ECPoint
+import java.security.spec.ECPublicKeySpec
 import java.security.spec.RSAPublicKeySpec
 import java.util.Base64
 
@@ -132,22 +136,48 @@ def getPublicKeyFromJwks = { Map jwksKeys, String kid ->
         return null
     }
 
-    if (keyEntry.kty != 'RSA' || keyEntry.use != 'sig') {
-        logger.warn('[BackchannelLogoutHandler] Key with kid={} is not an RSA signing key', kid)
+    if (keyEntry.use != 'sig') {
+        logger.warn('[BackchannelLogoutHandler] Key with kid={} is not a signing key', kid)
         return null
     }
 
-    // Reconstruct RSA public key from JWK (n=modulus, e=exponent)
     try {
-        byte[] nBytes = base64UrlDecode(keyEntry.n)
-        byte[] eBytes = base64UrlDecode(keyEntry.e)
-        BigInteger modulus = new BigInteger(1, nBytes)
-        BigInteger exponent = new BigInteger(1, eBytes)
-        RSAPublicKeySpec keySpec = new RSAPublicKeySpec(modulus, exponent)
-        KeyFactory keyFactory = KeyFactory.getInstance('RSA')
-        def publicKey = keyFactory.generatePublic(keySpec)
-        logger.info('[BackchannelLogoutHandler] Successfully reconstructed public key for kid={}', kid)
-        return publicKey
+        if (keyEntry.kty == 'RSA') {
+            // Reconstruct RSA public key from JWK (n=modulus, e=exponent)
+            byte[] nBytes = base64UrlDecode(keyEntry.n)
+            byte[] eBytes = base64UrlDecode(keyEntry.e)
+            BigInteger modulus = new BigInteger(1, nBytes)
+            BigInteger exponent = new BigInteger(1, eBytes)
+            RSAPublicKeySpec keySpec = new RSAPublicKeySpec(modulus, exponent)
+            KeyFactory keyFactory = KeyFactory.getInstance('RSA')
+            def publicKey = keyFactory.generatePublic(keySpec)
+            logger.info('[BackchannelLogoutHandler] Successfully reconstructed RSA public key for kid={}', kid)
+            return publicKey
+        }
+
+        if (keyEntry.kty == 'EC') {
+            if (keyEntry.crv != 'P-256') {
+                logger.warn('[BackchannelLogoutHandler] Key with kid={} has unsupported EC curve={}', kid, keyEntry.crv)
+                return null
+            }
+
+            byte[] xBytes = base64UrlDecode(keyEntry.x)
+            byte[] yBytes = base64UrlDecode(keyEntry.y)
+            BigInteger x = new BigInteger(1, xBytes)
+            BigInteger y = new BigInteger(1, yBytes)
+
+            AlgorithmParameters algorithmParameters = AlgorithmParameters.getInstance('EC')
+            algorithmParameters.init(new ECGenParameterSpec('secp256r1'))
+            def ecParameterSpec = algorithmParameters.getParameterSpec(java.security.spec.ECParameterSpec)
+            ECPublicKeySpec keySpec = new ECPublicKeySpec(new ECPoint(x, y), ecParameterSpec)
+            KeyFactory keyFactory = KeyFactory.getInstance('EC')
+            def publicKey = keyFactory.generatePublic(keySpec)
+            logger.info('[BackchannelLogoutHandler] Successfully reconstructed EC public key for kid={}', kid)
+            return publicKey
+        }
+
+        logger.warn('[BackchannelLogoutHandler] Key with kid={} has unsupported kty={}', kid, keyEntry.kty)
+        return null
     } catch (Exception e) {
         logger.error('[BackchannelLogoutHandler] Failed to reconstruct public key for kid={}', kid, e)
         return null
@@ -155,7 +185,7 @@ def getPublicKeyFromJwks = { Map jwksKeys, String kid ->
 }
 
 // --- Helper: Verify JWT signature ---
-def verifySignature = { String jwt, java.security.PublicKey publicKey ->
+def verifySignature = { String jwt, java.security.PublicKey publicKey, String alg ->
     try {
         String[] parts = jwt.split('\\.')
         if (parts.length != 3) return false
@@ -163,7 +193,52 @@ def verifySignature = { String jwt, java.security.PublicKey publicKey ->
         byte[] headerAndPayload = (parts[0] + '.' + parts[1]).getBytes('UTF-8')
         byte[] signatureBytes = base64UrlDecode(parts[2])
 
-        Signature sig = Signature.getInstance('SHA256withRSA')
+        Signature sig
+        if (alg == 'RS256') {
+            sig = Signature.getInstance('SHA256withRSA')
+        } else if (alg == 'ES256') {
+            if (signatureBytes.length != 64) {
+                logger.warn('[BackchannelLogoutHandler] Invalid ES256 signature length: {}', signatureBytes.length)
+                return false
+            }
+
+            byte[] rBytes = new byte[32]
+            byte[] sBytes = new byte[32]
+            System.arraycopy(signatureBytes, 0, rBytes, 0, 32)
+            System.arraycopy(signatureBytes, 32, sBytes, 0, 32)
+
+            def toDerInteger = { byte[] value ->
+                int offset = 0
+                while (offset < value.length - 1 && value[offset] == 0) {
+                    offset++
+                }
+                int length = value.length - offset
+                ByteArrayOutputStream derInteger = new ByteArrayOutputStream()
+                if ((value[offset] & 0x80) != 0) {
+                    derInteger.write(0)
+                }
+                derInteger.write(value, offset, length)
+                derInteger.toByteArray()
+            }
+
+            byte[] derR = toDerInteger(rBytes)
+            byte[] derS = toDerInteger(sBytes)
+            ByteArrayOutputStream derSignature = new ByteArrayOutputStream()
+            derSignature.write(0x30)
+            derSignature.write(2 + derR.length + 2 + derS.length)
+            derSignature.write(0x02)
+            derSignature.write(derR.length)
+            derSignature.write(derR)
+            derSignature.write(0x02)
+            derSignature.write(derS.length)
+            derSignature.write(derS)
+            signatureBytes = derSignature.toByteArray()
+            sig = Signature.getInstance('SHA256withECDSA')
+        } else {
+            logger.warn('[BackchannelLogoutHandler] Unsupported signature algorithm: {}', alg)
+            return false
+        }
+
         sig.initVerify(publicKey)
         sig.update(headerAndPayload)
 
@@ -310,7 +385,7 @@ try {
     }
 
     // 6. Verify JWT signature
-    boolean signatureValid = verifySignature(logoutToken, publicKey)
+    boolean signatureValid = verifySignature(logoutToken, publicKey, alg)
     if (!signatureValid) {
         logger.error('[BackchannelLogoutHandler] JWT signature verification FAILED')
         return newResultPromise(new Response(Status.BAD_REQUEST))
