@@ -40,6 +40,7 @@ Keycloak shared: `http://auth.sso.local:8080`, realm `sso-realm`.
 - Legacy app cookies phải nằm ở browser; OpenIG session chỉ giữ OIDC tokens và marker nhỏ (`*_user_sub`, cookie names), không giữ raw upstream cookies như `wp_session_cookies` / `redmine_session_cookies`
 - `TokenReferenceFilter.groovy` offload `oauth2:*` session blob sang Redis; JwtSession cookie chỉ giữ `token_ref_id` + marker nhỏ (`IG_SSO_C` sampled ~`849` chars trên Stack C sau fix)
 - OAuth2ClientFilter session key format = `oauth2:<full-URL>/<clientEndpoint>`; luôn dùng dynamic `session.keySet()` discovery, không hardcode `oauth2:/openid/appX`
+- `BackchannelLogoutHandler.groovy` support cả `RS256` (RSA key) và `ES256` (EC `P-256` key) cho backchannel `logout_token` validation; khi Keycloak client dùng `ES256`, JWKS trả `kty=EC` và signature phải verify bằng `SHA256withECDSA` sau khi convert JWS raw `R\|\|S` sang DER
 - Vault credentials shared mount → cả 2 node dùng chung `role_id`/`secret_id`
 
 ## Pinned canonical origins
@@ -65,7 +66,7 @@ Keycloak shared: `http://auth.sso.local:8080`, realm `sso-realm`.
 - Stack A: `IG_SSO`, `cookieDomain: ".sso.local"`
 - Stack B: `IG_SSO_B`, `cookieDomain: ".sso.local"`
 - Stack C: `IG_SSO_C`, `cookieDomain: ".sso.local"`
-- Current lab state on `fix/jwtsession-production-pattern`: cả 3 stacks đã chạy `JwtSession` heap `Session` với Redis token reference offload; full user validation login+logout cho 3 stacks vẫn còn pending
+- Current lab state on `fix/jwtsession-production-pattern`: cả 3 stacks đã chạy `JwtSession` heap `Session` với Redis token reference offload; full validation login+logout PASS trên cả 3 stacks ngày 2026-03-19 và branch ready để merge
 
 ## SLO mechanism
 - Keycloak → backchannel logout → `BackchannelLogoutHandler.groovy` → Redis blacklist

@@ -69,6 +69,8 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] Stack C recovery: Vault unsealed, AppRole refreshed, `secret/phpmyadmin/alice` realigned to live MariaDB password `AlicePass123`, Grafana + phpMyAdmin login/logout reconfirmed (`6cc3fc9` + 2026-03-19 log evidence)
 - [x] Phase 1: restore `JwtSession` production pattern — rename heap `JwtSession` -> `Session`, switch 4 OpenIG clients to `ES256`, disable `refresh_token` (`0454796`)
 - [x] Phase 2: Redis Token Reference Pattern — `TokenReferenceFilter.groovy`, dynamic oauth2 session key discovery, `IG_SSO_C` shrunk to `849` chars (`9b2d109`, `47cbab9`)
+- [x] BackchannelLogoutHandler ES256/EC fix — accept `ES256` alg + EC key reconstruction + `SHA256withECDSA` (`646a45a`, `d2eb8e9`)
+- [x] Full validation login+logout all 3 stacks on `fix/jwtsession-production-pattern` — PASS (2026-03-19)
 
 ### Phase tiếp theo
 - Active branch for JwtSession work: `fix/jwtsession-production-pattern` (created from `9a7b855` before rename experiment commit `e37536d`)
@@ -93,7 +95,7 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] Redis persistence (appendonly yes) — đảm bảo SLO blacklist survive restart
 - [x] Vault audit logging
 - [x] Stack C Grafana SSO re-validation/fix — root cause: OpenIG OAuth2ClientFilter không URL-encode client_secret; Base64 secret chứa '+' → Keycloak decode thành space → invalid_client_credentials. Fix: rotate secret alphanumeric-only (commit a403b3d)
-- [ ] Full validation: login+logout all 3 stacks on `fix/jwtsession-production-pattern`
+- [ ] Merge `fix/jwtsession-production-pattern` -> `main`
 - [ ] Provision MariaDB user `bob` for Stack C phpMyAdmin or document alice-only support explicitly
 - [ ] Đóng gói: OVA / Docker Compose bundle — single-command deploy
 - [ ] Slide + tài liệu báo cáo phương án giải pháp

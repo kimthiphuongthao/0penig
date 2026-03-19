@@ -84,5 +84,8 @@
 - [x] End-of-session doc audit sync: roadmap, audit docs, test docs, rules, và state notes đã phản ánh STEP-01/02/03
 - [x] Stack C Grafana SSO/SLO re-validation PASS: confirmed OpenIG `OAuth2ClientFilter` does not URL-encode `client_secret`; APP5 rotated to alphanumeric-only secret, Stack C OpenIG containers recreated, user confirmed end-to-end flow (`a403b3d`)
 - [x] 2026-03-18: STEP-13 (proxy_cookie_flags SameSite=Lax, all 3 stacks) + STEP-14 (non-root: macOS vault permission constraint, comment added). Phase 2b complete.
+- [x] 2026-03-19: Phase 1+2 `JwtSession` production pattern fully validated on `fix/jwtsession-production-pattern`
+- [x] 2026-03-19: BackchannelLogoutHandler ES256/EC fix complete (`646a45a`, `d2eb8e9`)
+- [x] 2026-03-19: Full login+logout validation PASS on Stack A, Stack B, and Stack C
 
 ---
