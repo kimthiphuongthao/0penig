@@ -59,6 +59,19 @@
       }
     },
     {
+      "name": "TokenReferenceFilterApp1",
+      "type": "ScriptableFilter",
+      "config": {
+        "type": "application/x-groovy",
+        "file": "TokenReferenceFilter.groovy",
+        "args": {
+          "clientEndpoint": "/openid/app1",
+          "redisHost": "redis-a",
+          "redisTtl": 1800
+        }
+      }
+    },
+    {
       "name": "VaultCredentialFilter",
       "type": "ScriptableFilter",
       "config": {
@@ -100,6 +113,7 @@
     "type": "Chain",
     "config": {
       "filters": [
+        "TokenReferenceFilterApp1",
         "OidcFilter",
         "SessionBlacklistFilter",
         "VaultCredentialFilter",

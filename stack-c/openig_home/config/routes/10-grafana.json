@@ -59,6 +59,19 @@
       }
     },
     {
+      "name": "TokenReferenceFilterApp5",
+      "type": "ScriptableFilter",
+      "config": {
+        "type": "application/x-groovy",
+        "file": "TokenReferenceFilter.groovy",
+        "args": {
+          "clientEndpoint": "/openid/app5",
+          "redisHost": "redis-c",
+          "redisTtl": 1800
+        }
+      }
+    },
+    {
       "name": "SessionBlacklistFilterApp5",
       "type": "ScriptableFilter",
       "config": {
@@ -99,6 +112,7 @@
     "type": "Chain",
     "config": {
       "filters": [
+        "TokenReferenceFilterApp5",
         "OidcFilterApp5",
         "SessionBlacklistFilterApp5",
         "GrafanaUserHeader"

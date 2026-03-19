@@ -59,6 +59,19 @@
       }
     },
     {
+      "name": "TokenReferenceFilterApp2",
+      "type": "ScriptableFilter",
+      "config": {
+        "type": "application/x-groovy",
+        "file": "TokenReferenceFilter.groovy",
+        "args": {
+          "clientEndpoint": "/openid/app2",
+          "redisHost": "redis-a",
+          "redisTtl": 1800
+        }
+      }
+    },
+    {
       "name": "App2HeaderFilter",
       "type": "HeaderFilter",
       "config": {
@@ -99,6 +112,7 @@
     "type": "Chain",
     "config": {
       "filters": [
+        "TokenReferenceFilterApp2",
         "OidcFilter",
         "SessionBlacklistFilterApp2",
         "App2HeaderFilter"
