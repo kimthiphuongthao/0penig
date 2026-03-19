@@ -74,7 +74,7 @@ POLICY
   vault read -field=role_id auth/approle/role/openig-role-c/role-id > /vault/init/role_id
   vault write -f -field=secret_id auth/approle/role/openig-role-c/secret-id > /vault/init/secret_id
   chmod 600 /vault/init/role_id /vault/init/secret_id
-  vault kv put secret/phpmyadmin/alice username=alice password="mF0k6thz34B8XbAWEn0tIRVCc3!"
+  vault kv put secret/phpmyadmin/alice username=alice password="AlicePass123"
   vault kv put secret/phpmyadmin/bob username=bob password="OYHupH3pbskR6sY5vcKr6X0Dd4\$"
   touch "$BOOTSTRAP_FLAG"
   echo "Bootstrap complete."
@@ -89,6 +89,8 @@ path "auth/approle/role/*" { capabilities = ["read", "update"] }
 path "auth/approle/role/+/role-id" { capabilities = ["read"] }
 path "auth/approle/role/+/secret-id" { capabilities = ["create", "update"] }
 path "secret/config" { capabilities = ["read", "update"] }
+path "secret/data/phpmyadmin/*" { capabilities = ["create", "read", "update"] }
+path "secret/metadata/phpmyadmin/*" { capabilities = ["read", "list"] }
 path "sys/audit" { capabilities = ["read", "sudo"] }
 path "sys/audit/*" { capabilities = ["create", "read", "update", "delete", "sudo"] }
 path "sys/health" { capabilities = ["read"] }
