@@ -17,7 +17,7 @@
       }
     },
     {
-      "name": "JwtSession",
+      "name": "Session",
       "type": "JwtSession",
       "config": {
         "cookieName": "IG_SSO_B",
