@@ -55,7 +55,7 @@ Keycloak shared: `http://auth.sso.local:8080`, realm `sso-realm`.
 - OIDC client secrets đi qua `OAuth2ClientFilter` PHẢI dùng strong random alphanumeric-only values; không dùng Base64 có `+`, `/`, `=` vì OpenIG 6 không URL-encode `client_secret` trong POST body
 - Với các secret Base64 khác (không đi qua `OAuth2ClientFilter`), phải copy nguyên vẹn. Dấu `=` cuối chuỗi là dữ liệu hợp lệ, không phải ký tự thừa
 - Tất cả OpenIG containers PHẢI pin `openidentityplatform/openig:6.0.1`
-- KHÔNG dùng `openidentityplatform/openig:latest` vì `latest=6.0.2` chuyển sang Tomcat 11 và làm OpenIG 6 không khởi động được
+- KHÔNG dùng `openidentityplatform/openig:latest` vì `latest=6.0.2` hiện đang broken trong lab; `6.0.1` là tag đã được verify chạy ổn định cho OpenIG 6 ở project này
 
 ## Keycloak URL + compose baseline
 - Cả 3 stacks giờ dùng env-driven Keycloak URLs trong route JSON: `KEYCLOAK_BROWSER_URL` cho browser-facing `issuer`/authorize/logout semantics, `KEYCLOAK_INTERNAL_URL` cho OpenIG -> Keycloak `token`/`userinfo`/`jwks`

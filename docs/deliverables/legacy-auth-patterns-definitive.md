@@ -3,7 +3,7 @@
 **Purpose:** Tài liệu reference để đối chiếu với hiện trạng triển khai và tìm gaps
 **Sources:** Claude (Exa MCP) + Codex (web search) + Gemini (deep research)
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. The live lab now uses consolidated SessionBlacklistFilter / BackchannelLogoutHandler / SloHandler templates; STEP-02 rotated Stack C OIDC secrets; STEP-03 moved compose secrets into gitignored `.env` files and pinned OpenIG to `6.0.1`. Operational follow-up 2026-03-18: Stack C Grafana re-validation passed after rotating APP5 to an alphanumeric-only secret because OpenIG `OAuth2ClientFilter` does not URL-encode `client_secret`.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. The live lab now uses consolidated SessionBlacklistFilter / BackchannelLogoutHandler / SloHandler templates; STEP-02 rotated Stack C OIDC secrets; STEP-03 moved compose secrets into gitignored `.env` files and pinned OpenIG to `6.0.1`. Operational follow-up 2026-03-18: Stack C Grafana re-validation passed after rotating APP5 to an alphanumeric-only secret because OpenIG `OAuth2ClientFilter` does not URL-encode `client_secret`. Validation follow-up 2026-03-19: the Phase 1+2 `JwtSession` production pattern is now fully validated across all three stacks, with `TokenReferenceFilter.groovy` offloading `oauth2:*` state and `BackchannelLogoutHandler.groovy` supporting both `RS256` and `ES256`.
 
 ---
 
@@ -330,25 +330,29 @@ Score per control: `0 = missing`, `1 = partial`, `2 = adequate`
 
 As of 2026-03-17 (Pattern Consolidation Steps 1-6), all gateway Groovy scripts follow a parameterized template architecture. New app integrations should copy these templates and configure via route JSON args.
 
-Runtime note: pin OpenIG images to `openidentityplatform/openig:6.0.1`. Do not use the mutable `latest` tag, because `latest=6.0.2` moved to a Tomcat 11 build that breaks OpenIG 6 startup.
+Runtime note: pin OpenIG images to `openidentityplatform/openig:6.0.1`. Do not use the mutable `latest` tag, because `latest=6.0.2` is currently broken in this lab while `6.0.1` is the known-good OpenIG 6 runtime tag.
 
 OpenIG compatibility note: when `OAuth2ClientFilter` consumes an OIDC `clientSecret`, generate a strong random alphanumeric-only value. Avoid Base64 secrets containing `+`, `/`, or `=` because OpenIG 6 sends `client_secret` without URL-encoding in the token request body.
+
+Validated session note: when routes use browser-bound `JwtSession`, place `TokenReferenceFilter.groovy` immediately after `OAuth2ClientFilter` so the heavy `oauth2:*` entry is offloaded to Redis and the browser cookie keeps only `token_ref_id` plus small identity markers.
 
 ### Available Templates (per stack)
 
 | Template | File | Args | Purpose |
 |----------|------|------|---------|
+| TokenReferenceFilter | TokenReferenceFilter.groovy | clientEndpoint, redisHost, redisTtl | Offload heavy `oauth2:*` session state to Redis so `JwtSession` stays under the browser cookie budget |
 | SessionBlacklistFilter | SessionBlacklistFilter.groovy | clientEndpoint, sessionCacheKey, canonicalOrigin | Check Redis blacklist on every request; redirect to re-auth if blacklisted |
-| BackchannelLogoutHandler | BackchannelLogoutHandler.groovy | audiences (List), redisHost, jwksUri, issuer | Receive Keycloak backchannel logout POST; validate JWT; write sid to Redis blacklist |
+| BackchannelLogoutHandler | BackchannelLogoutHandler.groovy | audiences (List), redisHost, jwksUri, issuer | Receive Keycloak backchannel logout POST; validate `RS256` / `ES256` JWTs against JWKS; write sid to Redis blacklist |
 | SloHandler | SloHandler.groovy | clientEndpoint, clientId, canonicalOrigin, postLogoutPath | Intercept logout request; redirect to Keycloak end_session with id_token_hint |
 | SloHandlerJellyfin | SloHandlerJellyfin.groovy | (hardcoded — Jellyfin-specific) | Same as SloHandler + calls Jellyfin /Sessions/Logout API before redirect |
 
 ### Template Selection Decision Tree
 
-1. Does the app need SSO session revocation check on every request? -> Add SessionBlacklistFilter to route chain
-2. Does Keycloak need to notify this app on global logout? -> Register backchannel logout URL + add BackchannelLogoutHandler route
-3. Does the app have a logout URL to intercept? -> Add SloHandler route (or SloHandlerJellyfin for Jellyfin-specific API)
-4. Does the app use a dedicated Keycloak client? -> Set matching clientId arg in SloHandler + BackchannelLogoutHandler audiences
+1. Does the route use `OAuth2ClientFilter` with browser-bound `JwtSession`? -> Add TokenReferenceFilter immediately after the OIDC filter
+2. Does the app need SSO session revocation check on every request? -> Add SessionBlacklistFilter to route chain
+3. Does Keycloak need to notify this app on global logout? -> Register backchannel logout URL + add BackchannelLogoutHandler route
+4. Does the app have a logout URL to intercept? -> Add SloHandler route (or SloHandlerJellyfin for Jellyfin-specific API)
+5. Does the app use a dedicated Keycloak client? -> Set matching clientId arg in SloHandler + BackchannelLogoutHandler audiences
 
 ### Args Binding Pattern (OpenIG 6.0.x runtime pinned to 6.0.1)
 

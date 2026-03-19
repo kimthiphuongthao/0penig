@@ -1,11 +1,11 @@
 ---
 # Mẫu Chuẩn Gateway OpenIG cho SSO/SLO
-**Version:** 1.1
-**Date:** 2026-03-15
+**Version:** 1.2
+**Date:** 2026-03-19
 **Derived from:** Đánh giá mã nguồn và bảo mật của 3 stack tích hợp (WordPress, Redmine+Jellyfin, Grafana+phpMyAdmin)
 **Scope:** OpenIG 6 + Keycloak + Vault + Redis
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. STEP-02 rotated Stack C OIDC secrets, and STEP-03 moved compose secrets into gitignored `.env` files while pinning OpenIG to `6.0.1`.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. STEP-02 rotated Stack C OIDC secrets, and STEP-03 moved compose secrets into gitignored `.env` files while pinning OpenIG to `6.0.1`. Follow-up 2026-03-19: Phase 1+2 `JwtSession` production pattern đã được validate trên cả 3 stack; `TokenReferenceFilter.groovy` offload `oauth2:*` khỏi browser cookie, và `BackchannelLogoutHandler.groovy` giờ support cả `RS256` lẫn `ES256` / EC JWKS.
 
 ---
 
@@ -33,7 +33,7 @@ Derived from: Cross-Stack Summary "Login Mechanism Pattern Risk Matrix"; Stack B
 
 Derived from: Cross-Stack Summary "Recommended Standard Pattern"; Stack B `F4`, `F7`, `F9-F10`; Stack C `§3`, `§4 F4`, `§4 F6-F9`; Stack A `§4`, `§5 F2-F5`, `§6`.
 
-Triển khai chuẩn đặt nginx phía trước OpenIG và xem OpenIG là enforcement point cho session, revocation, logout và logic adapter. Keycloak giữ vai trò nhà cung cấp OIDC dùng chung và nguồn phát backchannel logout. Vault là nguồn runtime cho secret của gateway và downstream. Redis là kho revocation, và phải có giới hạn rõ ràng để không âm thầm làm sai logout hoặc làm gateway bị treo. Các stack đã đánh giá cho thấy các mối quan tâm này phải được thiết kế như một hợp đồng thống nhất, không phải các script rời rạc.
+Triển khai chuẩn đặt nginx phía trước OpenIG và xem OpenIG là enforcement point cho session, revocation, logout và logic adapter. Keycloak giữ vai trò nhà cung cấp OIDC dùng chung và nguồn phát backchannel logout. Vault là nguồn runtime cho secret của gateway và downstream. Redis là kho revocation, và phải có giới hạn rõ ràng để không âm thầm làm sai logout hoặc làm gateway bị treo. Các stack đã đánh giá cho thấy các mối quan tâm này phải được thiết kế như một hợp đồng thống nhất, không phải các script rời rạc, và `JwtSession` chỉ còn khả thi khi blob `oauth2:*` nặng được offload phía server thay vì serialize vào browser cookie.
 
 Text diagram:
 
@@ -47,10 +47,11 @@ nginx
   - loại bỏ hoặc chuẩn hóa Host inbound và trusted identity headers
   |
   v
-OpenIG
-  - SessionBlacklistFilter
-  - adapter filters theo từng app
-  - proxy handler
+  OpenIG
+    - TokenReferenceFilter
+    - SessionBlacklistFilter
+    - adapter filters theo từng app
+    - proxy handler
   |
   v
 Downstream App
@@ -63,10 +64,10 @@ Redis    <---- blacklist read/write ----------------------- OpenIG
 Thành phần chính và vai trò:
 
 - `nginx`: kết thúc TLS, chuẩn hóa định tuyến trước OpenIG, và loại bỏ trusted identity/header inbound mà downstream app chỉ được chấp nhận từ gateway. Ghi chú sticky-routing cho HA là suy luận từ topology HA 2 node đã đánh giá ở Stack B, không phải finding trực tiếp. Derived from: Stack B "Scope" and "Summary"; Stack B `F4`, `F7`; Stack C `§4 F4`, `§4 F9`.
-- Chuỗi filter `OpenIG`: cưỡng chế revocation trước, sau đó chạy adapter-specific filters cần cho cơ chế đăng nhập đã chọn trước khi proxy. App cleanup và logout helper chỉ là một phần của route contract khi chúng thực sự được wiring vào chain. Derived from: Stack A `§5 F2-F5`, `§6`; Stack B `F5`; Stack C `§4 F6`.
+- Chuỗi filter `OpenIG`: giữ `JwtSession` phía trình duyệt nhỏ bằng cách offload blob `oauth2:*` qua `TokenReferenceFilter`, cưỡng chế revocation trước downstream adapter path, sau đó chạy adapter-specific filters cần cho cơ chế đăng nhập đã chọn trước khi proxy. App cleanup và logout helper chỉ là một phần của route contract khi chúng thực sự được wiring vào chain. Derived from: Stack A `§5 F2-F5`, `§6`; Stack B `F5`; Stack C `§4 F6`.
 - `Vault`: cung cấp secret runtime cho gateway crypto, OIDC client và downstream credential thay vì literal nằm trong repo. Derived from: Stack A `§5 F1`; Stack B `F1`; Stack C `§4 F1` and `§3`.
 - `Redis`: lưu trạng thái revocation với TTL ít nhất bằng gateway session lifetime và hành vi socket có giới hạn. Derived from: Stack A `§5 F2-F3`, `§6`; Stack B `F2-F3`, `F9-F10`, `F11`; Stack C `§4 F2-F3`, `§4 F7-F8`.
-- `Keycloak`: đóng vai trò IdP dùng chung, OIDC issuer, và bộ phát backchannel logout. Các điểm mạnh đã được xác nhận cho thấy OpenIG phải validate đầy đủ logout token trước khi ghi trạng thái revocation. Derived from: Stack A `§4`; Stack B "Confirmed Strengths"; Stack C `§3`.
+- `Keycloak`: đóng vai trò IdP dùng chung, OIDC issuer, và bộ phát backchannel logout. Các điểm mạnh đã được xác nhận cho thấy OpenIG phải validate đầy đủ logout token trước khi ghi trạng thái revocation. Vì Keycloak là dependency dùng chung cho mọi stack, production reference phải có kế hoạch HA/availability rõ ràng cho login mới, frontchannel logout, và backchannel delivery thay vì chỉ dựa vào HA của gateway. Derived from: Stack A `§4`; Stack B "Confirmed Strengths"; Stack C `§3`.
 
 ## Controls Bắt buộc (Required Controls - MUST)
 
@@ -79,7 +80,7 @@ Lý do: Cả ba stack đều lộ secret gateway hoặc OIDC trong config quản
 
 Cách triển khai trong OpenIG: Dùng nguồn secret runtime kiểu `VaultCredentialFilter` và inject giá trị thu được vào cấu hình route/filter mà không serialize chúng vào `JwtSession`. Mẫu triển khai suy luận từ adapter dùng Vault đã đánh giá là: lấy secret lúc startup, cache có TTL, và refresh trước khi hết hạn thay vì lưu secret đã lấy vào session gắn với trình duyệt. Derived from: Stack A `§4`; Stack C `§3`; Stack C `§4 F5`.
 
-Quy tắc triển khai: secret ở Compose phải nằm trong file `.env` được gitignore; chỉ commit `.env.example`. Container OpenIG phải pin tag tường minh `openidentityplatform/openig:6.0.1`; không dùng `latest` vì `latest=6.0.2` chuyển sang Tomcat 11 và làm OpenIG 6 không khởi động được.
+Quy tắc triển khai: secret ở Compose phải nằm trong file `.env` được gitignore; chỉ commit `.env.example`. Container OpenIG phải pin tag tường minh `openidentityplatform/openig:6.0.1`; không dùng `latest` vì `latest=6.0.2` hiện vẫn broken trong lab này, còn `6.0.1` là tag đã được verify chạy ổn định cho OpenIG 6.
 
 ### 2. Hợp đồng Revocation (Revocation Contract)
 [Derived from: A F2/F3, B F2/F3, C F2/F3, B F11]
@@ -88,7 +89,7 @@ Nội dung: TTL blacklist trong Redis BẮT BUỘC lớn hơn hoặc bằng `Jwt
 
 Lý do: Các stack đã đánh giá lặp lại hai failure mode giống nhau: trạng thái revocation hết hạn trước session trình duyệt, và kiểm tra revocation vẫn tiếp tục khi Redis lỗi. Stack B còn cho thấy lệch `sid`/`sub` có thể làm hỏng enforcement dù cả hai đường đều tồn tại. Derived from: Stack A `§5 F2-F3`; Stack B `F2-F3`, `F11`; Stack C `§4 F2-F3`; Cross-Stack Summary Universal Findings.
 
-Cách triển khai trong OpenIG: `BackchannelLogoutHandler` phải validate logout token trước khi ghi `blacklist:<sid>` vào Redis với TTL khớp session lifetime, và `SessionBlacklistFilter` phải đọc đúng key `sid` đó trên mọi request đã xác thực. Bộ validate logout token BẮT BUỘC kiểm tra `alg=RS256`, resolve signing key từ JWKS theo `kid`, và validate `iss`, `aud`, `events`, `iat`, `exp` trước khi ghi trạng thái revocation. Derived from: Stack A `§4`; Stack B "Confirmed Strengths"; Stack C `§3`.
+Cách triển khai trong OpenIG: `BackchannelLogoutHandler` phải validate logout token trước khi ghi `blacklist:<sid>` vào Redis với TTL khớp session lifetime, và `SessionBlacklistFilter` phải đọc đúng key `sid` đó trên mọi request đã xác thực. Bộ validate logout token BẮT BUỘC kiểm tra `alg` bất đối xứng được phép (`RS256` hoặc `ES256` trong lab hiện tại), resolve signing key từ JWKS theo `kid`, reconstruct RSA hoặc EC `P-256` khi cần, và validate `iss`, `aud`, `events`, `iat`, `exp` trước khi ghi trạng thái revocation. Với `JwtSession` production pattern, `TokenReferenceFilter.groovy` cũng phải offload blob `oauth2:*` sang Redis để browser cookie chỉ giữ `token_ref_id` và marker nhỏ. Derived from: Stack A `§4`; Stack B "Confirmed Strengths"; Stack C `§3`.
 
 ### 3. Bảo mật Truyền tải (Transport Security)
 [Derived from: B F4, C F4, A §6]
@@ -176,7 +177,7 @@ Với adapter trusted-header (kiểu Grafana), gateway BẮT BUỘC chỉ inject
 
 ### Validate logout token backchannel (H8)
 
-Cả ba stack đều triển khai đầy đủ validate logout token RS256 trong `BackchannelLogoutHandler`: kiểm tra algorithm (`alg=RS256`), JWKS lookup theo `kid` có cache và re-fetch khi kid miss, verify chữ ký, và validate claims `iss`, `aud`, `events`, `iat`, `exp` trước khi ghi trạng thái revocation. Đây là hình dạng triển khai đúng cần giữ lại, thỏa mãn yêu cầu validate trong Control 2 và trình tự Backchannel Logout. **ĐÃ TRIỂN KHAI** trên cả 3 stack (H8 security hardening, 2026-03-14). Derived from: Stack A `§4`; Stack B "Confirmed Strengths"; Stack C `§3`.
+Cả ba stack giờ triển khai validate logout token hai thuật toán trong `BackchannelLogoutHandler`: kiểm tra algorithm (`RS256` và `ES256`), JWKS lookup theo `kid` có cache và re-fetch khi kid miss, reconstruct RSA hoặc EC key khi cần, verify chữ ký (gồm cả chuyển raw `R||S` -> DER cho `ES256`), và validate claims `iss`, `aud`, `events`, `iat`, `exp` trước khi ghi trạng thái revocation. Đây là hình dạng triển khai đã được xác nhận sau lần validate 2026-03-19. Derived from: Stack A `§4`; Stack B "Confirmed Strengths"; Stack C `§3`.
 
 ## Luồng SLO — Trình tự Chuẩn (SLO Flow — Standard Sequence)
 
@@ -198,7 +199,7 @@ Derived from: Stack A `§5 F4-F5`; Stack B `F5`, `F7`; Stack C `§4 F9`.
 Derived from: Stack A `§4`, `§5 F2-F3`; Stack B "Confirmed Strengths", `F2-F3`, `F10-F11`; Stack C `§3`, `§4 F2-F3`, `§4 F7-F8`.
 
 1. Keycloak gửi `POST /backchannel_logout` kèm logout token đã ký.
-2. `BackchannelLogoutHandler` validate token: `alg=RS256`, JWKS lookup theo `kid`, verify chữ ký, và kiểm tra `iss`, `aud`, `events`, `iat`, `exp`.
+2. `BackchannelLogoutHandler` validate token: `alg` (`RS256` hoặc `ES256`), JWKS lookup theo `kid`, verify chữ ký RSA hoặc EC tương ứng, và kiểm tra `iss`, `aud`, `events`, `iat`, `exp`.
 3. Khi token hợp lệ, handler ghi `blacklist:<sid>` vào Redis với TTL bằng `sessionTimeout`.
 4. Handler trả `200` cho Keycloak.
 5. Ở request đã xác thực kế tiếp, `SessionBlacklistFilter` kiểm tra Redis cho `sid` đó.

@@ -7,7 +7,7 @@ tags:
   - keycloak
   - sso
   - slo
-date: 2026-03-12
+date: 2026-03-19
 status: active
 ---
 
@@ -19,10 +19,11 @@ Related: [[OpenIG]] [[Keycloak]] [[Vault]] [[Stack C]]
 
 - SSO: ✅
 - SLO: ✅
+- Full 2026-03-19 validation PASS: `IG_SSO_C` observed at `971` chars during end-to-end login+logout, with TokenRef Store/Restore OK and backchannel Redis blacklist enforcement confirmed.
 - Stack C OIDC clients were rotated away from weak literal `secret-c` in Phase 2 STEP-02 (M-5/S-9). APP5 was re-rotated on 2026-03-18 to a strong alphanumeric-only secret because OpenIG `OAuth2ClientFilter` does not URL-encode `client_secret`.
 - Phase 2 hardening `[H-5/S-3]`: secret-bearing Compose values moved out of `stack-c/docker-compose.yml` into local `stack-c/.env`; committed `stack-c/.env.example` documents the required variables and K8s Secret bootstrap flow.
 - Phase 2 hardening `[H-4/S-2]`: `redis-c` now enforces `--requirepass ${REDIS_PASSWORD}`; `openig-c1` and `openig-c2` receive `REDIS_PASSWORD`; both `SessionBlacklistFilter.groovy` and `BackchannelLogoutHandler.groovy` send RESP `AUTH` before the existing Redis `GET`/`SET` calls. Validation on 2026-03-18: unauthenticated `redis-cli PING` returned `NOAUTH Authentication required.` and `openig-c1` reloaded all routes after restart.
-- `openig-c1` and `openig-c2` are pinned to `openidentityplatform/openig:6.0.1`; `openidentityplatform/openig:latest` moved to a Tomcat 11 build that breaks OpenIG 6 startup.
+- `openig-c1` and `openig-c2` are pinned to `openidentityplatform/openig:6.0.1`; `openidentityplatform/openig:latest` (`6.0.2`) is currently broken in this lab while `6.0.1` is the verified good tag.
 
 > [!success]
 > SSO/SLO WORKING for app5 (Grafana) and app6 (phpMyAdmin). Post-audit cleanup confirmed the old `SloHandlerGrafana.groovy` and `SloHandlerPhpMyAdmin.groovy` files were leftover artifacts from Step 4 and have been deleted.
@@ -98,7 +99,7 @@ Related: [[OpenIG]] [[Keycloak]] [[Vault]] [[Stack C]]
 ### Backchannel (both apps)
 
 1. Keycloak sends `POST /openid/app5/backchannel_logout` or `/openid/app6/backchannel_logout`.
-2. `BackchannelLogoutHandler.groovy` parses `logout_token`, extracts `sid`, sets `blacklist:<sid>` in Redis (TTL 1800s, aligned to `JwtSession.sessionTimeout: "30 minutes"`).
+2. `BackchannelLogoutHandler.groovy` parses `logout_token`, validates `RS256` / `ES256`, and sets `blacklist:<sid>` in Redis with the shared `28800`-second TTL, comfortably above `JwtSession.sessionTimeout: "30 minutes"`.
 3. `SessionBlacklistFilter.groovy` checks Redis each request; if blacklisted, session is cleared and request is redirected to same URL for fresh OIDC flow.
 
 ## Key files
@@ -113,6 +114,7 @@ Related: [[OpenIG]] [[Keycloak]] [[Vault]] [[Stack C]]
 - Handlers/filters:
   - `stack-c/openig_home/scripts/groovy/SloHandler.groovy`
   - `stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy`
+  - `stack-c/openig_home/scripts/groovy/TokenReferenceFilter.groovy`
   - `stack-c/openig_home/scripts/groovy/SessionBlacklistFilter.groovy`
   - `stack-c/openig_home/scripts/groovy/VaultCredentialFilter.groovy`
 - Platform:

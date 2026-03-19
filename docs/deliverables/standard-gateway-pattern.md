@@ -1,11 +1,11 @@
 ---
 # Standard OpenIG SSO/SLO Gateway Pattern
-**Version:** 1.1
-**Date:** 2026-03-18
+**Version:** 1.2
+**Date:** 2026-03-19
 **Derived from:** Code and security review of 3 integration stacks (WordPress, Redmine+Jellyfin, Grafana+phpMyAdmin)
 **Scope:** OpenIG 6 + Keycloak + Vault + Redis
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. The lab implementation now also matches more of this pattern operationally: Redmine no longer exposes host port `3000`, Stack C nginx carries the same proxy buffer settings as A/B, all 3 stacks declare app-specific `CANONICAL_ORIGIN_APP*` env vars, Stack C OIDC secrets were rotated, and compose secrets now live in gitignored `.env` files while OpenIG stays pinned to `6.0.1`. Follow-up 2026-03-18: APP5 was re-rotated to a strong alphanumeric-only secret after confirming OpenIG `OAuth2ClientFilter` does not URL-encode `client_secret`, Stack A/C Keycloak routes now use env-driven browser/internal URLs, Stack C compose and timeout settings are aligned to the baseline, all 6 OpenIG nodes are Linux-portable via `extra_hosts`, and all three nginx configs ship the shared HTTP-safe response-header baseline.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. The lab implementation now also matches more of this pattern operationally: Redmine no longer exposes host port `3000`, Stack C nginx carries the same proxy buffer settings as A/B, all 3 stacks declare app-specific `CANONICAL_ORIGIN_APP*` env vars, Stack C OIDC secrets were rotated, and compose secrets now live in gitignored `.env` files while OpenIG stays pinned to `6.0.1`. Follow-up 2026-03-18: APP5 was re-rotated to a strong alphanumeric-only secret after confirming OpenIG `OAuth2ClientFilter` does not URL-encode `client_secret`, Stack A/C Keycloak routes now use env-driven browser/internal URLs, Stack C compose and timeout settings are aligned to the baseline, all 6 OpenIG nodes are Linux-portable via `extra_hosts`, and all three nginx configs ship the shared HTTP-safe response-header baseline. Validation follow-up 2026-03-19: Phase 1+2 `JwtSession` production pattern passed full login+logout validation on all three stacks, `TokenReferenceFilter.groovy` keeps `oauth2:*` blobs out of the browser cookie, and `BackchannelLogoutHandler.groovy` now supports `RS256` plus `ES256` / EC JWKS validation.
 
 ---
 
@@ -33,7 +33,7 @@ Derived from: Cross-Stack Summary "Login Mechanism Pattern Risk Matrix"; Stack B
 
 Derived from: Cross-Stack Summary "Recommended Standard Pattern"; Stack B `F4`, `F7`, `F9-F10`; Stack C `§3`, `§4 F4`, `§4 F6-F9`; Stack A `§4`, `§5 F2-F5`, `§6`.
 
-The standard deployment places nginx in front of OpenIG and treats OpenIG as the enforcement point for session, revocation, logout, and adapter logic. Keycloak remains the shared OIDC provider and backchannel logout initiator. Vault is the runtime source of gateway and downstream secrets. Redis is the revocation store and must be bounded so it cannot silently degrade logout correctness or stall the gateway. The reviewed stacks show that these concerns must be designed as one contract, not as independent scripts.
+The standard deployment places nginx in front of OpenIG and treats OpenIG as the enforcement point for session, revocation, logout, and adapter logic. Keycloak remains the shared OIDC provider and backchannel logout initiator. Vault is the runtime source of gateway and downstream secrets. Redis is the revocation store and must be bounded so it cannot silently degrade logout correctness or stall the gateway. The reviewed stacks show that these concerns must be designed as one contract, not as independent scripts, and that `JwtSession` stays viable only when heavyweight `oauth2:*` state is offloaded server-side instead of serialized into the browser cookie.
 
 Text diagram:
 
@@ -48,6 +48,7 @@ nginx
   |
   v
 OpenIG
+  - TokenReferenceFilter
   - SessionBlacklistFilter
   - app-specific adapter filters
   - proxy handler
@@ -63,10 +64,10 @@ Redis    <---- blacklist read/write ----------------------- OpenIG
 Key components and roles:
 
 - `nginx`: terminate TLS, normalize routing before OpenIG, and remove inbound trusted identity/header inputs that the downstream app must accept only from the gateway. The HA sticky-routing note is an inference from Stack B's reviewed 2-node HA topology rather than a direct finding. Derived from: Stack B "Scope" and "Summary"; Stack B `F4`, `F7`; Stack C `§4 F4`, `§4 F9`.
-- `OpenIG` filter chain: enforce revocation first, then run the adapter-specific filters needed for the chosen login mechanism before proxying. App cleanup and logout helpers are part of this route contract only when they are wired into the chain. Derived from: Stack A `§5 F2-F5`, `§6`; Stack B `F5`; Stack C `§4 F6`.
+- `OpenIG` filter chain: keep the browser-bound `JwtSession` small by offloading heavyweight `oauth2:*` state through `TokenReferenceFilter`, enforce revocation before the downstream adapter path, then run the adapter-specific filters needed for the chosen login mechanism before proxying. App cleanup and logout helpers are part of this route contract only when they are wired into the chain. Derived from: Stack A `§5 F2-F5`, `§6`; Stack B `F5`; Stack C `§4 F6`.
 - `Vault`: provide runtime secret material for gateway crypto, OIDC clients, and downstream credentials instead of repo-managed literals. Derived from: Stack A `§5 F1`; Stack B `F1`; Stack C `§4 F1` and `§3`.
 - `Redis`: hold revocation state with TTL at least equal to the gateway session lifetime and with bounded socket behavior. Derived from: Stack A `§5 F2-F3`, `§6`; Stack B `F2-F3`, `F9-F10`, `F11`; Stack C `§4 F2-F3`, `§4 F7-F8`.
-- `Keycloak`: act as the shared IdP, OIDC issuer, and backchannel logout sender. The reviewed strengths show that OpenIG must validate logout tokens fully before writing revocation state. Derived from: Stack A `§4`; Stack B "Confirmed Strengths"; Stack C `§3`.
+- `Keycloak`: act as the shared IdP, OIDC issuer, and backchannel logout sender. The reviewed strengths show that OpenIG must validate logout tokens fully before writing revocation state. Because Keycloak is a shared dependency across all stacks, the production reference must plan explicit HA/availability coverage for new logins, frontchannel logout, and backchannel delivery rather than assuming the gateway tier alone removes that dependency. Derived from: Stack A `§4`; Stack B "Confirmed Strengths"; Stack C `§3`.
 
 ## Required Controls (MUST)
 
@@ -77,9 +78,11 @@ What it is: Redis blacklist TTL MUST be greater than or equal to `JwtSession.ses
 
 Why: The reviewed stacks show the same two failure modes repeatedly: revocation state expires before the browser session does, and revocation checks continue on Redis failure. Stack B also shows that `sid`/`sub` drift can break enforcement even when both paths exist. [Note: B F11 (sid vs sub mismatch) was confirmed by 1/4 reviewers and flagged for investigation.] Derived from: Stack A `§5 F2-F3`; Stack B `F2-F3`, `F11`; Stack C `§4 F2-F3`; Cross-Stack Summary Universal Findings.
 
-How to implement in OpenIG: `BackchannelLogoutHandler` must validate logout tokens before writing `blacklist:<sid>` to Redis with TTL aligned to session lifetime, and `SessionBlacklistFilter` must read that same `sid` key on every authenticated request. The logout token validator MUST check `alg=RS256`, resolve the signing key from JWKS by `kid`, and validate `iss`, `aud`, `events`, `iat`, and `exp` before writing revocation state. Redis `requirepass` MUST be enabled, and each OpenIG revocation socket MUST send `AUTH` before the subsequent `GET` or `SET` command. Derived from: Stack A `§4`; Stack B "Confirmed Strengths"; Stack C `§3`.
+How to implement in OpenIG: `BackchannelLogoutHandler` must validate logout tokens before writing `blacklist:<sid>` to Redis with TTL aligned to session lifetime, and `SessionBlacklistFilter` must read that same `sid` key on every authenticated request. The logout token validator MUST check that `alg` is an allowed asymmetric signing algorithm (`RS256` or `ES256` in the current lab), resolve the signing key from JWKS by `kid`, reconstruct RSA or EC `P-256` keys as required, and validate `iss`, `aud`, `events`, `iat`, and `exp` before writing revocation state. Redis `requirepass` MUST be enabled, and each OpenIG revocation socket MUST send `AUTH` before the subsequent `GET` or `SET` command. Derived from: Stack A `§4`; Stack B "Confirmed Strengths"; Stack C `§3`.
 
 > **Implementation (2026-03-17):** SessionBlacklistFilter.groovy — parameterized template, configured via route args: clientEndpoint, sessionCacheKey, canonicalOrigin.
+>
+> **Implementation (2026-03-19):** TokenReferenceFilter.groovy — route-scoped `JwtSession` guard that stores heavyweight `oauth2:*` state in Redis and leaves only `token_ref_id` plus small identity markers in the browser cookie.
 
 ### 2. Secret Externalization
 [Derived from: A F1, B F1, C F1]
@@ -194,7 +197,7 @@ For trusted-header adapters (Grafana-style), the gateway MUST inject the identit
 
 ### Backchannel logout token validation (H8)
 
-All three stacks implement full RS256 logout token validation in `BackchannelLogoutHandler`: algorithm check (`alg=RS256`), JWKS lookup by `kid` with cache and kid-triggered re-fetch on miss, signature verification, and `iss`, `aud`, `events`, `iat`, `exp` claims validation before writing revocation state. This is a confirmed correct implementation shape that satisfies the validation requirements in Control 1 and the Backchannel Logout sequence. **IMPLEMENTED** across all stacks (H8 security hardening, 2026-03-14). Derived from: Stack A `§4`; Stack B "Confirmed Strengths"; Stack C `§3`.
+All three stacks now implement dual-algorithm logout token validation in `BackchannelLogoutHandler`: algorithm check (`RS256` and `ES256`), JWKS lookup by `kid` with cache and kid-triggered re-fetch on miss, RSA or EC key reconstruction as appropriate, signature verification (including JWS raw `R||S` -> DER conversion for `ES256`), and `iss`, `aud`, `events`, `iat`, `exp` claims validation before writing revocation state. This is the confirmed implementation shape after the 2026-03-19 validation pass. Derived from: Stack A `§4`; Stack B "Confirmed Strengths"; Stack C `§3`.
 
 ## SLO Flow — Standard Sequence
 
@@ -216,7 +219,7 @@ Derived from: Stack A `§5 F4-F5`; Stack B `F5`, `F7`; Stack C `§4 F9`.
 Derived from: Stack A `§4`, `§5 F2-F3`; Stack B "Confirmed Strengths", `F2-F3`, `F10-F11`; Stack C `§3`, `§4 F2-F3`, `§4 F7-F8`.
 
 1. Keycloak sends `POST /backchannel_logout` with a signed logout token.
-2. `BackchannelLogoutHandler` validates the token: `alg=RS256`, JWKS lookup by `kid`, signature verification, and `iss`, `aud`, `events`, `iat`, `exp`.
+2. `BackchannelLogoutHandler` validates the token: `alg` (`RS256` or `ES256`), JWKS lookup by `kid`, RSA or EC signature verification as appropriate, and `iss`, `aud`, `events`, `iat`, `exp`.
 3. On a valid token, the handler writes `blacklist:<sid>` to Redis with TTL equal to `sessionTimeout`.
 4. Handler returns `200` to Keycloak.
 5. On the next authenticated request, `SessionBlacklistFilter` checks Redis for that `sid`.
@@ -232,6 +235,7 @@ Derived from: Cross-Stack Summary Universal Findings and Stack-Specific Findings
 | Hardcoded secrets in config or route files | Repository or filesystem access exposes gateway signing material and OIDC client credentials | `A F1`, `B F1`, `C F1` | Externalize gateway and OIDC secrets to Vault or environment at runtime |
 | Revocation TTL shorter than session lifetime | Revoked browser session becomes valid again after Redis entry expires | `A F3`, `B F2`, `C F2` | Set blacklist TTL to at least `JwtSession.sessionTimeout` |
 | Fail-open on Redis errors | Redis outage turns logout enforcement into best-effort behavior | `A F2`, `B F3`, `C F3` | Fail closed for authenticated sessions when revocation state is indeterminate |
+| Raw `oauth2:*` session blobs kept in `JwtSession` | Browser cookie exceeds the 4 KB budget and the production cookie-backed session pattern collapses | Phase 1+2 validation, 2026-03-19 | Offload `oauth2:*` state through `TokenReferenceFilter` and keep only `token_ref_id` plus small markers in `JwtSession` |
 | Host-derived redirects | Redirect integrity and session lookup depend on attacker-influenced request headers | `A F5`, `B F7`, `C F9` | Pin origins and redirect targets in static config |
 | Vault or app credentials in `JwtSession` | Cookie theft or shared-secret compromise exposes privileged backend material | `B F6`, `C F5` | Keep privileged adapter state server-side behind an opaque session reference |
 | Bearer tokens in `localStorage` | Any same-origin JavaScript can read and persist bearer tokens | `B F8` | Use `httpOnly`, `Secure` cookies or server-side storage |
@@ -258,6 +262,8 @@ Derived from: Cross-Stack Summary "Recommended Standard Pattern" and "Next Steps
 - [ ] All revocation read paths use the same `sid` key written by the backchannel handler.
 - [ ] If Redis lookup fails for an authenticated session, the request fails closed rather than continuing downstream.
 - [ ] Redis read and write paths have explicit connect and read timeouts, and backchannel runtime failures return `5xx`.
+- [ ] Routes that use `OAuth2ClientFilter` with browser-bound `JwtSession` offload heavyweight `oauth2:*` state through `TokenReferenceFilter`, leaving only `token_ref_id` and small identity markers in the cookie.
+- [ ] `TokenReferenceFilter` discovers the real `oauth2:` namespace dynamically from the live session state rather than hardcoding `oauth2:/openid/appX`.
 
 ### Transport
 
@@ -284,6 +290,7 @@ Derived from: Cross-Stack Summary "Recommended Standard Pattern" and "Next Steps
 
 ## Parameterized Template Architecture (2026-03-17)
 
-All gateway Groovy scripts now use a parameterized template architecture (Pattern Consolidation Steps 1-5). Each stack has its own copy of each template; configuration is per-route via JSON args binding.
+All shared gateway Groovy patterns now use a parameterized template architecture (Pattern Consolidation Steps 1-5). Each stack has its own copy of each template; configuration is per-route via JSON args binding.
 
 See docs/deliverables/legacy-auth-patterns-definitive.md section "Template-Based Integration" for full template catalogue and args reference.
+The validated browser-cookie session pattern also depends on `TokenReferenceFilter.groovy`, which is configured per route to offload `oauth2:*` state to Redis before OpenIG persists the response.

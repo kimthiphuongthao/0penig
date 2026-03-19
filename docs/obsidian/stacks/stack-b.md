@@ -7,7 +7,7 @@ tags:
   - redmine
   - jellyfin
   - security-hardening
-date: 2026-03-18
+date: 2026-03-19
 status: complete
 ---
 
@@ -44,22 +44,23 @@ Related: [[Stack A]] [[Stack C]] [[OpenIG]] [[Keycloak]] [[Vault]]
 | `00-backchannel-logout-app3.json` | Handles Keycloak `POST /openid/app3/backchannel_logout` for Redmine and runs `BackchannelLogoutHandler.groovy`. |
 | `00-backchannel-logout-app4.json` | Handles Keycloak `POST /openid/app4/backchannel_logout` for Jellyfin and runs `BackchannelLogoutHandler.groovy`. |
 | `00-dotnet-logout.json` (DELETED) | Legacy `/app3/Account/Logout` intercept on `openigb.sso.local`, handled by `DotnetSloHandler.groovy`. |
-| `00-jellyfin-logout.json` | Intercepts Jellyfin logout requests and delegates to `SloHandlerJellyfin.groovy`. |
-| `00-redmine-logout.json` | Intercepts Redmine `POST /logout` and delegates to the consolidated `SloHandler.groovy`; the old `SloHandlerRedmine.groovy` file was leftover only and has been deleted. |
+| `00-jellyfin-logout.json` | Intercepts Jellyfin logout requests, runs `TokenReferenceFilter.groovy` for `/openid/app4`, then delegates to `SloHandlerJellyfin.groovy`. |
+| `00-redmine-logout.json` | Intercepts Redmine `POST /logout`, runs `TokenReferenceFilter.groovy` for `/openid/app3`, then delegates to the consolidated `SloHandler.groovy`; the old `SloHandlerRedmine.groovy` file was leftover only and has been deleted. |
 | `01-dotnet.json` (DELETED) | Legacy .NET SSO chain for `/app3*` and `/openid/app3*` to `dotnet-app:5000`, with OAuth2 + blacklist + credential injection. |
-| `01-jellyfin.json` | Main Jellyfin SSO chain to `jellyfin:8096`: OAuth2 (`/openid/app4`) + app4 blacklist + Vault creds + token injector + response rewrite. |
-| `02-redmine.json` | Main Redmine SSO chain to `redmine:3000`: OAuth2 (`/openid/app3`) + app3 blacklist + Vault creds + form-login credential injector. |
+| `01-jellyfin.json` | Main Jellyfin SSO chain to `jellyfin:8096`: OAuth2 (`/openid/app4`) + TokenReferenceFilter + app4 blacklist + Vault creds + token injector + response rewrite. |
+| `02-redmine.json` | Main Redmine SSO chain to `redmine:3000`: OAuth2 (`/openid/app3`) + TokenReferenceFilter + app3 blacklist + Vault creds + form-login credential injector. |
 
 ## Groovy Scripts
 
 | Script file | Purpose |
 |---|---|
-| `BackchannelLogoutHandler.groovy` | Parses Keycloak `logout_token`, extracts `sid/sub`, writes Redis `blacklist:{sid}` with TTL. |
+| `BackchannelLogoutHandler.groovy` | Parses Keycloak `logout_token`, validates `RS256` / `ES256` signatures, extracts `sid/sub`, and writes Redis `blacklist:{sid}` with TTL. |
 | `DotnetCredentialInjector.groovy` (DELETED) | Legacy ASP.NET login automation (antiforgery token + cookies) using Vault-backed creds; injects upstream `Cookie`. |
 | `DotnetSloHandler.groovy` (DELETED) | Legacy .NET logout redirect to Keycloak end-session with optional `id_token_hint`. |
 | `JellyfinResponseRewriter.groovy` | Rewrites Jellyfin HTML to seed `localStorage` credentials and steer browser flow away from local login. |
 | `JellyfinTokenInjector.groovy` | Calls Jellyfin auth API, stores token/user/device in session, injects MediaBrowser `Authorization`, clears on `401`. |
-| `RedmineCredentialInjector.groovy` | Performs Redmine `/login` GET+POST (CSRF + credentials), caches `_redmine_session`, injects cookies, retries on `/login` redirect. |
+| `RedmineCredentialInjector.groovy` | Performs Redmine `/login` GET+POST (CSRF + credentials), returns upstream cookies to the browser, removes legacy `redmine_session_cookies` state, and retries on `/login` redirect. |
+| `TokenReferenceFilter.groovy` | Stores and restores the live `oauth2:*` session namespace in Redis so `IG_SSO_B` only carries `token_ref_id` plus small identity markers. |
 | `SessionBlacklistFilter.groovy` | Shared blacklist filter used by both Stack B routes via `args` (`clientEndpoint`, `sessionCacheKey`, `canonicalOrigin`, `canonicalOriginEnvVar`). |
 | `SloHandlerJellyfin.groovy` | Calls Jellyfin `/Sessions/Logout` when token exists, clears OpenIG session, redirects to Keycloak logout with `id_token_hint` if found. |
 | `SloHandler.groovy` | Consolidated Redmine/logout handler shared after Step 4 parameterization. |
@@ -67,13 +68,13 @@ Related: [[Stack A]] [[Stack C]] [[OpenIG]] [[Keycloak]] [[Vault]]
 | `VaultCredentialFilterRedmine.groovy` | AppRole login to Vault and fetch `secret/data/redmine-creds/{email}` into `attributes.redmine_credentials`. |
 
 > [!success]
-> SSO/SLO WORKING for both apps: `redmine-b.sso.local` and `jellyfin-b.sso.local`. Post-audit cleanup confirmed `SloHandlerRedmine.groovy` was an unreferenced leftover from Step 4 and has been deleted.
+> Full 2026-03-19 validation PASS: `IG_SSO_B` present, TokenRef Store/Restore OK, and backchannel Redis blacklist logout works for both `redmine-b.sso.local` and `jellyfin-b.sso.local`. Post-audit cleanup confirmed `SloHandlerRedmine.groovy` was an unreferenced leftover from Step 4 and has been deleted.
 
 > [!warning]
 > Known pending:
 > - Jellyfin WebSocket `http://` -> `ws://` bug (`01-jellyfin.json`)
-> - STEP-13: model `SameSite`/`Secure` cookie flags for `IG_SSO_B` in the nginx layer
 > - STEP-14: remove `user: root` from `openig-b1` and `openig-b2` after host-volume compatibility validation
+> - Jellyfin-specific P3 debt remains open around logout fallback without `id_token` and unstable device-ID derivation
 
 ## 2026-03-17 Security Hardening
 
@@ -81,7 +82,7 @@ Related: [[Stack A]] [[Stack C]] [[OpenIG]] [[Keycloak]] [[Vault]]
 - Moved Stack B runtime secrets out of `stack-b/docker-compose.yml` into local `stack-b/.env`.
 - Added committed `stack-b/.env.example` placeholders with Kubernetes `envFrom secretRef` guidance for production secret delivery.
 - Replaced hardcoded secret values in `openig-b1`, `openig-b2`, `mysql-redmine`, and `redmine` with `${...}` environment references.
-- Pinned `openig-b1` and `openig-b2` to `openidentityplatform/openig:6.0.1` because `openidentityplatform/openig:latest` now resolves to a Tomcat 11 build that breaks OpenIG 6.
+- Pinned `openig-b1` and `openig-b2` to `openidentityplatform/openig:6.0.1` because `openidentityplatform/openig:latest` (`6.0.2`) is currently broken in this lab while `6.0.1` is the verified good tag.
 - Kept `REDIS_PASSWORD` out of this step intentionally; STEP-04 remains the owner for Redis auth rollout.
 
 > [!success]

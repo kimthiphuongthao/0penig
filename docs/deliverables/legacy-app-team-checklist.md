@@ -3,11 +3,11 @@
 **Dành cho:** Team phát triển và vận hành ứng dụng legacy cần tích hợp vào hệ thống SSO.
 **Không dành cho:** Gateway team — xem `standalone-legacy-app-integration-guide.md`.
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. STEP-01 deleted `PhpMyAdminCookieFilter.groovy`, STEP-02 rotated Stack C OIDC secrets, and STEP-03 moved compose secrets into gitignored `.env` files while pinning OpenIG to `6.0.1`.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. STEP-01 deleted `PhpMyAdminCookieFilter.groovy`, STEP-02 rotated Stack C OIDC secrets, and STEP-03 moved compose secrets into gitignored `.env` files while pinning OpenIG to `6.0.1`. Validation follow-up 2026-03-19: the Phase 1+2 `JwtSession` production pattern is fully validated on all three stacks, including Redis token-reference offload and `BackchannelLogoutHandler` support for `RS256` plus `ES256`.
 
 > [!warning]
 > Gateway-team handoff notes:
-> - Pin `openidentityplatform/openig:6.0.1`; do not use `openidentityplatform/openig:latest` because `latest=6.0.2` moved to Tomcat 11 and breaks OpenIG 6 startup.
+> - Pin `openidentityplatform/openig:6.0.1`; do not use `openidentityplatform/openig:latest` because `latest=6.0.2` is currently broken in this lab while `6.0.1` is the verified good OpenIG 6 tag.
 > - If an OIDC client secret is consumed by OpenIG `OAuth2ClientFilter`, use a strong random alphanumeric-only value. Avoid `+`, `/`, and `=` because OpenIG does not URL-encode `client_secret` in the token request body.
 
 ---
@@ -370,6 +370,8 @@ Gateway team cấu hình để tự động xử lý logout khi người dùng c
 Khi gateway down, người dùng không thể đăng nhập mới. Người dùng đang có session hợp lệ có thể bị ảnh hưởng tùy cấu hình. Đây là trade-off của mô hình centralized gateway — gateway chạy HA (High Availability) với ít nhất 2 node để giảm thiểu downtime.
 
 **Lưu ý về SLO khi hạ tầng gặp sự cố:** Nếu thành phần lưu trữ trạng thái logout (Redis) bị gián đoạn đúng lúc có lệnh logout, phiên đăng nhập ở một số app có thể chưa bị thu hồi ngay. Phiên đó sẽ hết hạn tự nhiên theo thời gian session timeout (mặc định 30 phút). Trong môi trường production, hạ tầng Redis chạy HA (High Availability) để giảm thiểu khả năng này xảy ra.
+
+**Lưu ý về Keycloak:** Gateway HA không loại bỏ dependency vào Keycloak. Nếu Keycloak unavailable, login mới, frontchannel logout, và backchannel logout delivery đều bị ảnh hưởng. Production cần HA/availability plan cho cả gateway **và** Keycloak, không chỉ riêng gateway.
 
 **6. Có thể truy cập app trực tiếp (không qua gateway) để debug không?**
 

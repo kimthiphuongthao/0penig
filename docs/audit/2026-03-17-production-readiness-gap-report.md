@@ -6,16 +6,16 @@ Status: NOT READY
 
 ## Executive Summary
 
-This report captures the 2026-03-17 production-readiness gap assessment for SSO Lab, cross-referencing the 2026-03-16 pre-packaging audit against the current codebase. The current state is **NOT READY** for release as a production reference solution: **18 findings remain open, 7 are partial, and 56 are resolved** out of 81 checks.
+This report captures the 2026-03-17 production-readiness gap assessment for SSO Lab, cross-referencing the 2026-03-16 pre-packaging audit against the current codebase. The current state is **NOT READY** for release as a production reference solution: **17 findings remain open, 7 are partial, and 57 are resolved** out of 81 checks.
 
-Resolved work now covers 56 findings, and one additional finding is now explicitly documented as a partial macOS lab exception. The resolved work includes the JWKS cache race, `SloHandler` try-catch hardening, TTL unit standardization, consolidation of `SessionBlacklistFilter` / `BackchannelLogoutHandler` / `SloHandler`, `vault/keys/` repo hygiene, Redmine direct-port exposure removal, Stack C nginx buffer alignment, `CANONICAL_ORIGIN_*` environment variables, dead-code cleanup, Stack C OIDC client secret rotation, STEP-03 secret externalization plus OpenIG image pinning, STEP-04 Redis authentication hardening, STEP-05 Keycloak URL externalization, STEP-06 Stack C compose parity plus Stack A OpenIG healthchecks, STEP-07 Vault `502` alignment, STEP-08 EOF fail-closed behavior, STEP-09 Base64 URL decoding simplification, STEP-10 Stack C timeout alignment, STEP-11 Linux `extra_hosts` portability, STEP-12 nginx baseline security headers, and STEP-13 nginx cookie `SameSite=Lax` flags.
+Resolved work now covers 57 findings, and one additional finding is now explicitly documented as a partial macOS lab exception. The resolved work includes the JWKS cache race, `SloHandler` try-catch hardening, TTL unit standardization, consolidation of `SessionBlacklistFilter` / `BackchannelLogoutHandler` / `SloHandler`, `vault/keys/` repo hygiene, Redmine direct-port exposure removal, Stack C nginx buffer alignment, `CANONICAL_ORIGIN_*` environment variables, dead-code cleanup, Stack C OIDC client secret rotation, STEP-03 secret externalization plus OpenIG image pinning, STEP-04 Redis authentication hardening, STEP-05 Keycloak URL externalization, STEP-06 Stack C compose parity plus Stack A OpenIG healthchecks, STEP-07 Vault `502` alignment, STEP-08 EOF fail-closed behavior, STEP-09 Base64 URL decoding simplification, STEP-10 Stack C timeout alignment, STEP-11 Linux `extra_hosts` portability, STEP-12 nginx baseline security headers, STEP-13 nginx cookie `SameSite=Lax` flags, the validated Phase 1+2 `JwtSession` production restore, `BackchannelLogoutHandler` `ES256` / EC support, and explicit Keycloak shared-dependency guidance in the deliverables.
 
-Operational follow-up after the scorecard: Stack C Grafana SSO/SLO was re-validated successfully on 2026-03-18. The earlier APP5 padding theory was superseded; the verified root cause was OpenIG `OAuth2ClientFilter` not URL-encoding `client_secret`, so APP5 now uses a strong alphanumeric-only secret and the recreated Stack C OpenIG containers are confirmed working.
+Operational follow-up after the scorecard: Stack C Grafana SSO/SLO was re-validated successfully on 2026-03-18. The earlier APP5 padding theory was superseded; the verified root cause was OpenIG `OAuth2ClientFilter` not URL-encoding `client_secret`, so APP5 now uses a strong alphanumeric-only secret and the recreated Stack C OpenIG containers are confirmed working. Additional follow-up on 2026-03-19 validated the full Phase 1+2 `JwtSession` production pattern on all three stacks, including Redis token-reference offload and `BackchannelLogoutHandler` support for `RS256` and `ES256` logout tokens.
 
-The remaining 18 open findings are concentrated in three categories that matter for a reusable reference solution:
+The remaining 17 open findings are concentrated in three categories that matter for a reusable reference solution:
 
 - Security: the `Secure` cookie flag remains deferred until TLS is enabled, and OpenIG non-root remains partially blocked by macOS host-mount constraints.
-- Architecture and documentation: the lab still needs explicit Keycloak single-point-of-failure guidance in the deliverables, and the documented lab exceptions must remain visible so the HTTP and Vault deferments are not mistaken for production defaults.
+- Architecture and documentation: the documented lab exceptions must remain visible so the HTTP and Vault deferments are not mistaken for production defaults.
 - Code quality and operational consistency: several low-effort cleanup items remain open, including hardcoded Redis literals, Groovy log-prefix consistency, Jellyfin-specific logout/device-ID edge cases, and duplicated Vault AppRole logic.
 
 The most important conclusion is that the lab now demonstrates a strong reference pattern shape, but it is not yet publishable as a copy-paste production reference. The blocking work is concentrated in gateway-side assets only: `docker-compose.yml`, OpenIG route JSON, Groovy scripts, and `nginx.conf`.
@@ -155,7 +155,6 @@ These items remain acceptable only as explicitly documented lab constraints. The
 | L-3 | Log prefix naming inconsistent | All Groovy files under `stack-a/openig_home/scripts/groovy/`, `stack-b/openig_home/scripts/groovy/`, `stack-c/openig_home/scripts/groovy/` | LOW |
 | L-4 | `SloHandlerJellyfin` skips Keycloak logout when no `id_token` | `stack-b/openig_home/scripts/groovy/SloHandlerJellyfin.groovy` | LOW |
 | L-6 | Jellyfin device ID derived from `session.hashCode()` is not stable | `stack-b/openig_home/scripts/groovy/JellyfinTokenInjector.groovy`, `stack-b/openig_home/scripts/groovy/SloHandlerJellyfin.groovy` | LOW |
-| A-10 | Keycloak single point of failure not documented | `docs/deliverables/` | LOW |
 | L-2 | Redis TTL `28800` still hardcoded in route args | `stack-a/openig_home/config/routes/00-backchannel-logout-app1.json`, `stack-b/openig_home/config/routes/00-backchannel-logout-app3.json`, `stack-b/openig_home/config/routes/00-backchannel-logout-app4.json`, `stack-c/openig_home/config/routes/00-backchannel-logout-app5.json`, `stack-c/openig_home/config/routes/00-backchannel-logout-app6.json` | LOW |
 | Code-M3 | `VaultCredentialFilter` copies still duplicate AppRole login/read logic | `stack-a/openig_home/scripts/groovy/VaultCredentialFilter.groovy`, `stack-b/openig_home/scripts/groovy/VaultCredentialFilterRedmine.groovy`, `stack-b/openig_home/scripts/groovy/VaultCredentialFilterJellyfin.groovy`, `stack-c/openig_home/scripts/groovy/VaultCredentialFilter.groovy` | MEDIUM |
 
@@ -168,7 +167,7 @@ These items remain acceptable only as explicitly documented lab constraints. The
 | P1-MUST | H-7/A-1 | Stack C docker-compose parity + Stack A healthcheck baseline [RESOLVED 2026-03-18] | MEDIUM |
 | P1-MUST | A-6/A-7 | Keycloak URL externalization Stack A+C [RESOLVED 2026-03-18] | MEDIUM |
 | P1-MUST | M-5/S-9 | Stack C weak OIDC secrets [RESOLVED] | LOW |
-| P1-MUST | L-5 | `PhpMyAdminCookieFilter` dead code | LOW |
+| P1-MUST | L-5 | `PhpMyAdminCookieFilter` dead code [RESOLVED 2026-03-17] | LOW |
 | P2-SHOULD | M-11 | `readRespLine` EOF in `BackchannelLogoutHandler` [RESOLVED 2026-03-18] | LOW |
 | P2-SHOULD | M-12 | `base64UrlDecode` manual padding [RESOLVED 2026-03-18] | LOW |
 | P2-SHOULD | M-3/S-7 | nginx security headers [RESOLVED 2026-03-18] | LOW |
@@ -177,7 +176,7 @@ These items remain acceptable only as explicitly documented lab constraints. The
 | P2-SHOULD | M-9 | Vault error status `502` consistency [RESOLVED 2026-03-18] | LOW |
 | P2-SHOULD | A-3 | Stack C nginx timeouts [RESOLVED 2026-03-18] | LOW |
 | P2-SHOULD | A-4 | `host.docker.internal` Linux portability [RESOLVED 2026-03-18] | LOW |
-| P3-NICE | L-1, L-2, L-3, L-4, L-6, A-10 | Low severity improvements | LOW |
+| P3-NICE | L-1, L-2, L-3, L-4, L-6 | Low severity improvements | LOW |
 | P3-NICE | Code-M3 | `VaultCredentialFilter` consolidation | MEDIUM |
 
 ## Resolved Findings Summary (Pattern Consolidation Phase)
@@ -206,6 +205,9 @@ These items remain acceptable only as explicitly documented lab constraints. The
 | A-3/S-14 | Stack C nginx timeouts aligned | Stack C now uses the standardized `3s` connect and `60s` read/send timeout profile on user-facing and backchannel proxy paths (2026-03-18) |
 | A-4 | Linux portability for `host.docker.internal` | `extra_hosts: host.docker.internal:host-gateway` added to all six OpenIG services (2026-03-18) |
 | M-3/S-7 | nginx security headers | Added `X-Frame-Options`, `X-Content-Type-Options`, and `Referrer-Policy`; CSP intentionally omitted pending app-specific tuning, HSTS deferred until TLS (2026-03-18) |
+| BUG-JWTSESSION-4KB | `JwtSession` production pattern restore | Heap renamed to `Session`, Stack A/B app cookies moved to browser pass-through, `TokenReferenceFilter.groovy` now offloads `oauth2:*` state to Redis, and full login+logout validation passed across all three stacks on 2026-03-19 (`0454796`, `78e2128`, `895e401`, `9b2d109`, `47cbab9`) |
+| Post-audit | `BackchannelLogoutHandler` `ES256` / EC support | Logout-token validation now accepts `RS256` and `ES256`, reconstructs EC `P-256` keys from JWKS, and verifies ECDSA signatures after raw `R||S` -> DER conversion (`646a45a`, `d2eb8e9`) |
+| A-10 | Keycloak single-point-of-failure guidance | Deliverables now call out Keycloak as a shared dependency that needs explicit HA/availability planning for new integrations (2026-03-19) |
 | Pattern | `SessionBlacklistFilter` 6 copies -> 1 template | Three per-stack parameterized copies via args (commits `a76e194`, `832bbae`) |
 | Pattern | `BackchannelLogoutHandler` 3 copies -> 1 template | Three per-stack parameterized copies via args (commit `4d8f065`) |
 | Pattern | `SloHandler` 5 copies -> 2 templates | Standard + Jellyfin-specific (commit `3b8a6d8`) |
