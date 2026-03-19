@@ -38,6 +38,8 @@ Keycloak shared: `http://auth.sso.local:8080`, realm `sso-realm`.
 - Production target: OpenIG `JwtSession` heap object phải được khai báo dưới tên heap `Session` → session mã hóa trong cookie, stateless, mọi node đọc được
 - Nếu heap object bị đặt tên `"JwtSession"` thay vì `"Session"`, OpenIG sẽ fall back sang Tomcat `HttpSession` (`JSESSIONID`) dù `type` vẫn là `JwtSession`
 - Legacy app cookies phải nằm ở browser; OpenIG session chỉ giữ OIDC tokens và marker nhỏ (`*_user_sub`, cookie names), không giữ raw upstream cookies như `wp_session_cookies` / `redmine_session_cookies`
+- `TokenReferenceFilter.groovy` offload `oauth2:*` session blob sang Redis; JwtSession cookie chỉ giữ `token_ref_id` + marker nhỏ (`IG_SSO_C` sampled ~`849` chars trên Stack C sau fix)
+- OAuth2ClientFilter session key format = `oauth2:<full-URL>/<clientEndpoint>`; luôn dùng dynamic `session.keySet()` discovery, không hardcode `oauth2:/openid/appX`
 - Vault credentials shared mount → cả 2 node dùng chung `role_id`/`secret_id`
 
 ## Pinned canonical origins
@@ -63,7 +65,7 @@ Keycloak shared: `http://auth.sso.local:8080`, realm `sso-realm`.
 - Stack A: `IG_SSO`, `cookieDomain: ".sso.local"`
 - Stack B: `IG_SSO_B`, `cookieDomain: ".sso.local"`
 - Stack C: `IG_SSO_C`, `cookieDomain: ".sso.local"`
-- Current lab state on `fix/jwtsession-production-pattern`: cả 3 stacks vẫn đang chạy `HttpSession` fallback cho đến khi heap object được rename lại thành `Session` và payload size được xác nhận < 4KB
+- Current lab state on `fix/jwtsession-production-pattern`: cả 3 stacks đã chạy `JwtSession` heap `Session` với Redis token reference offload; full user validation login+logout cho 3 stacks vẫn còn pending
 
 ## SLO mechanism
 - Keycloak → backchannel logout → `BackchannelLogoutHandler.groovy` → Redis blacklist

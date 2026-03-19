@@ -1,7 +1,7 @@
 # Gotchas & Decision Log
 
-## Known bugs (chưa fix)
-- `BUG-JWTSESSION-4KB`: production `JwtSession` chưa restore trên branch `fix/jwtsession-production-pattern`; cả 3 stacks đang chạy `HttpSession` fallback vì heap object còn tên `"JwtSession"` thay vì `"Session"`
+## Known gaps (chưa xong)
+- `VALIDATION-JWTSESSION`: Phase 1+2 implementation đã complete trên branch `fix/jwtsession-production-pattern`, nhưng user vẫn chưa full validate login+logout cho cả 3 stacks
 - Stack C infra gap: phpMyAdmin path cho `bob` chưa support được vì live MariaDB chưa provision user `bob`
 
 ## Gotchas đã biết
@@ -45,6 +45,7 @@
 | `proxy_cookie_flags` Secure flag NOT added in HTTP lab | Adding `Secure` over HTTP breaks cookies because browsers ignore them on plain HTTP | Dùng `SameSite=Lax` only. Add `Secure` only after TLS enabled. Production: bật `Secure` cùng lúc với TLS termination |
 | OpenIG chỉ auto-wire JWT session khi heap object tên đúng là `Session` | Cùng config `type: "JwtSession"` nhưng nếu heap object được đặt tên `"JwtSession"` thay vì `"Session"`, request flow vẫn rơi về Tomcat `HttpSession` và browser chỉ thấy `JSESSIONID` | Muốn dùng cookie-backed session thật sự thì phải rename heap object sang `"Session"` và verify fresh requests set `IG_SSO*`, không phải `JSESSIONID` |
 | JwtSession 4KB budget bị đội lên rất nhanh khi cache app cookies trong session | Sau khi rename heap object đúng, `OAuth2ClientFilter` tokens + `wp_session_cookies` / `redmine_session_cookies` đẩy serialized session lên ~7 KB; `realm_access` + `resource_access` trong `access_token` cũng làm payload to thêm | Production pattern: browser giữ legacy app cookies, OpenIG session chỉ giữ marker nhỏ (`*_user_sub`, cookie names). Trim access-token claims; size levers tiếp theo là `ES256` và disable `refresh_token` |
+| OAuth2ClientFilter session key includes full app URL, không chỉ `clientEndpoint` path | OpenIG dùng request URL làm một phần session namespace, nên key thực tế có dạng `oauth2:<scheme>://<host>:<port><clientEndpoint>` (ví dụ `oauth2:http://grafana-c.sso.local:18080/openid/app5`) | Dùng `session.keySet().findAll { it.startsWith("oauth2:") }` rồi match endpoint động; không hardcode `oauth2:/openid/appX` |
 | Stack C MariaDB/Vault credential drift sau bootstrap | Live MariaDB seed `alice/AlicePass123`, nhưng Vault vẫn giữ password bootstrap cũ cho `secret/phpmyadmin/alice` nên phpMyAdmin SSO fail với MySQL `1045` dù OIDC/AppRole đều OK | Align lại Vault secret theo password MariaDB đang chạy và patch `stack-c/vault/init/vault-bootstrap.sh` để bootstrap lần sau ghi đúng giá trị |
 | Stack C phpMyAdmin bob login chưa thể hoạt động | Vault có thể giữ secret `bob`, nhưng live MariaDB chỉ provision `alice`; không có `bob@%` để authenticate | Xử lý như infra gap: tạo user `bob` ở MariaDB theo workflow được duyệt, rồi align Vault; nếu không support thì document rõ alice-only |
 | OpenIG non-root blocked by Vault file permissions | `vault/file/openig-role-id` is `-rw-------` (root-only) on macOS host mounts, and `entrypoint.sh` writes `config.json` in place | Lab: keep `user: root` with macOS exception comment. Production: use K8s init container + Vault Agent sidecar, no host mounts |
