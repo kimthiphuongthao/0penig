@@ -120,35 +120,90 @@ String hostWithoutPort = hostHeader?.split(':')?.getAt(0)
 String defaultPort = publicUrl.contains(':9080') ? '9080' : publicUrl.contains(':18080') ? '18080' : '80'
 String hostWithPort = hostHeader?.contains(':') ? hostHeader : (hostWithoutPort ? hostWithoutPort + ':' + defaultPort : null)
 
-def oauth2SessionKeys = [
+def fallbackOauth2SessionKeys = [
     "oauth2:${configuredClientEndpoint}",
     hostWithPort ? "oauth2:http://${hostWithPort}${configuredClientEndpoint}" : null,
     hostWithoutPort ? "oauth2:http://${hostWithoutPort}${configuredClientEndpoint}" : null,
     publicUrl ? "oauth2:${publicUrl}${configuredClientEndpoint}" : null
 ].findAll { it != null && !it.trim().isEmpty() }.unique()
 
-String primaryOauth2SessionKey = oauth2SessionKeys[0]
+String restoreOauth2SessionKey = hostWithPort ?
+    "oauth2:http://${hostWithPort}${configuredClientEndpoint}" :
+    fallbackOauth2SessionKeys[0]
 
-def findOauth2SessionValue = {
-    for (def oauth2SessionKey : oauth2SessionKeys) {
+def discoverOauth2SessionKeys = {
+    try {
+        return session.keySet()
+            .collect { String.valueOf(it) }
+            .findAll { it.startsWith('oauth2:') && it.endsWith(configuredClientEndpoint) }
+            .sort()
+    } catch (Exception e) {
+        List<String> matchedKeys = fallbackOauth2SessionKeys.findAll { candidateKey ->
+            session[candidateKey] != null
+        }
+        logger.warn(
+            '[TokenRef] session.keySet() unavailable, using fallback endpoint={} matchedKeys={}',
+            configuredClientEndpoint,
+            matchedKeys,
+            e
+        )
+        return matchedKeys
+    }
+}
+
+def collectOauth2SessionEntries = {
+    Map<String, Object> oauth2Entries = [:]
+    for (String oauth2SessionKey : discoverOauth2SessionKeys()) {
         def oauth2Value = session[oauth2SessionKey]
         if (oauth2Value != null) {
-            return oauth2Value
+            oauth2Entries[oauth2SessionKey] = oauth2Value
         }
     }
-    null
+    oauth2Entries
 }
 
-def restoreOauth2SessionValue = { def oauth2Value ->
-    for (def oauth2SessionKey : oauth2SessionKeys) {
-        session[oauth2SessionKey] = oauth2Value
+def restoreOauth2SessionEntries = { Object storedPayload ->
+    Map<String, Object> restoredEntries = [:]
+    if (storedPayload instanceof Map && storedPayload.containsKey('oauth2Entries')) {
+        def serializedEntries = storedPayload['oauth2Entries']
+        if (serializedEntries instanceof Map) {
+            serializedEntries.each { key, value ->
+                if (key != null && value != null) {
+                    restoredEntries[String.valueOf(key)] = value
+                }
+            }
+        }
+    } else if (storedPayload != null) {
+        restoredEntries[restoreOauth2SessionKey] = storedPayload
     }
+
+    restoredEntries.each { key, value ->
+        session[key] = value
+    }
+
+    restoredEntries
 }
 
-def removeOauth2SessionValues = {
-    for (def oauth2SessionKey : oauth2SessionKeys) {
-        session.remove(oauth2SessionKey)
+def stripOauth2EntriesFromSession = { String newTokenRefId ->
+    Map<String, Object> preservedEntries = [:]
+    try {
+        session.keySet().collect { String.valueOf(it) }.sort().each { key ->
+            if (!key.startsWith('oauth2:') && key != 'token_ref_id') {
+                def value = session[key]
+                if (value != null) {
+                    preservedEntries[key] = value
+                }
+            }
+        }
+    } catch (Exception e) {
+        logger.warn('[TokenRef] Failed to enumerate non-oauth2 session keys before clear endpoint={}', configuredClientEndpoint, e)
     }
+
+    session.clear()
+    preservedEntries.each { key, value ->
+        session[key] = value
+    }
+    session['token_ref_id'] = newTokenRefId
 }
 
 try {
@@ -159,37 +214,50 @@ try {
         throw new IllegalStateException('TokenReferenceFilter requires redisHost arg')
     }
 
-    def oauth2SessionValue = findOauth2SessionValue()
-    if (oauth2SessionValue != null && session[primaryOauth2SessionKey] == null) {
-        session[primaryOauth2SessionKey] = oauth2SessionValue
-    }
-
     String tokenRefId = session['token_ref_id'] as String
-    if (tokenRefId?.trim() && session[primaryOauth2SessionKey] == null) {
+    if (tokenRefId?.trim() && collectOauth2SessionEntries().isEmpty()) {
         String redisPayload = getFromRedis(tokenRefId)
         if (!redisPayload) {
             logger.error('[TokenRef] Missing Redis payload for token_ref_id={} endpoint={}', tokenRefId, configuredClientEndpoint)
             return newResultPromise(new Response(Status.BAD_GATEWAY))
         }
 
-        def restoredOauth2Value = new JsonSlurper().parseText(redisPayload)
-        restoreOauth2SessionValue(restoredOauth2Value)
-        logger.info('[TokenRef] Restored oauth2 session for endpoint={} token_ref_id={}', configuredClientEndpoint, tokenRefId)
+        def restoredOauth2Entries = restoreOauth2SessionEntries(new JsonSlurper().parseText(redisPayload))
+        logger.info(
+            '[TokenRef] Restored oauth2 session keys={} endpoint={} token_ref_id={}',
+            restoredOauth2Entries.keySet(),
+            configuredClientEndpoint,
+            tokenRefId
+        )
     }
 
     return next.handle(context, request).then({ response ->
-        def oauth2ValueForResponse = findOauth2SessionValue()
-        if (oauth2ValueForResponse == null) {
+        def oauth2EntriesForResponse = collectOauth2SessionEntries()
+        if (oauth2EntriesForResponse.isEmpty()) {
+            logger.warn('[TokenRef] No oauth2 session value found during response phase endpoint={}', configuredClientEndpoint)
             return response
         }
 
         try {
+            try {
+                logger.warn("[TokenRef DEBUG] Session keys at .then(): " + session.keySet().toString())
+            } catch (Exception e) {
+                logger.warn('[TokenRef DEBUG] session.keySet() failed at .then() endpoint={}', configuredClientEndpoint, e)
+                fallbackOauth2SessionKeys.each { candidateKey ->
+                    logger.warn('[TokenRef DEBUG] Candidate key {} present={}', candidateKey, session[candidateKey] != null)
+                }
+            }
+
             String newTokenRefId = UUID.randomUUID().toString()
-            String redisPayload = JsonOutput.toJson(oauth2ValueForResponse)
+            String redisPayload = JsonOutput.toJson([oauth2Entries: oauth2EntriesForResponse])
             setInRedis(newTokenRefId, redisPayload)
-            removeOauth2SessionValues()
-            session['token_ref_id'] = newTokenRefId
-            logger.info('[TokenRef] Stored oauth2 session for endpoint={} token_ref_id={}', configuredClientEndpoint, newTokenRefId)
+            stripOauth2EntriesFromSession(newTokenRefId)
+            logger.info(
+                '[TokenRef] Stored oauth2 session keys={} endpoint={} token_ref_id={}',
+                oauth2EntriesForResponse.keySet(),
+                configuredClientEndpoint,
+                newTokenRefId
+            )
         } catch (Exception e) {
             logger.error('[TokenRef] Failed to offload oauth2 session for endpoint={}', configuredClientEndpoint, e)
         }
