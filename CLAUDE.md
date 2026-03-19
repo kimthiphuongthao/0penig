@@ -63,8 +63,14 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] STEP-01 (L-5): deleted `PhpMyAdminCookieFilter.groovy` dead code (`20d523f`)
 - [x] STEP-02 (M-5/S-9): rotated Stack C OIDC client secrets to strong values (`37672ed`)
 - [x] STEP-03 (H-5/S-3): externalized secrets to gitignored `.env` files and pinned all OpenIG images to `openidentityplatform/openig:6.0.1` (`b738577`)
+- [x] Phase 1 prep: Stack A `CredentialInjector.groovy` refactored to browser cookie pass-through on `fix/jwtsession-production-pattern` (`78e2128`)
+- [x] Phase 1 prep: Stack B `RedmineCredentialInjector.groovy` refactored to browser cookie pass-through on `fix/jwtsession-production-pattern` (`895e401`)
+- [x] Keycloak token-size trim: removed `realm_access` and `resource_access` from `access_token` for `openig-client`, `openig-client-b`, `openig-client-c-app5`, and `openig-client-c-app6` (persistent runtime/admin API change)
+- [x] Stack C recovery: Vault unsealed, AppRole refreshed, `secret/phpmyadmin/alice` realigned to live MariaDB password `AlicePass123`, Grafana + phpMyAdmin login/logout reconfirmed (`6cc3fc9` + 2026-03-19 log evidence)
 
 ### Phase tiếp theo
+- Active branch for JwtSession work: `fix/jwtsession-production-pattern` (created from `9a7b855` before rename experiment commit `e37536d`)
+- Backup branch: `feat/subdomain-test` at `cdb5425` = working HttpSession fallback snapshot
 - [x] **Fix phase COMPLETE**: 15 fixes (11 implemented, 2 WONT_FIX, 2 verified-no-action) — tracking: `docs/fix-phase/checklist.md`
 - [x] Phase 3: Vault Production Hardening — 6/9 RESOLVED, 1 PARTIAL (CIDR), 2 deferred (TLS, Raft)
 - [x] STEP-03 (H-5/S-3): Secrets externalization to `.env` files + pin OpenIG image to `6.0.1`
@@ -85,6 +91,11 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] Redis persistence (appendonly yes) — đảm bảo SLO blacklist survive restart
 - [x] Vault audit logging
 - [x] Stack C Grafana SSO re-validation/fix — root cause: OpenIG OAuth2ClientFilter không URL-encode client_secret; Base64 secret chứa '+' → Keycloak decode thành space → invalid_client_credentials. Fix: rotate secret alphanumeric-only (commit a403b3d)
+- [ ] Phase 1: restore `JwtSession` production pattern on `fix/jwtsession-production-pattern` (`config.json` heap `"JwtSession"` -> `"Session"` for all 3 stacks, switch 4 Keycloak clients to `ES256`, disable `refresh_token`, verify cookie payload < 4KB)
+- [ ] Phase 2 fallback: Token Reference Pattern via Redis nếu Phase 1 vẫn vượt 4KB
+- [ ] Validate Stack A login/logout on `fix/jwtsession-production-pattern` after `JwtSession` restore
+- [ ] Validate Stack B login/logout on `fix/jwtsession-production-pattern` after `JwtSession` restore
+- [ ] Provision MariaDB user `bob` for Stack C phpMyAdmin or document alice-only support explicitly
 - [ ] Đóng gói: OVA / Docker Compose bundle — single-command deploy
 - [ ] Slide + tài liệu báo cáo phương án giải pháp
 

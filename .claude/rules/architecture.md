@@ -35,7 +35,9 @@ Keycloak shared: `http://auth.sso.local:8080`, realm `sso-realm`.
 
 ## HA pattern (tất cả stacks)
 - nginx `ip_hash` → sticky routing (cùng IP → cùng OpenIG node)
-- `JwtSession` → session mã hóa trong cookie, stateless, mọi node đọc được
+- Production target: OpenIG `JwtSession` heap object phải được khai báo dưới tên heap `Session` → session mã hóa trong cookie, stateless, mọi node đọc được
+- Nếu heap object bị đặt tên `"JwtSession"` thay vì `"Session"`, OpenIG sẽ fall back sang Tomcat `HttpSession` (`JSESSIONID`) dù `type` vẫn là `JwtSession`
+- Legacy app cookies phải nằm ở browser; OpenIG session chỉ giữ OIDC tokens và marker nhỏ (`*_user_sub`, cookie names), không giữ raw upstream cookies như `wp_session_cookies` / `redmine_session_cookies`
 - Vault credentials shared mount → cả 2 node dùng chung `role_id`/`secret_id`
 
 ## Pinned canonical origins
@@ -61,6 +63,7 @@ Keycloak shared: `http://auth.sso.local:8080`, realm `sso-realm`.
 - Stack A: `IG_SSO`, `cookieDomain: ".sso.local"`
 - Stack B: `IG_SSO_B`, `cookieDomain: ".sso.local"`
 - Stack C: `IG_SSO_C`, `cookieDomain: ".sso.local"`
+- Current lab state on `fix/jwtsession-production-pattern`: cả 3 stacks vẫn đang chạy `HttpSession` fallback cho đến khi heap object được rename lại thành `Session` và payload size được xác nhận < 4KB
 
 ## SLO mechanism
 - Keycloak → backchannel logout → `BackchannelLogoutHandler.groovy` → Redis blacklist
@@ -107,4 +110,4 @@ App credentials (injected by OpenIG via Vault):
 - Redmine: login `alice@lab.local`, `bob@lab.local`
 - Jellyfin: `alice`/`AliceJelly2026`, `bob`/`BobJelly2026` (**set thủ công, không trong bootstrap**)
 - Grafana: auto-provisioned từ `preferred_username`
-- phpMyAdmin: `alice`, `bob` (MariaDB, từ Vault `secret/phpmyadmin/*`)
+- phpMyAdmin: `alice` confirmed working via Vault -> MariaDB; `bob` vẫn là infra gap vì live Stack C MariaDB chưa provision user này
