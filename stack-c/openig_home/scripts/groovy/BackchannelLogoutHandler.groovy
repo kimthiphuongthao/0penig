@@ -276,13 +276,13 @@ try {
     }
     logger.info('[BackchannelLogoutHandler] JWT header parsed, kid={}', kid)
 
-    // Check algorithm - must be RS256
+    // Check algorithm - must be RS256 or ES256
     String alg = header.alg as String
-    if (alg != 'RS256') {
-        logger.error('[BackchannelLogoutHandler] Invalid algorithm: expected RS256, got {}', alg)
+    if (alg != 'RS256' && alg != 'ES256') {
+        logger.error('[BackchannelLogoutHandler] Invalid algorithm: expected RS256 or ES256, got {}', alg)
         return newResultPromise(new Response(Status.BAD_REQUEST))
     }
-    logger.info('[BackchannelLogoutHandler] Algorithm validation: OK (alg=RS256)')
+    logger.info('[BackchannelLogoutHandler] Algorithm validation: OK (alg={})', alg)
 
     // 4. Fetch JWKS from Keycloak through atomic global cache
     Map jwksKeys = loadJwksKeys()
