@@ -142,7 +142,7 @@ def discoverOauth2SessionKeys = {
             session[candidateKey] != null
         }
         logger.warn(
-            '[TokenRef] session.keySet() unavailable, using fallback endpoint={} matchedKeys={}',
+            '[TokenReferenceFilter] session.keySet() unavailable, using fallback endpoint={} matchedKeys={}',
             configuredClientEndpoint,
             matchedKeys,
             e
@@ -196,7 +196,7 @@ def stripOauth2EntriesFromSession = { String newTokenRefId ->
             }
         }
     } catch (Exception e) {
-        logger.warn('[TokenRef] Failed to enumerate non-oauth2 session keys before clear endpoint={}', configuredClientEndpoint, e)
+        logger.warn('[TokenReferenceFilter] Failed to enumerate non-oauth2 session keys before clear endpoint={}', configuredClientEndpoint, e)
     }
 
     session.clear()
@@ -218,13 +218,13 @@ try {
     if (tokenRefId?.trim() && collectOauth2SessionEntries().isEmpty()) {
         String redisPayload = getFromRedis(tokenRefId)
         if (!redisPayload) {
-            logger.error('[TokenRef] Missing Redis payload for token_ref_id={} endpoint={}', tokenRefId, configuredClientEndpoint)
+            logger.error('[TokenReferenceFilter] Missing Redis payload for token_ref_id={} endpoint={}', tokenRefId, configuredClientEndpoint)
             return newResultPromise(new Response(Status.BAD_GATEWAY))
         }
 
         def restoredOauth2Entries = restoreOauth2SessionEntries(new JsonSlurper().parseText(redisPayload))
         logger.info(
-            '[TokenRef] Restored oauth2 session keys={} endpoint={} token_ref_id={}',
+            '[TokenReferenceFilter] Restored oauth2 session keys={} endpoint={} token_ref_id={}',
             restoredOauth2Entries.keySet(),
             configuredClientEndpoint,
             tokenRefId
@@ -234,17 +234,17 @@ try {
     return next.handle(context, request).then({ response ->
         def oauth2EntriesForResponse = collectOauth2SessionEntries()
         if (oauth2EntriesForResponse.isEmpty()) {
-            logger.warn('[TokenRef] No oauth2 session value found during response phase endpoint={}', configuredClientEndpoint)
+            logger.warn('[TokenReferenceFilter] No oauth2 session value found during response phase endpoint={}', configuredClientEndpoint)
             return response
         }
 
         try {
             try {
-                logger.warn("[TokenRef DEBUG] Session keys at .then(): " + session.keySet().toString())
+                logger.warn("[TokenReferenceFilter] Session keys at .then(): " + session.keySet().toString())
             } catch (Exception e) {
-                logger.warn('[TokenRef DEBUG] session.keySet() failed at .then() endpoint={}', configuredClientEndpoint, e)
+                logger.warn('[TokenReferenceFilter] session.keySet() failed at .then() endpoint={}', configuredClientEndpoint, e)
                 fallbackOauth2SessionKeys.each { candidateKey ->
-                    logger.warn('[TokenRef DEBUG] Candidate key {} present={}', candidateKey, session[candidateKey] != null)
+                    logger.warn('[TokenReferenceFilter] Candidate key {} present={}', candidateKey, session[candidateKey] != null)
                 }
             }
 
@@ -253,18 +253,18 @@ try {
             setInRedis(newTokenRefId, redisPayload)
             stripOauth2EntriesFromSession(newTokenRefId)
             logger.info(
-                '[TokenRef] Stored oauth2 session keys={} endpoint={} token_ref_id={}',
+                '[TokenReferenceFilter] Stored oauth2 session keys={} endpoint={} token_ref_id={}',
                 oauth2EntriesForResponse.keySet(),
                 configuredClientEndpoint,
                 newTokenRefId
             )
         } catch (Exception e) {
-            logger.error('[TokenRef] Failed to offload oauth2 session for endpoint={}', configuredClientEndpoint, e)
+            logger.error('[TokenReferenceFilter] Failed to offload oauth2 session for endpoint={}', configuredClientEndpoint, e)
         }
 
         response
     })
 } catch (Exception e) {
-    logger.error('[TokenRef] Failed to restore oauth2 session for endpoint={}', configuredClientEndpoint, e)
+    logger.error('[TokenReferenceFilter] Failed to restore oauth2 session for endpoint={}', configuredClientEndpoint, e)
     newResultPromise(new Response(Status.BAD_GATEWAY))
 }

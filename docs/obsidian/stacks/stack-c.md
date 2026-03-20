@@ -7,7 +7,7 @@ tags:
   - keycloak
   - sso
   - slo
-date: 2026-03-19
+date: 2026-03-20
 status: active
 ---
 
@@ -235,3 +235,11 @@ Related: [[OpenIG]] [[Keycloak]] [[Vault]] [[Stack C]]
 
 > [!tip]
 > Keep timeout and upstream retry behavior only on the user-facing `location /` proxy paths; leave backchannel logout endpoints without upstream retry directives so logout POST handling stays single-attempt and predictable.
+
+## 2026-03-20 Groovy Redis port and log prefix cleanup
+
+- Resolved `[L-1]`: [stack-c/openig_home/scripts/groovy/SessionBlacklistFilter.groovy](/Volumes/OS/claude/openig/sso-lab/stack-c/openig_home/scripts/groovy/SessionBlacklistFilter.groovy) and [stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy](/Volumes/OS/claude/openig/sso-lab/stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy) now read Redis port from route arg `redisPort`, then `REDIS_PORT`, then default `6379`.
+- Resolved `[L-3]`: [stack-c/openig_home/scripts/groovy/TokenReferenceFilter.groovy](/Volumes/OS/claude/openig/sso-lab/stack-c/openig_home/scripts/groovy/TokenReferenceFilter.groovy) now uses the standardized `[TokenReferenceFilter]` log prefix for all restore/offload logging.
+
+> [!success]
+> Validation on `2026-03-20`: `docker restart stack-c-openig-c1-1 stack-c-openig-c2-1` completed successfully. `docker logs stack-c-openig-c1-1 2>&1 | grep 'Loaded the route'` showed `00-backchannel-logout-app5`, `00-phpmyadmin-logout`, `00-backchannel-logout-app6`, `00-grafana-logout`, `11-phpmyadmin`, and `10-grafana`.

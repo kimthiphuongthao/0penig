@@ -21,6 +21,8 @@ import java.util.Base64
 // --- JWT Validation Configuration ---
 List expectedAudiences = binding.hasVariable('audiences') ? (audiences as List) : []
 String configuredRedisHost = binding.hasVariable('redisHost') ? (redisHost as String) : (System.getenv('REDIS_HOST') ?: 'redis-b')
+String configuredRedisPort = binding.hasVariable('redisPort') ? String.valueOf(redisPort) : (System.getenv('REDIS_PORT') ?: '6379')
+configuredRedisPort = configuredRedisPort?.trim()
 String configuredRedisPassword = System.getenv('REDIS_PASSWORD') ?: ''
 String configuredJwksUri = binding.hasVariable('jwksUri') ? (jwksUri as String) : null
 String configuredIssuer = binding.hasVariable('issuer') ? (issuer as String) : null
@@ -406,7 +408,7 @@ try {
     logger.info('[BackchannelLogoutHandler] All JWT validations passed, sid={}', sid)
 
     // 8. Write to Redis blacklist
-    int redisPort = 6379
+    int redisPort = configuredRedisPort as int
     String key = "blacklist:${sid}"
     int keySize = key.getBytes('UTF-8').length
     // TTL must be >= JwtSession.sessionTimeout (1800s = 30min)

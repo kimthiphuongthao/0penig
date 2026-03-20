@@ -5,7 +5,7 @@ tags:
   - stack-a
   - openig
   - wordpress
-date: 2026-03-19
+date: 2026-03-20
 status: complete
 ---
 
@@ -116,6 +116,14 @@ Related: [[Stack B]] [[Stack C]] [[OpenIG]] [[Keycloak]] [[Vault]]
 > Remaining notes:
 > - OpenIG non-root remains lab-deferred on macOS host mounts.
 > - Operational gotcha for Stack A: empty `/vault/file/openig-role-id` or `/vault/file/openig-secret-id` on one OpenIG node can trigger `"SSO authentication failed"`.
+
+## 2026-03-20 Groovy Redis port and log prefix cleanup
+
+- Resolved `[L-1]`: [stack-a/openig_home/scripts/groovy/SessionBlacklistFilter.groovy](/Volumes/OS/claude/openig/sso-lab/stack-a/openig_home/scripts/groovy/SessionBlacklistFilter.groovy) and [stack-a/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy](/Volumes/OS/claude/openig/sso-lab/stack-a/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy) now read Redis port from route arg `redisPort`, then `REDIS_PORT`, then default `6379`.
+- Resolved `[L-3]`: [stack-a/openig_home/scripts/groovy/TokenReferenceFilter.groovy](/Volumes/OS/claude/openig/sso-lab/stack-a/openig_home/scripts/groovy/TokenReferenceFilter.groovy) now uses the standardized `[TokenReferenceFilter]` log prefix across its restore/offload paths.
+
+> [!success]
+> Validation on `2026-03-20`: `docker restart sso-openig-1 sso-openig-2` completed successfully. `docker logs sso-openig-1 2>&1 | grep 'Loaded the route'` showed `00-wp-logout`, `00-backchannel-logout-app1`, `01-wordpress`, and `02-app2` after restart.
 
 ## Routes
 

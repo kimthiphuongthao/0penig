@@ -124,3 +124,11 @@ Related: [[Stack A]] [[Stack C]] [[OpenIG]] [[Keycloak]] [[Vault]]
 
 > [!success]
 > Validation on `2026-03-20`: `docker restart sso-b-openig-1 sso-b-openig-2` completed successfully. When scoped to the fresh restart window, `docker logs --since 2026-03-20T02:08:00.590644839Z sso-b-openig-1 2>&1 | grep -E 'Loaded the route|ERROR'` showed all six Stack B routes loading and no startup-time `ERROR` lines.
+
+## 2026-03-20 Groovy Redis port and log prefix cleanup
+
+- Resolved `[L-1]`: [stack-b/openig_home/scripts/groovy/SessionBlacklistFilter.groovy](/Volumes/OS/claude/openig/sso-lab/stack-b/openig_home/scripts/groovy/SessionBlacklistFilter.groovy) and [stack-b/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy](/Volumes/OS/claude/openig/sso-lab/stack-b/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy) now read Redis port from route arg `redisPort`, then `REDIS_PORT`, then default `6379`.
+- Resolved `[L-3]`: [stack-b/openig_home/scripts/groovy/TokenReferenceFilter.groovy](/Volumes/OS/claude/openig/sso-lab/stack-b/openig_home/scripts/groovy/TokenReferenceFilter.groovy) now uses `[TokenReferenceFilter]`, and [stack-b/openig_home/scripts/groovy/JellyfinResponseRewriter.groovy](/Volumes/OS/claude/openig/sso-lab/stack-b/openig_home/scripts/groovy/JellyfinResponseRewriter.groovy) now emits `[JellyfinResponseRewriter]`.
+
+> [!success]
+> Validation on `2026-03-20`: `docker restart sso-b-openig-1 sso-b-openig-2` completed successfully. `docker logs sso-b-openig-1 2>&1 | grep 'Loaded the route'` showed `00-redmine-logout`, `02-redmine`, `00-jellyfin-logout`, `01-jellyfin`, `00-backchannel-logout-app3`, and `00-backchannel-logout-app4`.

@@ -99,11 +99,11 @@ try {
             response.headers.remove('Content-Encoding')
             return response
         } catch (Exception e) {
-            logError('JellyfinResponseRewriter failed to rewrite response', e)
+            logError('[JellyfinResponseRewriter] Failed to rewrite response', e)
             return response
         }
     })
 } catch (Exception e) {
-    logError('JellyfinResponseRewriter failed before handling request', e)
+    logError('[JellyfinResponseRewriter] Failed before handling request', e)
     return next.handle(context, request)
 }

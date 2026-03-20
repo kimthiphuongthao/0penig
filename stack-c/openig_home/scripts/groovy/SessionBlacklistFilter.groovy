@@ -21,6 +21,8 @@ if (configuredCanonicalOriginEnvVar) {
 if (!origin && binding.hasVariable('canonicalOrigin')) {
     origin = (canonicalOrigin as String)?.trim()
 }
+String configuredRedisPort = binding.hasVariable('redisPort') ? String.valueOf(redisPort) : (System.getenv('REDIS_PORT') ?: '6379')
+configuredRedisPort = configuredRedisPort?.trim()
 
 def decodeSidFromToken = { String jwt ->
     String[] tokenParts = jwt.split('\\.')
@@ -98,7 +100,7 @@ try {
     }
 
     String redisHost = System.getenv('REDIS_HOST') ?: 'redis-a'
-    int redisPort = 6379
+    int redisPort = configuredRedisPort as int
     String redisPassword = System.getenv('REDIS_PASSWORD') ?: ''
     String key = "blacklist:${sid}"
     int keySize = key.getBytes('UTF-8').length
