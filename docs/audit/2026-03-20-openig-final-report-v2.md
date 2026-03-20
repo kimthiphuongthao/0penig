@@ -121,8 +121,9 @@ That wording error was already corrected in commit `b53c239`, which updated `.cl
 ### ACT-1
 
 - Exact file path: `docs/deliverables/legacy-auth-patterns-definitive.md`
-- Exact section or heading to modify: `Template-Based Integration`, line `337`, paragraph `Validated session note`
-- Current text to replace: `Validated session note: when routes use browser-bound JwtSession, place TokenReferenceFilter.groovy immediately after OAuth2ClientFilter so the heavy oauth2:* entry is offloaded to Redis and the browser cookie keeps only a per-app token reference key (token_ref_id_appN on shared-cookie stacks, fallback token_ref_id) plus small identity markers.`
+- Verified section heading: `## Template-Based Integration` (heading line `329`)
+- Verified current text to search: ``Validated session note: when routes use browser-bound `JwtSession`, place `TokenReferenceFilter.groovy` immediately after `OAuth2ClientFilter` so the heavy `oauth2:*` entry is offloaded to Redis and the browser cookie keeps only a per-app token reference key (`token_ref_id_appN` on shared-cookie stacks, fallback `token_ref_id`) plus small identity markers.``
+- Verified line number: `337`
 - Correct replacement: `Validated session note: when routes use browser-bound JwtSession, place TokenReferenceFilter.groovy immediately after OAuth2ClientFilter so the heavy oauth2:* entry is offloaded to Redis and the browser cookie keeps only a per-app token reference key (token_ref_id_appN on shared-cookie stacks, fallback token_ref_id) plus small identity markers. OIDC data-model note: target = ${attributes.openid} is request-scoped output written by OAuth2ClientFilter.fillTarget(); it does not mirror data into session. Persisted session[oauth2Key] state is written separately by OAuth2Utils.saveSession(), so lookups such as session[oauth2Key].atr.id_token must use the persisted blob, while live user_info belongs under attributes.openid.`
 - Evidence citation: `OAuth2ClientFilter.fillTarget` lines `820-825`; `OAuth2Utils.saveSession` lines `147-152`; `OAuth2Session.toJson` lines `97-107`.
 - Priority: MED
@@ -130,8 +131,9 @@ That wording error was already corrected in commit `b53c239`, which updated `.cl
 ### ACT-2
 
 - Exact file path: `.claude/rules/architecture.md`
-- Exact section or heading to modify: `## clientEndpoint namespace (MỖI app trong cùng OpenIG instance PHẢI unique)`, line `25`
-- Current text to replace or extend: the section currently jumps straight from the heading to the endpoint table and does not explain the collision mechanism.
+- Verified section heading: `## clientEndpoint namespace (MỖI app trong cùng OpenIG instance PHẢI unique)` (heading line `25`)
+- Verified current text to search: `| Stack | App | clientEndpoint | Keycloak client |`
+- Verified line number: `27`
 - Correct insertion: `Why unique: OpenIG does not keep a server-global clientEndpoint registry. Each OAuth2ClientFilter instance matches its own login, callback, and logout URIs inside the route-local filter chain, so collisions happen when more than one route can match the same clientEndpoint and lexicographic route order selects the wrong route first.`
 - Evidence citation: `OAuth2ClientFilter.filter` lines `292-323`; `RouteBuilder.setupRouteHandler` lines `156-192`; `RouterHandler.handle` lines `347-355`; `LexicographicalRouteComparator.compare` line `28`.
 - Priority: MED
@@ -139,8 +141,12 @@ That wording error was already corrected in commit `b53c239`, which updated `.cl
 ### ACT-3
 
 - Exact file path: `docs/deliverables/standard-gateway-pattern.md`
-- Exact section or heading to modify: `### 1. Revocation Contract`, line `77`, and `### Session and revocation`, lines `259-266`
-- Current text to replace or extend: line `77` explains TTL and fail-closed behavior only; the checklist section has no sentence or bullet describing `Expires` versus `Max-Age`.
+- Verified section heading (anchor 1): `### 1. Revocation Contract` (heading line `74`)
+- Verified current text to search (anchor 1): ``What it is: Redis blacklist TTL MUST be greater than or equal to `JwtSession.sessionTimeout`. On Redis lookup failure, the gateway MUST fail closed for authenticated sessions by returning `503` or forcing re-authentication; it MUST NOT proxy the request onward. On Redis write failure during backchannel logout, the handler MUST return `5xx`, not `4xx`. The same `sid` key MUST be used on both the write path and the read path.``
+- Verified line number (anchor 1): `77`
+- Verified section heading (anchor 2): `### Session and revocation` (heading line `259`)
+- Verified current text to search (anchor 2): ``- [ ] `BackchannelLogoutHandler` writes `blacklist:<sid>` with TTL greater than or equal to `JwtSession.sessionTimeout`.``
+- Verified line number (anchor 2): `261`
 - Correct insertion after line `77`: `For OpenIG 6 JwtSession, sessionTimeout is enforced through the JWT _ig_exp claim plus the cookie Expires attribute; JwtCookieSession does not emit Max-Age, so tests and runbooks must validate Expires or decoded JWT expiry instead of asserting Max-Age.`
 - Correct insertion after line `261`: `- [ ] For OpenIG 6 JwtSession, session lifetime checks validate cookie Expires or JWT _ig_exp rather than Max-Age, because JwtCookieSession.buildJwtCookie() writes Expires only.`
 - Evidence citation: `JwtCookieSession.buildJwtCookie` lines `324-337`; `JwtCookieSession.<field IG_EXP_SESSION_KEY>` lines `79-82`; `JwtCookieSession.getNewExpiryTime` lines `370-372`; `JwtSessionManager$Heaplet.create` lines `199-214`.
@@ -187,4 +193,3 @@ That wording error was already corrected in commit `b53c239`, which updated `.cl
 | EV-35 | `JwtCookieSession` | `<field IG_EXP_SESSION_KEY>` | `79-82` | `F2` | JWT session expiry state is tracked under `_ig_exp` |
 | EV-36 | `JwtCookieSession` | `getNewExpiryTime` | `370-372` | `F2` | expiry time is derived from the configured timeout |
 | EV-37 | `JwtSessionManager$Heaplet` | `create` | `199-214` | `F2` | `sessionTimeout` is wired into the JWT session manager |
-
