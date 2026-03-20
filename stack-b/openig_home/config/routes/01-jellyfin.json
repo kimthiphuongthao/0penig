@@ -85,7 +85,18 @@
       "type": "ScriptableFilter",
       "config": {
         "type": "application/x-groovy",
-        "file": "VaultCredentialFilterJellyfin.groovy"
+        "file": "VaultCredentialFilter.groovy",
+        "args": {
+          "appDisplayName": "Jellyfin",
+          "secretPathPrefix": "jellyfin-creds",
+          "lookupUserInfoField": "email",
+          "credentialAttributeName": "jellyfin_credentials",
+          "credentialUsernameSource": "user_info",
+          "usernameUserInfoField": "preferred_username",
+          "attributeUsernameField": "username",
+          "credentialPasswordField": "password",
+          "attributePasswordField": "password"
+        }
       }
     },
     {

@@ -79,7 +79,18 @@
       "type": "ScriptableFilter",
       "config": {
         "type": "application/x-groovy",
-        "file": "VaultCredentialFilterRedmine.groovy"
+        "file": "VaultCredentialFilter.groovy",
+        "args": {
+          "appDisplayName": "Redmine",
+          "secretPathPrefix": "redmine-creds",
+          "lookupUserInfoField": "email",
+          "credentialAttributeName": "redmine_credentials",
+          "credentialUsernameSource": "secret",
+          "credentialUsernameField": "login",
+          "attributeUsernameField": "login",
+          "credentialPasswordField": "password",
+          "attributePasswordField": "password"
+        }
       }
     },
     {

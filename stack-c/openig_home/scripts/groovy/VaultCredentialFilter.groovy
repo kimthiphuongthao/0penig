@@ -132,9 +132,11 @@ try {
     credsConnection.disconnect()
 
     if (credsStatus == 403) {
-        // Vault token rejected — invalidate cache, will re-login on next request
         globals.remove('vault_token')
-        throw new IllegalStateException('Vault token rejected for phpMyAdmin lookup (HTTP 403)')
+        Response retryResponse = new Response(Status.BAD_GATEWAY)
+        retryResponse.headers.put('Content-Type', ['text/html'])
+        retryResponse.entity.setString('<html><body><h2>Vault token expired. Please retry.</h2></body></html>')
+        return retryResponse
     }
     if (credsStatus < 200 || credsStatus >= 300) {
         throw new IllegalStateException("Vault credential lookup failed with HTTP ${credsStatus}")
