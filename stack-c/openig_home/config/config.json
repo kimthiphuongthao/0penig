@@ -12,7 +12,7 @@
             "type": "KeyStore",
             "config": {
                 "url": "file:///opt/openig/keystore.p12",
-                "password": "Bx4oNKDVzSav7TMHK6gsKcLyhqCgspqm",
+                "password": "__KEYSTORE_PASSWORD__",
                 "type": "PKCS12"
             }
         },
@@ -22,11 +22,11 @@
             "config": {
                 "cookieName": "IG_SSO_C",
                 "sessionTimeout": "30 minutes",
-                "sharedSecret": "fThJvpugVMgfRGoRYBK2tnuFDAQ+7kdrN9u6romRcUM=",
+                "sharedSecret": "__JWT_SHARED_SECRET__",
                 "keystore": "JwtKeyStore",
                 "alias": "openig-jwt",
                 "cookieDomain": ".sso.local",
-                "password": "Bx4oNKDVzSav7TMHK6gsKcLyhqCgspqm"
+                "password": "__KEYSTORE_PASSWORD__"
             }
         }
     ],
