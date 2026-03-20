@@ -11,7 +11,7 @@
         "redisHost": "redis-a",
         "jwksUri": "${env['KEYCLOAK_INTERNAL_URL']}/realms/sso-realm/protocol/openid-connect/certs",
         "issuer": "${env['KEYCLOAK_BROWSER_URL']}/realms/sso-realm",
-        "ttlSeconds": 28800
+        "ttlSeconds": "${env['REDIS_BLACKLIST_TTL'] != null ? env['REDIS_BLACKLIST_TTL'] : '28800'}"
       }
     }
   }

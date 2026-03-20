@@ -10,7 +10,8 @@
         "audiences": ["openig-client-c-app5"],
         "redisHost": "redis-c",
         "jwksUri": "${env['KEYCLOAK_INTERNAL_URL']}/realms/sso-realm/protocol/openid-connect/certs",
-        "issuer": "${env['KEYCLOAK_BROWSER_URL']}/realms/sso-realm"
+        "issuer": "${env['KEYCLOAK_BROWSER_URL']}/realms/sso-realm",
+        "ttlSeconds": "${env['REDIS_BLACKLIST_TTL'] != null ? env['REDIS_BLACKLIST_TTL'] : '28800'}"
       }
     }
   }

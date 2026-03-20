@@ -10,7 +10,8 @@
         "audiences": ["openig-client-b-app4"],
         "redisHost": "redis-b",
         "jwksUri": "http://host.docker.internal:8080/realms/sso-realm/protocol/openid-connect/certs",
-        "issuer": "http://auth.sso.local:8080/realms/sso-realm"
+        "issuer": "http://auth.sso.local:8080/realms/sso-realm",
+        "ttlSeconds": "${env['REDIS_BLACKLIST_TTL'] != null ? env['REDIS_BLACKLIST_TTL'] : '28800'}"
       }
     }
   }

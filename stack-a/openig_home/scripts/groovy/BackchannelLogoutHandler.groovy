@@ -26,9 +26,9 @@ configuredRedisPort = configuredRedisPort?.trim()
 String configuredRedisPassword = System.getenv('REDIS_PASSWORD') ?: ''
 String configuredJwksUri = binding.hasVariable('jwksUri') ? (jwksUri as String) : null
 String configuredIssuer = binding.hasVariable('issuer') ? (issuer as String) : null
+int redisBlacklistTtlSeconds = binding.hasVariable('ttlSeconds') ? (ttlSeconds as int) : 28800
 final long CLOCK_SKEW_SECONDS = 60
 final long JWKS_CACHE_TTL_SECONDS = 3600
-final int REDIS_BLACKLIST_TTL_SECONDS = 28800
 
 private static boolean validateClaims(Map payload, def expectedAudience) {
     def aud = payload.aud
@@ -412,7 +412,7 @@ try {
     String key = "blacklist:${sid}"
     int keySize = key.getBytes('UTF-8').length
     // TTL must be >= JwtSession.sessionTimeout (1800s = 30min)
-    String ttl = String.valueOf(REDIS_BLACKLIST_TTL_SECONDS)
+    String ttl = String.valueOf(redisBlacklistTtlSeconds)
     String authCommand = null
     if (!configuredRedisPassword.isEmpty()) {
         int redisPasswordSize = configuredRedisPassword.getBytes('UTF-8').length
