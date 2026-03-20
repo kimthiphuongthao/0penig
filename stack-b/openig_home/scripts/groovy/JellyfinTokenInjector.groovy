@@ -3,6 +3,7 @@ import groovy.json.JsonSlurper
 import org.forgerock.http.protocol.Response
 import org.forgerock.http.protocol.Status
 import static org.forgerock.util.promise.Promises.newResultPromise
+import java.security.MessageDigest
 
 def readResponseBody = { HttpURLConnection connection ->
     def stream = null
@@ -23,9 +24,9 @@ def readResponseBody = { HttpURLConnection connection ->
     }
 }
 
-def buildDeviceId = {
-    int sessionHash = Math.abs((session?.hashCode() ?: System.currentTimeMillis().hashCode()) as int)
-    return 'openig-' + sessionHash
+def buildDeviceId = { String sub ->
+    byte[] digest = MessageDigest.getInstance('SHA-256').digest(("jellyfin-${sub}").getBytes('UTF-8'))
+    return digest.encodeHex().toString().substring(0, 32)
 }
 
 try {
@@ -44,6 +45,21 @@ try {
     String accessToken = session['jellyfin_token'] as String
     String userId = session['jellyfin_user_id'] as String
     String deviceId = session['jellyfin_device_id'] as String
+    String requestUserSub = attributes.openid?.get('user_info')?.get('sub') as String
+    if (requestUserSub?.trim()) {
+        requestUserSub = requestUserSub.trim()
+        session['jellyfin_user_sub'] = requestUserSub
+    }
+
+    def requireUserSub = {
+        String sub = requestUserSub ?: (session['jellyfin_user_sub'] as String)
+        if (!sub?.trim()) {
+            throw new IllegalStateException('[JellyfinTokenInjector] No sub claim in OIDC user_info; cannot derive stable device ID')
+        }
+        sub = sub.trim()
+        session['jellyfin_user_sub'] = sub
+        sub
+    }
 
     if (!accessToken?.trim() || !userId?.trim()) {
         String acceptHeader = request.headers.getFirst('Accept') as String
@@ -52,7 +68,7 @@ try {
             return next.handle(context, request)
         }
 
-        deviceId = buildDeviceId()
+        deviceId = buildDeviceId(requireUserSub())
 
         HttpURLConnection authConnection = (HttpURLConnection) new URL('http://jellyfin:8096/Users/AuthenticateByName').openConnection()
         authConnection.requestMethod = 'POST'
@@ -77,6 +93,7 @@ try {
             session.remove('jellyfin_token')
             session.remove('jellyfin_user_id')
             session.remove('jellyfin_device_id')
+            session.remove('jellyfin_user_sub')
             Response redirectResponse = new Response(Status.FOUND)
             redirectResponse.headers.put('Location', ['/' as String])
             return newResultPromise(redirectResponse)
@@ -98,7 +115,7 @@ try {
     }
 
     if (deviceId == null || deviceId.trim().isEmpty()) {
-        deviceId = buildDeviceId()
+        deviceId = buildDeviceId(requireUserSub())
         session['jellyfin_device_id'] = deviceId
     }
 
@@ -110,6 +127,7 @@ try {
             session.remove('jellyfin_token')
             session.remove('jellyfin_user_id')
             session.remove('jellyfin_device_id')
+            session.remove('jellyfin_user_sub')
             Response redirectResponse = new Response(Status.FOUND)
             redirectResponse.headers.put('Location', ['/' as String])
             return redirectResponse

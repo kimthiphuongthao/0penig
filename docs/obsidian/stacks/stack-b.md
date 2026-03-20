@@ -7,7 +7,7 @@ tags:
   - redmine
   - jellyfin
   - security-hardening
-date: 2026-03-19
+date: 2026-03-20
 status: complete
 ---
 
@@ -58,11 +58,11 @@ Related: [[Stack A]] [[Stack C]] [[OpenIG]] [[Keycloak]] [[Vault]]
 | `DotnetCredentialInjector.groovy` (DELETED) | Legacy ASP.NET login automation (antiforgery token + cookies) using Vault-backed creds; injects upstream `Cookie`. |
 | `DotnetSloHandler.groovy` (DELETED) | Legacy .NET logout redirect to Keycloak end-session with optional `id_token_hint`. |
 | `JellyfinResponseRewriter.groovy` | Rewrites Jellyfin HTML to seed `localStorage` credentials and steer browser flow away from local login. |
-| `JellyfinTokenInjector.groovy` | Calls Jellyfin auth API, stores token/user/device in session, injects MediaBrowser `Authorization`, clears on `401`. |
+| `JellyfinTokenInjector.groovy` | Calls Jellyfin auth API, derives a stable Jellyfin `deviceId` from OIDC `sub`, stores token/user/device markers in session, injects MediaBrowser `Authorization`, and clears state on `401`. |
 | `RedmineCredentialInjector.groovy` | Performs Redmine `/login` GET+POST (CSRF + credentials), returns upstream cookies to the browser, removes legacy `redmine_session_cookies` state, and retries on `/login` redirect. |
 | `TokenReferenceFilter.groovy` | Stores and restores the live `oauth2:*` session namespace in Redis so `IG_SSO_B` only carries `token_ref_id` plus small identity markers. |
 | `SessionBlacklistFilter.groovy` | Shared blacklist filter used by both Stack B routes via `args` (`clientEndpoint`, `sessionCacheKey`, `canonicalOrigin`, `canonicalOriginEnvVar`). |
-| `SloHandlerJellyfin.groovy` | Calls Jellyfin `/Sessions/Logout` when token exists, clears OpenIG session, redirects to Keycloak logout with `id_token_hint` if found. |
+| `SloHandlerJellyfin.groovy` | Calls Jellyfin `/Sessions/Logout` when token exists, rebuilds the stable Jellyfin `deviceId` from OIDC `sub` if needed, clears OpenIG session, and always redirects through Keycloak logout while omitting `id_token_hint` only when it is missing. |
 | `SloHandler.groovy` | Consolidated Redmine/logout handler shared after Step 4 parameterization. |
 | `VaultCredentialFilterJellyfin.groovy` | AppRole login to Vault and fetch `secret/data/jellyfin-creds/{email}` into `attributes.jellyfin_credentials`. |
 | `VaultCredentialFilterRedmine.groovy` | AppRole login to Vault and fetch `secret/data/redmine-creds/{email}` into `attributes.redmine_credentials`. |
@@ -74,7 +74,6 @@ Related: [[Stack A]] [[Stack C]] [[OpenIG]] [[Keycloak]] [[Vault]]
 > Known pending:
 > - Jellyfin WebSocket `http://` -> `ws://` bug (`01-jellyfin.json`)
 > - STEP-14: remove `user: root` from `openig-b1` and `openig-b2` after host-volume compatibility validation
-> - Jellyfin-specific P3 debt remains open around logout fallback without `id_token` and unstable device-ID derivation
 
 ## 2026-03-17 Security Hardening
 
@@ -116,3 +115,12 @@ Related: [[Stack A]] [[Stack C]] [[OpenIG]] [[Keycloak]] [[Vault]]
 
 > [!success]
 > Stack B now matches the post-audit baseline for Vault error handling, fail-closed backchannel logout behavior, Linux `host.docker.internal` portability, and lab-safe nginx security headers.
+
+## 2026-03-20 Jellyfin logout hardening
+
+- Resolved `[L-4]`: [stack-b/openig_home/scripts/groovy/SloHandlerJellyfin.groovy](/Volumes/OS/claude/openig/sso-lab/stack-b/openig_home/scripts/groovy/SloHandlerJellyfin.groovy) now always sends the browser through the [[Keycloak]] end-session endpoint for app4 logout, even when the restored OAuth2 session no longer has an `id_token`. `id_token_hint` is appended only when present.
+- Resolved `[L-6]`: [stack-b/openig_home/scripts/groovy/JellyfinTokenInjector.groovy](/Volumes/OS/claude/openig/sso-lab/stack-b/openig_home/scripts/groovy/JellyfinTokenInjector.groovy) and [stack-b/openig_home/scripts/groovy/SloHandlerJellyfin.groovy](/Volumes/OS/claude/openig/sso-lab/stack-b/openig_home/scripts/groovy/SloHandlerJellyfin.groovy) now derive Jellyfin `deviceId` from `SHA-256("jellyfin-<sub>")`, truncated to 32 hex chars, instead of using `session.hashCode()`.
+- [stack-b/openig_home/scripts/groovy/JellyfinTokenInjector.groovy](/Volumes/OS/claude/openig/sso-lab/stack-b/openig_home/scripts/groovy/JellyfinTokenInjector.groovy) now persists `jellyfin_user_sub` in session and clears it with the rest of the Jellyfin markers on `401`, so [stack-b/openig_home/scripts/groovy/SloHandlerJellyfin.groovy](/Volumes/OS/claude/openig/sso-lab/stack-b/openig_home/scripts/groovy/SloHandlerJellyfin.groovy) can rebuild the same device ID before calling Jellyfin `/Sessions/Logout`.
+
+> [!success]
+> Validation on `2026-03-20`: `docker restart sso-b-openig-1 sso-b-openig-2` completed successfully. When scoped to the fresh restart window, `docker logs --since 2026-03-20T02:08:00.590644839Z sso-b-openig-1 2>&1 | grep -E 'Loaded the route|ERROR'` showed all six Stack B routes loading and no startup-time `ERROR` lines.
