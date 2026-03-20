@@ -24,6 +24,8 @@ Keycloak shared: `http://auth.sso.local:8080`, realm `sso-realm`.
 
 ## clientEndpoint namespace (MỖI app trong cùng OpenIG instance PHẢI unique)
 
+Why unique: OpenIG does not keep a server-global clientEndpoint registry. Each OAuth2ClientFilter instance matches its own login, callback, and logout URIs inside the route-local filter chain, so collisions happen when more than one route can match the same clientEndpoint and lexicographic route order selects the wrong route first.
+
 | Stack | App | clientEndpoint | Keycloak client |
 |-------|-----|----------------|-----------------|
 | A | WordPress | `/openid/app1` | `openig-client` |

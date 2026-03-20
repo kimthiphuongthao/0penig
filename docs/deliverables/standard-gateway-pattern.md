@@ -76,6 +76,8 @@ Key components and roles:
 
 What it is: Redis blacklist TTL MUST be greater than or equal to `JwtSession.sessionTimeout`. On Redis lookup failure, the gateway MUST fail closed for authenticated sessions by returning `503` or forcing re-authentication; it MUST NOT proxy the request onward. On Redis write failure during backchannel logout, the handler MUST return `5xx`, not `4xx`. The same `sid` key MUST be used on both the write path and the read path.
 
+For OpenIG 6 JwtSession, sessionTimeout is enforced through the JWT _ig_exp claim plus the cookie Expires attribute; JwtCookieSession does not emit Max-Age, so tests and runbooks must validate Expires or decoded JWT expiry instead of asserting Max-Age.
+
 Why: The reviewed stacks show the same two failure modes repeatedly: revocation state expires before the browser session does, and revocation checks continue on Redis failure. Stack B also shows that `sid`/`sub` drift can break enforcement even when both paths exist. [Note: B F11 (sid vs sub mismatch) was confirmed by 1/4 reviewers and flagged for investigation.] Derived from: Stack A `§5 F2-F3`; Stack B `F2-F3`, `F11`; Stack C `§4 F2-F3`; Cross-Stack Summary Universal Findings.
 
 How to implement in OpenIG: `BackchannelLogoutHandler` must validate logout tokens before writing `blacklist:<sid>` to Redis with TTL aligned to session lifetime, and `SessionBlacklistFilter` must read that same `sid` key on every authenticated request. The logout token validator MUST check that `alg` is an allowed asymmetric signing algorithm (`RS256` or `ES256` in the current lab), resolve the signing key from JWKS by `kid`, reconstruct RSA or EC `P-256` keys as required, and validate `iss`, `aud`, `events`, `iat`, and `exp` before writing revocation state. Redis `requirepass` MUST be enabled, each OpenIG revocation socket MUST send `AUTH` before the subsequent `GET` or `SET` command, and Redis port / blacklist TTL values MUST come from route args or environment-backed defaults rather than hardcoded `6379` / `28800` literals. Derived from: Stack A `§4`; Stack B "Confirmed Strengths"; Stack C `§3`.
@@ -259,6 +261,7 @@ Derived from: Cross-Stack Summary "Recommended Standard Pattern" and "Next Steps
 ### Session and revocation
 
 - [ ] `BackchannelLogoutHandler` writes `blacklist:<sid>` with TTL greater than or equal to `JwtSession.sessionTimeout`.
+- [ ] For OpenIG 6 JwtSession, session lifetime checks validate cookie Expires or JWT _ig_exp rather than Max-Age, because JwtCookieSession.buildJwtCookie() writes Expires only.
 - [ ] All revocation read paths use the same `sid` key written by the backchannel handler.
 - [ ] If Redis lookup fails for an authenticated session, the request fails closed rather than continuing downstream.
 - [ ] Redis read and write paths have explicit connect and read timeouts, and backchannel runtime failures return `5xx`.

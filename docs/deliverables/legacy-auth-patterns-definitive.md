@@ -334,7 +334,7 @@ Runtime note: pin OpenIG images to `openidentityplatform/openig:6.0.1`. Do not u
 
 OpenIG compatibility note: when `OAuth2ClientFilter` consumes an OIDC `clientSecret`, generate a strong random alphanumeric-only value. Avoid Base64 secrets containing `+`, `/`, or `=` because OpenIG 6 sends `client_secret` without URL-encoding in the token request body.
 
-Validated session note: when routes use browser-bound `JwtSession`, place `TokenReferenceFilter.groovy` immediately after `OAuth2ClientFilter` so the heavy `oauth2:*` entry is offloaded to Redis and the browser cookie keeps only a per-app token reference key (`token_ref_id_appN` on shared-cookie stacks, fallback `token_ref_id`) plus small identity markers.
+Validated session note: when routes use browser-bound `JwtSession`, place `TokenReferenceFilter.groovy` immediately after `OAuth2ClientFilter` so the heavy `oauth2:*` entry is offloaded to Redis and the browser cookie keeps only a per-app token reference key (`token_ref_id_appN` on shared-cookie stacks, fallback `token_ref_id`) plus small identity markers. OIDC data-model note: `target = ${attributes.openid}` is request-scoped output written by `OAuth2ClientFilter.fillTarget()`; it does not mirror data into session. Persisted `session[oauth2Key]` state is written separately by `OAuth2Utils.saveSession()`, so lookups such as `session[oauth2Key].atr.id_token` must use the persisted blob, while live `user_info` belongs under `attributes.openid`.
 
 ### Available Templates (per stack)
 
