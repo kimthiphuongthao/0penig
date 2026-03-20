@@ -14,6 +14,7 @@ String configuredRedisHost = binding.hasVariable('redisHost') ? (redisHost as St
 configuredRedisHost = configuredRedisHost?.trim()
 int configuredRedisTtl = binding.hasVariable('redisTtl') ? (redisTtl as Number).intValue() : 1800
 String configuredRedisPassword = System.getenv('REDIS_PASSWORD') ?: ''
+def tokenRefKey = binding.hasVariable('tokenRefKey') ? (tokenRefKey as String) : 'token_ref_id'
 
 def readRespLine = { InputStream input ->
     ByteArrayOutputStream buffer = new ByteArrayOutputStream()
@@ -188,7 +189,7 @@ def stripOauth2EntriesFromSession = { String newTokenRefId ->
     Map<String, Object> preservedEntries = [:]
     try {
         session.keySet().collect { String.valueOf(it) }.sort().each { key ->
-            if (!key.startsWith('oauth2:') && key != 'token_ref_id') {
+            if (!key.startsWith('oauth2:') && key != tokenRefKey) {
                 def value = session[key]
                 if (value != null) {
                     preservedEntries[key] = value
@@ -203,7 +204,7 @@ def stripOauth2EntriesFromSession = { String newTokenRefId ->
     preservedEntries.each { key, value ->
         session[key] = value
     }
-    session['token_ref_id'] = newTokenRefId
+    session[tokenRefKey] = newTokenRefId
 }
 
 try {
@@ -214,19 +215,20 @@ try {
         throw new IllegalStateException('TokenReferenceFilter requires redisHost arg')
     }
 
-    String tokenRefId = session['token_ref_id'] as String
+    String tokenRefId = session[tokenRefKey] as String
     if (tokenRefId?.trim() && collectOauth2SessionEntries().isEmpty()) {
         String redisPayload = getFromRedis(tokenRefId)
         if (!redisPayload) {
-            logger.error('[TokenReferenceFilter] Missing Redis payload for token_ref_id={} endpoint={}', tokenRefId, configuredClientEndpoint)
+            logger.error('[TokenReferenceFilter] Missing Redis payload for tokenRefKey={} tokenRefId={} endpoint={}', tokenRefKey, tokenRefId, configuredClientEndpoint)
             return newResultPromise(new Response(Status.BAD_GATEWAY))
         }
 
         def restoredOauth2Entries = restoreOauth2SessionEntries(new JsonSlurper().parseText(redisPayload))
         logger.info(
-            '[TokenReferenceFilter] Restored oauth2 session keys={} endpoint={} token_ref_id={}',
+            '[TokenReferenceFilter] Restored oauth2 session keys={} endpoint={} tokenRefKey={} tokenRefId={}',
             restoredOauth2Entries.keySet(),
             configuredClientEndpoint,
+            tokenRefKey,
             tokenRefId
         )
     }
@@ -253,9 +255,10 @@ try {
             setInRedis(newTokenRefId, redisPayload)
             stripOauth2EntriesFromSession(newTokenRefId)
             logger.info(
-                '[TokenReferenceFilter] Stored oauth2 session keys={} endpoint={} token_ref_id={}',
+                '[TokenReferenceFilter] Stored oauth2 session keys={} endpoint={} tokenRefKey={} tokenRefId={}',
                 oauth2EntriesForResponse.keySet(),
                 configuredClientEndpoint,
+                tokenRefKey,
                 newTokenRefId
             )
         } catch (Exception e) {

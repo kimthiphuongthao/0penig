@@ -67,7 +67,8 @@
         "args": {
           "clientEndpoint": "/openid/app2",
           "redisHost": "redis-a",
-          "redisTtl": 1800
+          "redisTtl": 1800,
+          "tokenRefKey": "token_ref_id_app2"
         }
       }
     },
