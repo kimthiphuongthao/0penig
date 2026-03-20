@@ -1,0 +1,18 @@
+{
+  "name": "00-backchannel-logout-app5",
+  "condition": "${matches(request.uri.path, '^/openid/app5/backchannel_logout$') and request.method == 'POST'}",
+  "handler": {
+    "type": "ScriptableHandler",
+    "config": {
+      "type": "application/x-groovy",
+      "file": "BackchannelLogoutHandler.groovy",
+      "args": {
+        "audiences": ["openig-client-c-app5"],
+        "redisHost": "redis-c",
+        "jwksUri": "${env['KEYCLOAK_INTERNAL_URL']}/realms/sso-realm/protocol/openid-connect/certs",
+        "issuer": "${env['KEYCLOAK_BROWSER_URL']}/realms/sso-realm",
+        "ttlSeconds": "${env['REDIS_BLACKLIST_TTL'] != null ? env['REDIS_BLACKLIST_TTL'] : '28800'}"
+      }
+    }
+  }
+}

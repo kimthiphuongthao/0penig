@@ -1,0 +1,37 @@
+{
+  "name": "00-redmine-logout-intercept",
+  "condition": "${matches(request.headers['Host'][0], 'redmine-b.sso.local.*') and matches(request.uri.path, '^/logout$') and request.method == 'POST'}",
+  "handler": {
+    "type": "Chain",
+    "config": {
+      "filters": [
+        {
+          "type": "ScriptableFilter",
+          "config": {
+            "type": "application/x-groovy",
+            "file": "TokenReferenceFilter.groovy",
+            "args": {
+              "clientEndpoint": "/openid/app3",
+              "redisHost": "redis-b",
+              "redisTtl": 1800,
+              "tokenRefKey": "token_ref_id_app3"
+            }
+          }
+        }
+      ],
+      "handler": {
+        "type": "ScriptableHandler",
+        "config": {
+          "type": "application/x-groovy",
+          "file": "SloHandler.groovy",
+          "args": {
+            "clientEndpoint": "/openid/app3",
+            "clientId": "openig-client-b",
+            "canonicalOrigin": "http://redmine-b.sso.local:9080",
+            "postLogoutPath": "/"
+          }
+        }
+      }
+    }
+  }
+}

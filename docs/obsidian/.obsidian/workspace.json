@@ -1,0 +1,212 @@
+{
+  "main": {
+    "id": "69ae6abaf42c01e2",
+    "type": "split",
+    "children": [
+      {
+        "id": "b3c06180a993c6d8",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "0c3935b625bcf334",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "debugging/2026-03-12-weekly-report-sync.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "2026-03-12-weekly-report-sync"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "b7d24fc4f2b7860e",
+    "type": "split",
+    "children": [
+      {
+        "id": "9b82ad6acdede235",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "d22cbf428b53ad1e",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "cde6029aa2568ed8",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "5d9548a9110bda29",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "e040a0daf7a0283f",
+    "type": "split",
+    "children": [
+      {
+        "id": "b99b0e2c92bd8ccd",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "b4eb89d4a804a5de",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks"
+            }
+          },
+          {
+            "id": "19082d48469fab50",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links"
+            }
+          },
+          {
+            "id": "c5676e1385e8a0ed",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "f4f2a1bcf6013521",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "33f5cf9507417652",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "0c3935b625bcf334",
+  "lastOpenFiles": [
+    "debugging/cross-stack-slo-jellyfin-fix.md",
+    "debugging/2026-03-12-weekly-report-sync.md",
+    "debugging/2026-03-12-stack-b-jellyfin-websocket-route.md",
+    "debugging/2026-03-12-keycloak-admin-logout-all-sessions-stack-a.md",
+    "debugging/2026-03-12-doc-sync-memory-permission.md",
+    "debugging/2026-03-12-progress-md-update.md",
+    "how-to/2026-03-12-legacy-survey-checklist-template.md",
+    "debugging/2026-03-12-stack-a-jwtsession-timeout-2-minutes.md",
+    "how-to/2026-03-12-legacy-auth-logout-sso-integration-research.md",
+    "decisions/transparent-vs-cooperative-sso.md",
+    "decisions/codex-prompt-standards.md",
+    "debugging/stack-b-cookiedomain-fix.md",
+    "stacks/stack-c.md",
+    "decisions/independence-principle.md",
+    "debugging/stack-c-slo-fixes.md",
+    "stacks/stack-b.md",
+    "stacks/stack-a.md",
+    "Session Notes.md",
+    "how-to/add-new-stack.md",
+    "how-to/restart-stack.md",
+    "Keycloak.md",
+    "CLAUDE.md",
+    "00-MOC.md",
+    "decisions/ha-architecture.md",
+    "decisions/vault-approle-design.md",
+    "decisions/slo-logout-design.md"
+  ]
+}

@@ -1,0 +1,199 @@
+# ============================================================
+# Stack B: OpenIG HA + Jellyfin + Vault-B
+# Browser → nginx-b (port 9080) → openig-b1/b2
+# Shares Keycloak at http://host.docker.internal:8080
+# ============================================================
+
+networks:
+  frontend-b:
+    driver: bridge
+  backend-b:
+    driver: bridge
+
+volumes:
+  redmine_mysql_data:
+  redmine_data:
+  jellyfin_config:
+  jellyfin_cache:
+  redis_b_data:
+
+services:
+
+  nginx-b:
+    image: nginx:1.25-alpine
+    container_name: sso-b-nginx
+    ports:
+      - "9080:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - frontend-b
+      - backend-b
+    depends_on:
+      - openig-b1
+      - openig-b2
+    restart: unless-stopped
+
+  openig-b1:
+    image: openidentityplatform/openig:6.0.1
+    platform: linux/amd64
+    container_name: sso-b-openig-1
+    user: root   # lab macOS exception: non-root requires chmod on host volumes; production MUST use non-root (UID 11111)
+    entrypoint: ["/docker-entrypoint.sh"]
+    volumes:
+      - ./openig_home:/opt/openig
+      - ./vault/file:/vault/file:ro
+      - ./docker/openig/server.xml:/usr/local/tomcat/conf/server.xml:ro
+      - ./docker/openig/docker-entrypoint.sh:/docker-entrypoint.sh:ro
+    environment:
+      OPENIG_BASE: /opt/openig
+      REDIS_HOST: redis-b
+      REDIS_PASSWORD: "${REDIS_PASSWORD}"
+      OPENIG_PUBLIC_URL: 'http://openigb.sso.local:9080'
+      CANONICAL_ORIGIN_APP3: 'http://redmine-b.sso.local:9080'
+      CANONICAL_ORIGIN_APP4: 'http://jellyfin-b.sso.local:9080'
+      JWT_SHARED_SECRET: "${JWT_SHARED_SECRET}"
+      KEYSTORE_PASSWORD: "${KEYSTORE_PASSWORD}"
+      KEYCLOAK_BROWSER_URL: "http://auth.sso.local:8080"
+      KEYCLOAK_INTERNAL_URL: "http://host.docker.internal:8080"
+      OIDC_CLIENT_ID: "openig-client-b"
+      OIDC_CLIENT_ID_APP4: "openig-client-b-app4"
+      OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET}"
+      OIDC_CLIENT_SECRET_APP4: "${OIDC_CLIENT_SECRET_APP4}"
+      OPENIG_NODE_NAME: "openig-b1"
+      VAULT_ADDR: "http://vault-b:8200"
+      VAULT_ROLE_ID_FILE: "/vault/file/openig-role-id"
+      VAULT_SECRET_ID_FILE: "/vault/file/openig-secret-id"
+      JELLYFIN_SERVER_ID: "8a4467ecf1d4422583f472d90cb8c78f"
+    networks:
+      - backend-b
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/openig/api/info"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  openig-b2:
+    image: openidentityplatform/openig:6.0.1
+    platform: linux/amd64
+    container_name: sso-b-openig-2
+    user: root   # lab macOS exception: non-root requires chmod on host volumes; production MUST use non-root (UID 11111)
+    entrypoint: ["/docker-entrypoint.sh"]
+    volumes:
+      - ./openig_home:/opt/openig
+      - ./vault/file:/vault/file:ro
+      - ./docker/openig/server.xml:/usr/local/tomcat/conf/server.xml:ro
+      - ./docker/openig/docker-entrypoint.sh:/docker-entrypoint.sh:ro
+    environment:
+      OPENIG_BASE: /opt/openig
+      REDIS_HOST: redis-b
+      REDIS_PASSWORD: "${REDIS_PASSWORD}"
+      OPENIG_PUBLIC_URL: 'http://openigb.sso.local:9080'
+      CANONICAL_ORIGIN_APP3: 'http://redmine-b.sso.local:9080'
+      CANONICAL_ORIGIN_APP4: 'http://jellyfin-b.sso.local:9080'
+      JWT_SHARED_SECRET: "${JWT_SHARED_SECRET}"
+      KEYSTORE_PASSWORD: "${KEYSTORE_PASSWORD}"
+      KEYCLOAK_BROWSER_URL: "http://auth.sso.local:8080"
+      KEYCLOAK_INTERNAL_URL: "http://host.docker.internal:8080"
+      OIDC_CLIENT_ID: "openig-client-b"
+      OIDC_CLIENT_ID_APP4: "openig-client-b-app4"
+      OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET}"
+      OIDC_CLIENT_SECRET_APP4: "${OIDC_CLIENT_SECRET_APP4}"
+      OPENIG_NODE_NAME: "openig-b2"
+      VAULT_ADDR: "http://vault-b:8200"
+      VAULT_ROLE_ID_FILE: "/vault/file/openig-role-id"
+      VAULT_SECRET_ID_FILE: "/vault/file/openig-secret-id"
+      JELLYFIN_SERVER_ID: "8a4467ecf1d4422583f472d90cb8c78f"
+    networks:
+      - backend-b
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/openig/api/info"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  jellyfin:
+    image: jellyfin/jellyfin
+    container_name: sso-b-jellyfin
+    volumes:
+      - jellyfin_config:/config
+      - jellyfin_cache:/cache
+    environment:
+      - TZ=Asia/Ho_Chi_Minh
+    networks:
+      - backend-b
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8096/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  redis-b:
+    image: redis:7-alpine
+    container_name: sso-redis-b
+    command: redis-server --appendonly yes --appendfsync everysec --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_b_data:/data
+    networks:
+      - backend-b
+    restart: unless-stopped
+
+  mysql-redmine:
+    image: mysql:8.0
+    container_name: sso-b-mysql-redmine
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
+      MYSQL_DATABASE: redmine
+      MYSQL_USER: redmine
+      MYSQL_PASSWORD: "${REDMINE_DB_PASSWORD}"
+    volumes:
+      - redmine_mysql_data:/var/lib/mysql
+    networks:
+      - backend-b
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  redmine:
+    image: redmine:5.1
+    container_name: sso-b-redmine
+    environment:
+      REDMINE_DB_MYSQL: mysql-redmine
+      REDMINE_DB_DATABASE: redmine
+      REDMINE_DB_USERNAME: redmine
+      REDMINE_DB_PASSWORD: "${REDMINE_DB_PASSWORD}"
+      REDMINE_SECRET_KEY_BASE: "${REDMINE_SECRET_KEY_BASE}"
+    depends_on:
+      mysql-redmine:
+        condition: service_healthy
+    volumes:
+      - redmine_data:/usr/src/redmine/files
+    networks:
+      - backend-b
+
+  vault-b:
+    image: hashicorp/vault:1.15
+    container_name: sso-b-vault
+    cap_add: [IPC_LOCK]
+    command: server
+    volumes:
+      - ./vault/config:/vault/config:ro
+      - ./vault/data:/vault/data
+      - ./vault/file:/vault/file
+      - ./vault/keys:/vault/keys
+    networks:
+      - backend-b
+    restart: unless-stopped

@@ -1,0 +1,31 @@
+{
+  "name": "00-jellyfin-logout-intercept",
+  "condition": "${matches(request.headers['Host'][0], 'jellyfin-b.sso.local.*') and (matches(request.uri.path, '^/logout$') or matches(request.uri.toString(), '.*/logout.*'))}",
+  "handler": {
+    "type": "Chain",
+    "config": {
+      "filters": [
+        {
+          "type": "ScriptableFilter",
+          "config": {
+            "type": "application/x-groovy",
+            "file": "TokenReferenceFilter.groovy",
+            "args": {
+              "clientEndpoint": "/openid/app4",
+              "redisHost": "redis-b",
+              "redisTtl": 1800,
+              "tokenRefKey": "token_ref_id_app4"
+            }
+          }
+        }
+      ],
+      "handler": {
+        "type": "ScriptableHandler",
+        "config": {
+          "type": "application/x-groovy",
+          "file": "SloHandlerJellyfin.groovy"
+        }
+      }
+    }
+  }
+}

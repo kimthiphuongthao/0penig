@@ -1,0 +1,370 @@
+{
+    "config": {
+        "dates": {
+            "monthNames": "January, February, March, April, May, June, July, August, September, October, November, December",
+            "monthNamesShort": "Jan., Feb., Mar., Apr., May., Jun., Jul., Aug., Sep., Oct., Nov., Dec.",
+            "dayNames": "Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday",
+            "dayNamesShort": "Sun. , Mon., Tue., Wed., Thu., Fri., Sat."
+        },
+        "messages": {
+            "CommonMessages": {
+                "serviceUnavailable": "Service unavailable",
+                "unknown": "Unknown error - contact an administrator",
+                "errorFetchingData": "Error fetching user data",
+                "internalError": "Internal server error",
+                "forbiddenError": "Forbidden request error.",
+                "notFoundError": "Not found error.",
+                "badRequestError": "Bad request error.",
+                "conflictError": "Detected conflict in request.",
+                "incorrectRevisionError": "Can't update the record because this isn't the latest version.",
+                "securityDataChanged": "Security data has been changed",
+                "tokenNotFound": "Token not found."
+            },
+            "OpenIGMessages":{
+                "deleteRouteSuccess": "Protection for '__title__' was removed",
+                "deleteRouteFailed": "Failed to remove protection for '__title__'",
+                "invalidModel": "Can't create the config file because the model is not valid",
+                "unknownFilterType": "Unknown filter type: '__message__'",
+                "routeSettingsSaveSuccess": "__filter__ settings saved",
+                "routeSettingsSaveFailed": "Failed to save __filter__ settings",
+                "routeSettingsDisabled": "__filter__ disabled",
+                "modelTransformationFailed": "Failed to transform the model",
+                "routeDeployedSuccess": "Protection for '__title__' was deployed",
+                "routeDeployedFailed": "Failed to deploy protection for '__title__'",
+                "routeUndeployedSuccess": "Protection for '__title__' was undeployed",
+                "routeUndeployedFailed": "Failed to undeploy protection for '__title__'",
+                "routeCreationFailed": "Failed to create protection"
+            }
+        },
+        "AppConfiguration": {
+            "Navigation": {
+                "links": {
+                    "routes": "Routes"
+                },
+                "routeSideMenu": {
+                    "overview": "Overview",
+                    "capture": "Capture",
+                    "throttling": "Throttling",
+                    "authentication":"Authentication",
+                    "authorization":"Authorization",
+                    "statistics": "Statistics"                    
+                }
+            }
+        }
+    },
+    "templates": {
+        "user": {
+            "404": {
+                "pageNotFound": "Page not found",
+                "requestedPageCouldNotBeFound": "Can't find the requested page"
+            }
+        },
+        "routes": {
+            "title": "Protected applications",
+            "description": "Configure OpenIG to protect your applications",
+            "filter": "Filter...",
+            "addRoute": "Protect an app",
+            "help": "Help",
+            "deployedState": "Deployed",
+            "undeployedState": "Undeployed",
+            "edit": "Edit",
+            "duplicate": "Duplicate",
+            "exportConfig": "Display route",
+            "undeploy": "Undeploy",
+            "deploy": "Deploy",
+            "deleteDialog": "Delete protection for '__title__'?",
+            "undeployAndDeleteDialog": "Do you want to undeploy the protection for '__title__' and then delete it?",
+            "deployDialog":"Deploy protection for '__title__'?",
+            "undeployDialog": "Undeploy protection for '__title__'?",
+            "duplicateDialog":"Duplicate protection for '__title__'?",
+            "changesPending": "Changes pending",
+            "routeSettings": "Protection settings",
+            "moreOptions": "More options",
+            "duplicateNameError": "This name already exists - provide a unique name",
+            "duplicateIdError": "This ID already exists - provide a unique ID",
+            "noRouteItems": "Protection is not configured for any apps",
+            "filters":{
+                "Off": "Off",
+                "OAuth2ClientFilter": "OpenID Connect",
+                "SingleSignOnFilter": "Single Sign-On",
+                "PolicyEnforcementFilter":"OpenAM Policy Enforcement",
+                "PasswordReplayFilter":"Password Replay",
+                "ThrottlingFilter": "__numberOfRequests__ requests/__duration__ __durationRange__"
+            },
+            "capture": {
+                "inboundMessages": "Inbound messages",
+                "inboundRequests": "Inbound requests",
+                "inboundResponses": "Inbound responses",
+                "outboundMessages": "Outbound messages",
+                "outboundRequests": "Outbound requests",
+                "outboundResponses": "Outbound responses",
+                "entity": "Entity"
+            },
+            "tableColumns":{
+                "name": "Name",
+                "baseURI": "URL",
+                "status": "Status"
+            },
+            "parts":{
+                "settings":{
+                    "addTitle": "Set up protection for an app",
+                    "addButton": "Create route",
+                    "editTitle": "Edit route",
+                    "fields":{
+                        "name":"Name",
+                        "nameHint": "Friendly name for the protected application",
+                        "id": "ID",
+                        "idHint": "Unique ID for the route",
+                        "baseURI": "Base URI",
+                        "baseURIHint": "Internal URL for the application - OpenIG forwards proxied requests to this URL",
+                        "condition": "Accept Condition",
+                        "conditionHint": "Enter a path or an expression to handle the request",
+                        "conditionPlaceHolder": "For example, /my-app or ${matches(request.uri.path, '^/my-app')}",
+                        "applicationUrl": "Application URL",
+                        "applicationUrlHint": "URL of the application to protect",
+                        "path": "Path",
+                        "expression": "Expression",
+                        "advancedOptions": "Advanced Options",
+                        "basicOptions": "Basic Options",
+                        "conditionModeTooltip": "Accept condition expression is too complex to display in basic mode"
+                    }
+                },
+                "authentication":{
+                    "title": "Authentication",
+                    "description": "Select a option to authenticate users to your application.",
+                    "chooseOption": "Choose an option...",
+                    "fields":{
+                        "enabled": "Enable authentication",
+                        "openID": "OpenID Connect",
+                        "openIDHint": "Authenticate users to your application using OpenID Connect...",
+                        "sso": "Single Sign-On",
+                        "ssoHint": "Use OpenAM to enable single sign-on."
+                    }
+                },
+                "openIDAuthentication":{
+                    "dialogTitle": "Configure OpenID Connect Authentication",
+                    "title": "OpenID Connect Authentication",
+                    "fields":{
+                        "enabled": "Enable authentication",
+                        "clientFilterGroup": "Client Filter",
+                        "clientRegistrationGroup": "Client Registration",
+                        "issuerGroup": "Issuer",
+                        "clientEndpoint": "Client Endpoint",
+                        "clientEndpointHint": "Base URI for OpenID Connect services.",
+                        "clientId": "Client ID",
+                        "clientIdHint": "Name of the OpenID Connect client configured in the identity provider",
+                        "clientSecret": "Client secret",
+                        "clientSecretHint": "Password for the client",
+                        "scopes": "Scopes",
+                        "scopesHint": "Scopes to use for the client",
+                        "tokenEndpointUseBasicAuth": "Basic authentication",
+                        "tokenEndpointUseBasicAuthHint": "Use HTTP basic authentication when sending client credentials to the provider",
+                        "issuerWellKnownEndpoint": "Well-known Endpoint",
+                        "issuerWellKnownEndpointHint": "URL to the well-known configuration resource",
+                        "requireHttps": "Require HTTPS",
+                        "requireHttpsHint": "Require incoming requests to use TLS (HTTPS)"
+                    }
+                },
+                "openAmSsoAuthentication":{
+                    "dialogTitle": "Configure Single Sign-On",
+                    "title": "Single Sign-On",
+                    "fields":{
+                        "openamUrl": "Server URL",
+                        "openamUrlHint": "Server URL",
+                        "realm": "Realm",
+                        "realmHint": "The Access Management realm used for user authentication and token validation",
+                        "cookieName": "SSO Cookie Name",
+                        "cookieNameHint": "The name of the cookie where to expect the SSO Token"
+                    }
+                },
+                "authorization":{
+                    "title": "Authorization",
+                    "description": "Enforce OpenAM policy decisions to allow or deny requests based on their context and URI, and on OpenAM policies",
+                    "fields":{
+                        "enabled": "Enable authorization",
+                        "openAMconfigurationGroup": "OpenAM configuration",
+                        "enforcementEndpointGroup": "OpenAM policy endpoint",
+                        "openamUrl": "OpenAM URL",
+                        "openamUrlHint": "URL of the OpenAM service making policy decisions",
+                        "pepUsername": "Policy administrator ID",
+                        "pepUsernameHint": "ID of the OpenAM subject or agent with permission to request policy decisions",
+                        "pepPassword": "Policy administrator password",
+                        "pepPasswordHint": "Password of the OpenAM subject or agent with permission to request policy decisions",
+                        "pepRealm": "Policy administrator realm",
+                        "pepRealmHint": "OpenAM realm where the policy administrator is configured",
+                        "realm": "Policy realm",
+                        "realmHint": "OpenAM realm where the policy set and policies are configured",
+                        "ssoTokenSubject": "OpenAM SSO token ID",
+                        "ssoTokenSubjectHint": "Expression evaluating to the OpenAM SSO token ID string that authenticates the user making the request",
+                        "jwtSubject": "OpenId Connect id_token",
+                        "jwtSubjectHint": "Expression evaluating to the OpenId Connect 'id_token' that the user received after consent",
+                        "application": "Policy set",
+                        "applicationHint": "Policy set to query for the policy decision",
+                        "contextualAuthGroup": "Contextual Authorization",
+                        "headers": "Headers",
+                        "headersHint": "List of HTTP headers to forward",
+                        "address": "IP",
+                        "addressHint": "Forward the requester's IP address"
+                    }
+                },
+                "capture":{
+                    "title": "Capture",
+                    "description": "Capture inbound and / or outbound HTTP messages.",
+                    "fields":{
+                        "enabled": "Enable",
+                        "inboundGroup": "Inbound Messages",
+                        "inboundRequest": "Capture Request",
+                        "inboundResponse": "Capture Response",
+                        "outboundGroup": "Outbound Messages",
+                        "outboundRequest": "Capture Request",
+                        "outboundResponse": "Capture Response",
+                        "entityGroup": "General Settings",
+                        "entity": "Capture Entity",
+                        "hint": "Capture the body of requests and responses in addition to messages' headers"
+                    }
+                },
+                "throttling":{
+                    "title": "Throttling",
+                    "description": "Limit the rate at which requests can access the application",
+                    "btnEnableTitle": "Enable throttling",
+                    "lblAllow": "Allow",
+                    "lblPer": "requests each"
+                },
+                "statistics":{
+                    "title": "Statistics",
+                    "description": "Specify whether to maintain statistics about the route.",
+                    "fields":{
+                        "enabled": "Enable statistics",
+                        "percentiles": "Percentiles",
+                        "status": "On",
+                        "percentilesHint": "The percentiles in the distribution for which to maintain response time statistics."
+                    }
+                }
+            }
+        },
+        "welcomePage": {
+            "title": "Welcome to OpenIG",
+            "subtitle": "OpenIG bridges your applications to the digital identity world. Use OpenIG Studio to develop and prototype protection for your applications and APIs.",
+            "benefit_1": "Authenticate Users",
+            "benefit_2": "Enforce Authorization Policies",
+            "benefit_3": "Throttle Requests",
+            "benefit_4": "Analyze Access",
+            "addRoute": "Protect an Application",
+            "routesList": "View Saved Protections",
+            "documentation": "View the Documentation",
+            "warning": "Running in evaluation mode - by default, all endpoints are open and accessible. Do not use this mode in a production environment."
+        }
+    },
+    "common": {
+        "form": {
+            "ok": "OK",
+            "confirm": "Confirm",
+            "true": "True",
+            "false": "False",
+            "update": "Update",
+            "save": "Save",
+            "create": "Create",
+            "cancel": "Cancel",
+            "close": "Close",
+            "logout": "Log out",
+            "register": "Register",
+            "home": "Home",
+            "start": "Start",
+            "continue": "Continue",
+            "back": "Back",
+            "delete": "Delete",
+            "details": "Details",
+            "pleaseSelect": "Please Select",
+            "addUser": "Add user",
+            "decision": "Decision",
+            "accept": "Accept",
+            "reject": "Reject",
+            "createdAt": "Created at",
+            "search": "Search",
+            "submit": "Submit",
+            "actions": "Actions",
+            "complete": "Complete",
+            "reset": "Reset",
+            "copyright": "Join <a href='https://github.com/OpenIdentityPlatform/OpenIG/blob/master/README.md'>OpenIG</a> Community",
+            "sessionExpired": "Session Expired",
+            "enableCookies": "Cookies must be enabled to login",
+            "reloadGrid": "Reload Grid",
+            "clearFilters": "Clear Filters",
+            "passwordPlaceholder": "••••••••••••",
+            "warning" : "Warning!",
+            "validation": {
+                "VALID_PHONE_FORMAT": "Must be a valid phone number",
+                "VALID_NAME_FORMAT": "Must have valid name characters",
+                "VALID_EMAIL_ADDRESS_FORMAT": "Must be a valid email address",
+                "AT_LEAST_X_CAPITAL_LETTERS": "At least __numCaps__ capital letters",
+                "AT_LEAST_X_NUMBERS": "At least __numNums__ numbers",
+                "CANNOT_CONTAIN_OTHERS": "Cannot contain values from: __disallowedFields__",
+                "CANNOT_CONTAIN_CHARACTERS": "Cannot contain characters: __forbiddenChars__",
+                "MIN_LENGTH": "At least __minLength__ characters",
+                "REQUIRED": "Cannot be blank",
+                "UNIQUE": "Already exists",
+                "REAUTH_REQUIRED": "",
+                "formContainsErrors": "Form contains validation errors",
+                "atLeastOneCapitalLetter": "At least one capital letter",
+                "atLeastOneNumber": "At least one number",
+                "atLeast8Characters": "At least 8 characters",
+                "cannotMatchLogin": "Cannot match login",
+                "confirmationMatchesPassword": "Passwords must match",
+                "usernameExists": "Username already exists",
+                "emailAddressAlreadyExists": "Email address already exists",
+                "onlyAlphabeticCharacters": "Only alphabetic characters",
+                "onlyNumbersAndSpecialCharacters": "Only numbers and special characters",
+                "cannotMatchOldPassword": "Cannot match old password",
+                "minimum4Characters": "Minimum 4 characters",
+                "acceptanceRequiredForRegistration": "Acceptance required for registration",
+                "incorrectPassword": "Incorrect password",
+                "incorrectSecurityAnswer": "Incorrect answer",
+                "required": "Required",
+                "emailNotValid": "Not a valid email address.",
+                "emailExists": "Email address already exists.",
+                "shouldBeLong": "Should be long value",
+                "wrongDateFormat": "Wrong format",
+                "baseURINotValid": "Not a valid uri",
+                "baseURIContainsPath": "Cannot contain path",
+                "URINotValid": "Not a valid uri",
+                "numberGreaterThanOrEqual": "Value must be greater than or equal to __minAttr__",
+                "numberLessThanOrEqual": "Value must be less than or equal to __maxAttr__",
+                "notUrlCompatible": "Value is not URI compatible. Use only lowercase letters, numbers and dash",
+                "invalidApplicationUrl":"Invalid Application Url"
+            }
+        },
+        "modalWindow": {
+            "title": {
+                "configExport": "JSON for the current configuration"
+            },
+            "button": {
+                "copyToClipboard": "Copy to clipboard"
+            },
+            "message":{
+                "copied": "Copied",
+                "copyFailed": "Copy failed"
+            }
+        },
+        "grid": {
+            "pagination": {
+                "first": "First",
+                "previous": "Previous",
+                "next": "Next",
+                "last": "Last"
+            }
+        },
+        "timeSlot":{
+            "ns": "nanosecond(s)",
+            "us": "microsecond(s)",
+            "ms": "millisecond(s)",
+            "s": "second(s)",
+            "m": "minute(s)",
+            "h": "hour(s)",
+            "d": "day(s)"
+        },
+        "footer":{
+            "versionInfo": "OpenIG __version__ Build __revision__ (__date__)",
+            "versionDate": "yyyy-MMMM-dd HH:mm"
+        }
+    }
+}

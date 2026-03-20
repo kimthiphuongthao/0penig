@@ -1,0 +1,37 @@
+{
+  "name": "00-phpmyadmin-logout",
+  "condition": "${request.method == 'GET' and request.headers['Host'] != null and request.headers['Host'][0] != null and matches(request.headers['Host'][0], '(?i)^phpmyadmin-c[.]sso[.]local(:[0-9]+)?$') and matches(request.uri.path, '^/$') and request.uri.query != null and matches(request.uri.query, '(^|&)logout=1($|&)')}",
+  "handler": {
+    "type": "Chain",
+    "config": {
+      "filters": [
+        {
+          "type": "ScriptableFilter",
+          "config": {
+            "type": "application/x-groovy",
+            "file": "TokenReferenceFilter.groovy",
+            "args": {
+              "clientEndpoint": "/openid/app6",
+              "redisHost": "redis-c",
+              "redisTtl": 1800,
+              "tokenRefKey": "token_ref_id_app6"
+            }
+          }
+        }
+      ],
+      "handler": {
+        "type": "ScriptableHandler",
+        "config": {
+          "type": "application/x-groovy",
+          "file": "SloHandler.groovy",
+          "args": {
+            "clientEndpoint": "/openid/app6",
+            "clientId": "openig-client-c-app6",
+            "canonicalOrigin": "http://phpmyadmin-c.sso.local:18080",
+            "postLogoutPath": "/"
+          }
+        }
+      }
+    }
+  }
+}

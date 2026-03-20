@@ -1,0 +1,171 @@
+networks:
+  frontend-c:
+    driver: bridge
+  backend-c:
+    driver: bridge
+
+volumes:
+  redis_c_data:
+
+services:
+  nginx-c:
+    image: nginx:1.25-alpine
+    container_name: stack-c-nginx-c-1
+    ports:
+      - "18080:80"
+    networks:
+      - frontend-c
+      - backend-c
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - openig-c1
+      - openig-c2
+    restart: unless-stopped
+
+  openig-c1:
+    image: openidentityplatform/openig:6.0.1
+    platform: linux/amd64
+    container_name: stack-c-openig-c1-1
+    user: root   # lab macOS exception: non-root requires chmod on host volumes; production MUST use non-root (UID 11111)
+    entrypoint: ["/docker-entrypoint.sh"]
+    networks:
+      - frontend-c
+      - backend-c
+    volumes:
+      - ./openig_home:/opt/openig
+      - ./docker/openig/docker-entrypoint.sh:/docker-entrypoint.sh:ro
+    environment:
+      OPENIG_BASE: "/opt/openig"
+      OPENIG_PUBLIC_URL: "http://openig-c.sso.local:10080"
+      KEYCLOAK_BROWSER_URL: "http://auth.sso.local:8080"
+      KEYCLOAK_INTERNAL_URL: "http://host.docker.internal:8080"
+      REDIS_HOST: "redis-c"
+      REDIS_PASSWORD: "${REDIS_PASSWORD}"
+      JWT_SHARED_SECRET: "${JWT_SHARED_SECRET}"
+      KEYSTORE_PASSWORD: "${KEYSTORE_PASSWORD}"
+      OIDC_CLIENT_SECRET_APP5: "${OIDC_CLIENT_SECRET_APP5}"
+      OIDC_CLIENT_SECRET_APP6: "${OIDC_CLIENT_SECRET_APP6}"
+      VAULT_ADDR: "http://vault-c:8200"
+      VAULT_ROLE_ID_FILE: "/opt/openig/vault/role_id"
+      VAULT_SECRET_ID_FILE: "/opt/openig/vault/secret_id"
+      CANONICAL_ORIGIN_APP5: "http://grafana-c.sso.local:18080"
+      CANONICAL_ORIGIN_APP6: "http://phpmyadmin-c.sso.local:18080"
+      OPENIG_NODE_NAME: "openig-c1"
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/openig/api/info"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  openig-c2:
+    image: openidentityplatform/openig:6.0.1
+    platform: linux/amd64
+    container_name: stack-c-openig-c2-1
+    user: root   # lab macOS exception: non-root requires chmod on host volumes; production MUST use non-root (UID 11111)
+    entrypoint: ["/docker-entrypoint.sh"]
+    networks:
+      - frontend-c
+      - backend-c
+    volumes:
+      - ./openig_home:/opt/openig
+      - ./docker/openig/docker-entrypoint.sh:/docker-entrypoint.sh:ro
+    environment:
+      OPENIG_BASE: "/opt/openig"
+      OPENIG_PUBLIC_URL: "http://openig-c.sso.local:10080"
+      KEYCLOAK_BROWSER_URL: "http://auth.sso.local:8080"
+      KEYCLOAK_INTERNAL_URL: "http://host.docker.internal:8080"
+      REDIS_HOST: "redis-c"
+      REDIS_PASSWORD: "${REDIS_PASSWORD}"
+      JWT_SHARED_SECRET: "${JWT_SHARED_SECRET}"
+      KEYSTORE_PASSWORD: "${KEYSTORE_PASSWORD}"
+      OIDC_CLIENT_SECRET_APP5: "${OIDC_CLIENT_SECRET_APP5}"
+      OIDC_CLIENT_SECRET_APP6: "${OIDC_CLIENT_SECRET_APP6}"
+      VAULT_ADDR: "http://vault-c:8200"
+      VAULT_ROLE_ID_FILE: "/opt/openig/vault/role_id"
+      VAULT_SECRET_ID_FILE: "/opt/openig/vault/secret_id"
+      CANONICAL_ORIGIN_APP5: "http://grafana-c.sso.local:18080"
+      CANONICAL_ORIGIN_APP6: "http://phpmyadmin-c.sso.local:18080"
+      OPENIG_NODE_NAME: "openig-c2"
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/openig/api/info"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: stack-c-grafana-1
+    networks:
+      - backend-c
+    environment:
+      GF_AUTH_PROXY_ENABLED: "true"
+      GF_AUTH_PROXY_HEADER_NAME: "X-WEBAUTH-USER"
+      GF_AUTH_PROXY_HEADER_PROPERTY: "username"
+      GF_AUTH_PROXY_AUTO_SIGN_UP: "true"
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_SERVER_ROOT_URL: "http://grafana-c.sso.local:18080"
+    restart: unless-stopped
+
+  mariadb:
+    image: mariadb:11
+    container_name: stack-c-mariadb-1
+    networks:
+      - backend-c
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
+      MYSQL_DATABASE: "appdb"
+      MYSQL_USER: "alice"
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD}"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: stack-c-phpmyadmin-1
+    networks:
+      - backend-c
+    environment:
+      PMA_HOST: "mariadb"
+      PMA_AUTH_TYPE: "http"
+    volumes:
+      - ./openig_home/phpmyadmin/config.user.inc.php:/etc/phpmyadmin/config.user.inc.php:ro
+    restart: unless-stopped
+
+  redis-c:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes --appendfsync everysec --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_c_data:/data
+    networks:
+      - backend-c
+    restart: unless-stopped
+
+  vault-c:
+    image: hashicorp/vault:1.15
+    container_name: stack-c-vault-c-1
+    networks:
+      - backend-c
+    cap_add:
+      - IPC_LOCK
+    command: server
+    volumes:
+      - ./vault/config:/vault/config:ro
+      - ./vault/data:/vault/data
+      - ./vault/file:/vault/file
+      - ./vault/init:/vault/init
+      - ./vault/keys:/vault/keys
+    restart: unless-stopped

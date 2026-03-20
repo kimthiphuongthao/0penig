@@ -1,0 +1,8 @@
+@addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@{ Layout = null; }
+<!DOCTYPE html>
+<html><head><title>Dashboard</title></head><body>
+<h2>Welcome, @ViewBag.Username!</h2>
+<p>You are logged in via SSO.</p>
+<a asp-controller="Account" asp-action="Logout">Logout</a>
+</body></html>

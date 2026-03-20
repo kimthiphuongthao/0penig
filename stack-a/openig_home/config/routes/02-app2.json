@@ -1,0 +1,124 @@
+{
+  "name": "app2-whoami",
+  "baseURI": "http://whoami",
+  "condition": "${matches(request.headers['Host'][0], 'whoami-a.sso.local.*')}",
+  "heap": [
+    {
+      "name": "KeycloakIssuer",
+      "type": "Issuer",
+      "config": {
+        "issuer": "${env['KEYCLOAK_BROWSER_URL']}/realms/sso-realm",
+        "authorizeEndpoint": "${env['KEYCLOAK_BROWSER_URL']}/realms/sso-realm/protocol/openid-connect/auth",
+        "tokenEndpoint": "${env['KEYCLOAK_INTERNAL_URL']}/realms/sso-realm/protocol/openid-connect/token",
+        "userInfoEndpoint": "${env['KEYCLOAK_INTERNAL_URL']}/realms/sso-realm/protocol/openid-connect/userinfo",
+        "jwksUri": "${env['KEYCLOAK_INTERNAL_URL']}/realms/sso-realm/protocol/openid-connect/certs"
+      }
+    },
+    {
+      "name": "OpenIGClientReg",
+      "type": "ClientRegistration",
+      "config": {
+        "clientId": "openig-client",
+        "clientSecret": "${env['OIDC_CLIENT_SECRET']}",
+        "issuer": "KeycloakIssuer",
+        "scopes": [
+          "openid",
+          "profile",
+          "email"
+        ]
+      }
+    },
+    {
+      "name": "OidcFilter",
+      "type": "OAuth2ClientFilter",
+      "config": {
+        "clientEndpoint": "/openid/app2",
+        "requireHttps": false,
+        "registrations": [
+          "OpenIGClientReg"
+        ],
+        "scopes": [
+          "openid",
+          "profile",
+          "email"
+        ],
+        "target": "${attributes.openid}",
+        "failureHandler": {
+          "type": "StaticResponseHandler",
+          "config": {
+            "status": 500,
+            "reason": "Internal Server Error",
+            "headers": {
+              "Content-Type": [
+                "text/html"
+              ]
+            },
+            "entity": "<html><body><h2>SSO authentication failed. Please contact support.</h2></body></html>"
+          }
+        }
+      }
+    },
+    {
+      "name": "TokenReferenceFilterApp2",
+      "type": "ScriptableFilter",
+      "config": {
+        "type": "application/x-groovy",
+        "file": "TokenReferenceFilter.groovy",
+        "args": {
+          "clientEndpoint": "/openid/app2",
+          "redisHost": "redis-a",
+          "redisTtl": 1800,
+          "tokenRefKey": "token_ref_id_app2"
+        }
+      }
+    },
+    {
+      "name": "App2HeaderFilter",
+      "type": "HeaderFilter",
+      "config": {
+        "messageType": "REQUEST",
+        "add": {
+          "X-Authenticated-User": [
+            "${attributes.openid != null && attributes.openid['user_info'] != null && attributes.openid['user_info']['preferred_username'] != null ? attributes.openid['user_info']['preferred_username'] : 'anonymous'}"
+          ],
+          "X-OpenIG-Node": [
+            "${env['OPENIG_NODE_NAME'] != null ? env['OPENIG_NODE_NAME'] : 'unknown'}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "SessionBlacklistFilterApp2",
+      "type": "ScriptableFilter",
+      "config": {
+        "type": "application/x-groovy",
+        "file": "SessionBlacklistFilter.groovy",
+        "args": {
+          "clientEndpoint": "/openid/app2",
+          "sessionCacheKey": "oidc_sid_app2",
+          "canonicalOrigin": "http://whoami-a.sso.local",
+          "canonicalOriginEnvVar": "CANONICAL_ORIGIN_APP2"
+        }
+      }
+    },
+    {
+      "name": "App2Proxy",
+      "type": "ClientHandler",
+      "config": {
+        "soTimeout": "10 seconds"
+      }
+    }
+  ],
+  "handler": {
+    "type": "Chain",
+    "config": {
+      "filters": [
+        "TokenReferenceFilterApp2",
+        "OidcFilter",
+        "SessionBlacklistFilterApp2",
+        "App2HeaderFilter"
+      ],
+      "handler": "App2Proxy"
+    }
+  }
+}
