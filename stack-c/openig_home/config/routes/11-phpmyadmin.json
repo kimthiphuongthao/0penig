@@ -113,8 +113,17 @@
               "canonicalOrigin": "http://phpmyadmin-c.sso.local:18080",
               "postLogoutPath": "/",
               "redirectUrl": "http://phpmyadmin-c.sso.local:18080/",
-              "logoutPathNeedle": "logout",
-              "logoutQueryNeedle": "logout=1",
+              "logoutPathNeedles": [
+                "logout"
+              ],
+              "logoutQueryNeedles": [
+                "logout=1",
+                "route=/logout",
+                "route=%2flogout",
+                "old_usr="
+              ],
+              "retryQueryParam": "_ig_pma_retry",
+              "retryQueryValue": "1",
               "sessionKeysToClear": [
                 "oauth2:http://phpmyadmin-c.sso.local:18080/openid/app6",
                 "oidc_sid_app6",

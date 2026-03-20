@@ -1,6 +1,6 @@
 {
   "name": "00-phpmyadmin-logout",
-  "condition": "${request.method == 'GET' and request.headers['Host'] != null and request.headers['Host'][0] != null and matches(request.headers['Host'][0], '(?i)^phpmyadmin-c[.]sso[.]local(:[0-9]+)?$') and matches(request.uri.path, '^/$') and request.uri.query != null and matches(request.uri.query, '(^|&)logout=1($|&)')}",
+  "condition": "${request.headers['Host'] != null and request.headers['Host'][0] != null and matches(request.headers['Host'][0], '(?i)^phpmyadmin-c[.]sso[.]local(:[0-9]+)?$') and (((request.method == 'GET') and matches(request.uri.path, '^/$') and request.uri.query != null and matches(request.uri.query, '(^|&)logout=1($|&)')) or (((request.method == 'GET') or (request.method == 'POST')) and matches(request.uri.path, '^/index[.]php$') and request.uri.query != null and matches(request.uri.query, '(^|&)route=(/|%2[Ff])logout($|&)')))}",
   "handler": {
     "type": "Chain",
     "config": {
@@ -14,7 +14,8 @@
               "clientEndpoint": "/openid/app6",
               "redisHost": "redis-c",
               "redisTtl": 1800,
-              "tokenRefKey": "token_ref_id_app6"
+              "tokenRefKey": "token_ref_id_app6",
+              "sessionCacheKey": "oidc_sid_app6"
             }
           }
         }

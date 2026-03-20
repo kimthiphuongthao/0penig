@@ -4,22 +4,52 @@ import static org.forgerock.util.promise.Promises.newResultPromise
 
 import java.net.URLEncoder
 
-String clientEndpoint = binding.hasVariable('clientEndpoint') ? (clientEndpoint as String) : '/openid/app6'
-String clientId = binding.hasVariable('clientId') ? (clientId as String) : 'openig-client-c-app6'
-String canonicalOrigin = binding.hasVariable('canonicalOrigin') ? (canonicalOrigin as String) : 'http://phpmyadmin-c.sso.local:18080'
-String postLogoutPath = binding.hasVariable('postLogoutPath') ? (postLogoutPath as String) : '/'
-String redirectUrl = binding.hasVariable('redirectUrl') ? (redirectUrl as String) : canonicalOrigin + '/'
-String logoutPathNeedle = binding.hasVariable('logoutPathNeedle') ? (logoutPathNeedle as String)?.toLowerCase() : null
-String logoutQueryNeedle = binding.hasVariable('logoutQueryNeedle') ? (logoutQueryNeedle as String)?.toLowerCase() : null
-List<String> configuredSessionKeysToClear = binding.hasVariable('sessionKeysToClear') ? (sessionKeysToClear as List)?.collect { String.valueOf(it) } : []
+String clientEndpoint = binding.hasVariable('clientEndpoint') ? String.valueOf(binding.variables['clientEndpoint']) : '/openid/app6'
+String clientId = binding.hasVariable('clientId') ? String.valueOf(binding.variables['clientId']) : 'openig-client-c-app6'
+String canonicalOrigin = binding.hasVariable('canonicalOrigin') ? String.valueOf(binding.variables['canonicalOrigin']) : 'http://phpmyadmin-c.sso.local:18080'
+String postLogoutPath = binding.hasVariable('postLogoutPath') ? String.valueOf(binding.variables['postLogoutPath']) : '/'
+String redirectUrl = binding.hasVariable('redirectUrl') ? String.valueOf(binding.variables['redirectUrl']) : canonicalOrigin + '/'
+
+def readStringListArg = { String pluralName, String singularName ->
+    List<String> values = []
+    if (binding.hasVariable(pluralName)) {
+        def rawValues = binding.variables[pluralName]
+        if (rawValues instanceof Collection) {
+            values.addAll(rawValues.collect { String.valueOf(it).toLowerCase() })
+        } else if (rawValues != null) {
+            values.add(String.valueOf(rawValues).toLowerCase())
+        }
+    } else if (binding.hasVariable(singularName)) {
+        def rawValue = binding.variables[singularName]
+        if (rawValue != null) {
+            values.add(String.valueOf(rawValue).toLowerCase())
+        }
+    }
+    values
+}
+
+List<String> logoutPathNeedles = []
+logoutPathNeedles.addAll(readStringListArg('logoutPathNeedles', 'logoutPathNeedle'))
+List<String> logoutQueryNeedles = []
+logoutQueryNeedles.addAll(readStringListArg('logoutQueryNeedles', 'logoutQueryNeedle'))
+String retryQueryParam = binding.hasVariable('retryQueryParam') ? String.valueOf(binding.variables['retryQueryParam'])?.trim() : '_ig_pma_retry'
+String retryQueryValue = binding.hasVariable('retryQueryValue') ? String.valueOf(binding.variables['retryQueryValue'])?.trim() : '1'
+List<String> configuredSessionKeysToClear = binding.hasVariable('sessionKeysToClear') ?
+    ((binding.variables['sessionKeysToClear'] as List)?.collect { String.valueOf(it) }) :
+    []
 
 String requestPath = request.uri.path ?: ''
 String requestQuery = request.uri.query ?: ''
+String requestMethod = request.method ?: 'GET'
 String requestPathLower = requestPath.toLowerCase()
 String requestQueryLower = requestQuery.toLowerCase()
 boolean logoutRequest =
-    (logoutPathNeedle && requestPathLower.contains(logoutPathNeedle)) ||
-    (logoutQueryNeedle && requestQueryLower.contains(logoutQueryNeedle))
+    logoutPathNeedles.any { requestPathLower.contains(it) } ||
+    logoutQueryNeedles.any { requestQueryLower.contains(it) }
+boolean retryRequest =
+    retryQueryParam?.trim() &&
+    requestQueryLower.contains((retryQueryParam + '=' + retryQueryValue).toLowerCase())
+boolean canRedirectForRetry = ['GET', 'HEAD'].contains(requestMethod?.toUpperCase())
 
 def removeAppSessionKeys = {
     Set<String> sessionKeysToClear = new LinkedHashSet<>(configuredSessionKeysToClear)
@@ -37,11 +67,59 @@ def removeAppSessionKeys = {
     }
 }
 
-if (!logoutRequest) {
+def buildRetryUrl = { String baseUrl ->
+    if (!retryQueryParam?.trim()) {
+        return baseUrl
+    }
+
+    String separator = baseUrl.contains('?') ?
+        ((baseUrl.endsWith('?') || baseUrl.endsWith('&')) ? '' : '&') :
+        '?'
+    baseUrl + separator +
+        URLEncoder.encode(retryQueryParam, 'UTF-8') +
+        '=' +
+        URLEncoder.encode(retryQueryValue ?: '1', 'UTF-8')
+}
+
+def buildRetryFailureResponse = {
     removeAppSessionKeys()
+    Response response = new Response(Status.BAD_GATEWAY)
+    response.headers.put('Content-Type', ['text/html'])
+    String retryHref = redirectUrl
+    String logoutHref = canonicalOrigin + '/?logout=1'
+    response.entity.setString(
+        '<html><body><h2>phpMyAdmin rejected the downstream credentials after SSO re-authentication.</h2>' +
+        '<p>The gateway stopped the automatic retry loop.</p>' +
+        '<p><a href="' + retryHref + '">Retry login</a> | <a href="' + logoutHref + '">Sign out</a></p>' +
+        '</body></html>'
+    )
+    response
+}
+
+if (!logoutRequest) {
+    if (!canRedirectForRetry || retryRequest) {
+        logger.warn(
+            '[PhpMyAdminAuthFailureHandler] Non-logout 401 stopped retry loop method={} path={} query={} keys={}',
+            requestMethod,
+            requestPath,
+            requestQuery,
+            configuredSessionKeysToClear
+        )
+        return newResultPromise(buildRetryFailureResponse())
+    }
+
+    removeAppSessionKeys()
+    String retryUrl = buildRetryUrl(redirectUrl)
     Response response = new Response(Status.FOUND)
-    response.headers.put('Location', [redirectUrl as String])
-    logger.info('[PhpMyAdminAuthFailureHandler] Non-logout 401 redirected to {} after clearing keys={}', redirectUrl, configuredSessionKeysToClear)
+    response.headers.put('Location', [retryUrl as String])
+    logger.info(
+        '[PhpMyAdminAuthFailureHandler] Non-logout 401 redirected to {} after clearing keys={} method={} path={} query={}',
+        retryUrl,
+        configuredSessionKeysToClear,
+        requestMethod,
+        requestPath,
+        requestQuery
+    )
     return newResultPromise(response)
 }
 
@@ -76,9 +154,9 @@ try {
     def logoutUrl = keycloakBrowserUrl + '/realms/sso-realm/protocol/openid-connect/logout?client_id=' + clientId + '&post_logout_redirect_uri=' + URLEncoder.encode(postLogoutUri, 'UTF-8')
     if (idToken?.trim()) {
         logoutUrl += '&id_token_hint=' + URLEncoder.encode(idToken, 'UTF-8')
-        logger.info('[PhpMyAdminAuthFailureHandler] Logout 401 redirected with id_token_hint=PRESENT clientId={} postLogoutUri={}', clientId, postLogoutUri)
+        logger.info('[PhpMyAdminAuthFailureHandler] Logout 401 redirected with id_token_hint=PRESENT clientId={} postLogoutUri={} path={} query={}', clientId, postLogoutUri, requestPath, requestQuery)
     } else {
-        logger.warn('[PhpMyAdminAuthFailureHandler] Logout 401 had no id_token, proceeding without id_token_hint')
+        logger.warn('[PhpMyAdminAuthFailureHandler] Logout 401 had no id_token, proceeding without id_token_hint path={} query={}', requestPath, requestQuery)
     }
 
     def response = new Response(Status.FOUND)
