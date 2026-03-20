@@ -19,7 +19,7 @@ Related: [[OpenIG]] [[Keycloak]] [[Vault]] [[Stack C]]
 
 - SSO: ✅
 - SLO: ✅
-- Full 2026-03-19 validation PASS: `IG_SSO_C` observed at `971` chars during end-to-end login+logout, with TokenRef Store/Restore OK and backchannel Redis blacklist enforcement confirmed.
+- Full 2026-03-19 validation PASS: `IG_SSO_C` observed at `971` chars during end-to-end login+logout, with per-app TokenRef Store/Restore OK (`token_ref_id_app5` / `token_ref_id_app6`) and backchannel Redis blacklist enforcement confirmed.
 - Stack C OIDC clients were rotated away from weak literal `secret-c` in Phase 2 STEP-02 (M-5/S-9). APP5 was re-rotated on 2026-03-18 to a strong alphanumeric-only secret because OpenIG `OAuth2ClientFilter` does not URL-encode `client_secret`.
 - Phase 2 hardening `[H-5/S-3]`: secret-bearing Compose values moved out of `stack-c/docker-compose.yml` into local `stack-c/.env`; committed `stack-c/.env.example` documents the required variables and K8s Secret bootstrap flow.
 - Phase 2 hardening `[H-4/S-2]`: `redis-c` now enforces `--requirepass ${REDIS_PASSWORD}`; `openig-c1` and `openig-c2` receive `REDIS_PASSWORD`; both `SessionBlacklistFilter.groovy` and `BackchannelLogoutHandler.groovy` send RESP `AUTH` before the existing Redis `GET`/`SET` calls. Validation on 2026-03-18: unauthenticated `redis-cli PING` returned `NOAUTH Authentication required.` and `openig-c1` reloaded all routes after restart.
@@ -236,9 +236,11 @@ Related: [[OpenIG]] [[Keycloak]] [[Vault]] [[Stack C]]
 > [!tip]
 > Keep timeout and upstream retry behavior only on the user-facing `location /` proxy paths; leave backchannel logout endpoints without upstream retry directives so logout POST handling stays single-attempt and predictable.
 
-## 2026-03-20 Groovy Redis port and log prefix cleanup
+## 2026-03-20 Redis/token-ref cleanup
 
 - Resolved `[L-1]`: [stack-c/openig_home/scripts/groovy/SessionBlacklistFilter.groovy](/Volumes/OS/claude/openig/sso-lab/stack-c/openig_home/scripts/groovy/SessionBlacklistFilter.groovy) and [stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy](/Volumes/OS/claude/openig/sso-lab/stack-c/openig_home/scripts/groovy/BackchannelLogoutHandler.groovy) now read Redis port from route arg `redisPort`, then `REDIS_PORT`, then default `6379`.
+- Resolved `[L-2]`: [stack-c/openig_home/config/routes/00-backchannel-logout-app5.json](/Volumes/OS/claude/openig/sso-lab/stack-c/openig_home/config/routes/00-backchannel-logout-app5.json) and [stack-c/openig_home/config/routes/00-backchannel-logout-app6.json](/Volumes/OS/claude/openig/sso-lab/stack-c/openig_home/config/routes/00-backchannel-logout-app6.json) now bind `ttlSeconds` through the route/env contract instead of hardcoding `28800`.
+- Resolved `[BUG-TOKENREFKEY]`: [stack-c/openig_home/scripts/groovy/TokenReferenceFilter.groovy](/Volumes/OS/claude/openig/sso-lab/stack-c/openig_home/scripts/groovy/TokenReferenceFilter.groovy) now keeps `token_ref_id_app5` and `token_ref_id_app6` separate so Grafana and phpMyAdmin cannot overwrite each other's Redis token pointer inside `IG_SSO_C`.
 - Resolved `[L-3]`: [stack-c/openig_home/scripts/groovy/TokenReferenceFilter.groovy](/Volumes/OS/claude/openig/sso-lab/stack-c/openig_home/scripts/groovy/TokenReferenceFilter.groovy) now uses the standardized `[TokenReferenceFilter]` log prefix for all restore/offload logging.
 
 > [!success]

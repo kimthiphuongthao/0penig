@@ -334,7 +334,7 @@ Runtime note: pin OpenIG images to `openidentityplatform/openig:6.0.1`. Do not u
 
 OpenIG compatibility note: when `OAuth2ClientFilter` consumes an OIDC `clientSecret`, generate a strong random alphanumeric-only value. Avoid Base64 secrets containing `+`, `/`, or `=` because OpenIG 6 sends `client_secret` without URL-encoding in the token request body.
 
-Validated session note: when routes use browser-bound `JwtSession`, place `TokenReferenceFilter.groovy` immediately after `OAuth2ClientFilter` so the heavy `oauth2:*` entry is offloaded to Redis and the browser cookie keeps only `token_ref_id` plus small identity markers.
+Validated session note: when routes use browser-bound `JwtSession`, place `TokenReferenceFilter.groovy` immediately after `OAuth2ClientFilter` so the heavy `oauth2:*` entry is offloaded to Redis and the browser cookie keeps only a per-app token reference key (`token_ref_id_appN` on shared-cookie stacks, fallback `token_ref_id`) plus small identity markers.
 
 ### Available Templates (per stack)
 

@@ -229,7 +229,7 @@ Tất cả domain đã được cấu hình trỏ về `127.0.0.1`:
 
 ### TC-1103 — Jellyfin Vault Mapping ⚠️ PARTIAL
 
-- **Kết quả:** Không tìm thấy log `VaultCredentialFilterJellyfin` với pattern email lookup trong window quan sát.
+- **Kết quả:** Không tìm thấy log `VaultCredentialFilter.groovy` (Stack B Jellyfin path) với pattern email lookup trong window quan sát.
 - **Nhận định:** Log mức INFO của Groovy script có thể có prefix class khác. Vault Stack B đang chạy bình thường (unsealed). Cần login thực để trigger và kiểm tra log.
 
 ---

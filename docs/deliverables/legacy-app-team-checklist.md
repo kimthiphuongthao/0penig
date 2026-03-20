@@ -3,7 +3,7 @@
 **Dành cho:** Team phát triển và vận hành ứng dụng legacy cần tích hợp vào hệ thống SSO.
 **Không dành cho:** Gateway team — xem `standalone-legacy-app-integration-guide.md`.
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. STEP-01 deleted `PhpMyAdminCookieFilter.groovy`, STEP-02 rotated Stack C OIDC secrets, and STEP-03 moved compose secrets into gitignored `.env` files while pinning OpenIG to `6.0.1`. Validation follow-up 2026-03-19: the Phase 1+2 `JwtSession` production pattern is fully validated on all three stacks, including Redis token-reference offload and `BackchannelLogoutHandler` support for `RS256` plus `ES256`.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. STEP-01 deleted `PhpMyAdminCookieFilter.groovy`, STEP-02 rotated Stack C OIDC secrets, and STEP-03 moved compose secrets into gitignored `.env` files while pinning OpenIG to `6.0.1`. Validation follow-up 2026-03-19: the Phase 1+2 `JwtSession` production pattern is fully validated on all three stacks, including Redis token-reference offload and `BackchannelLogoutHandler` support for `RS256` plus `ES256`. Follow-up 2026-03-20: multi-app OpenIG instances now bind per-app token reference keys (`token_ref_id_appN`) to avoid shared-cookie cross-app contamination, and Redis port / blacklist TTL are externalized through env-backed route args rather than hardcoded literals.
 
 > [!warning]
 > Gateway-team handoff notes:
@@ -45,6 +45,8 @@ Bạn **không cần** quan tâm đến những phần sau — gateway team xử
 - Toàn bộ cấu hình và logic xử lý nội bộ của gateway
 
 > **Gateway Integration Model (2026-03-17):** Gateway team configures parameterized Groovy templates via route JSON args — no Groovy code changes needed for standard integrations. App team provides: (1) app URL + login mechanism type, (2) Keycloak client ID (or request gateway team to create), (3) post-logout redirect URL.
+
+> **Gateway shared-instance rule (2026-03-20):** If one OpenIG instance fronts multiple apps, gateway team MUST allocate both a unique `clientEndpoint` and a unique `tokenRefKey` per app (for example `token_ref_id_app3`, `token_ref_id_app4`). Redis host/port and blacklist TTL must stay env/route-arg driven; do not hardcode `6379` or `28800`.
 
 **Action item cho bạn:** Không có. Phần này chỉ để bạn biết gateway team đang làm gì.
 
@@ -387,7 +389,7 @@ LDAP cần đánh giá riêng vì cơ chế xác thực và SLO khác với 4 nh
 
 **9. Tối đa bao nhiêu app trên 1 gateway?**
 
-Không có giới hạn cứng. Mỗi app có cấu hình riêng độc lập (ví dụ: nhiều app đang chạy song song trên cùng gateway). Khi thêm app mới, gateway team thêm cấu hình mới mà không ảnh hưởng app đang chạy.
+Không có giới hạn cứng. Mỗi app có cấu hình riêng độc lập (ví dụ: nhiều app đang chạy song song trên cùng gateway). Khi thêm app mới, gateway team thêm cấu hình mới mà không ảnh hưởng app đang chạy. Khi nhiều app share cùng một OpenIG instance, mỗi app vẫn PHẢI có `clientEndpoint` riêng và `tokenRefKey` riêng để tránh đè OAuth/session state của nhau trong cùng browser session.
 
 **10. Liên hệ ai khi có vấn đề?**
 

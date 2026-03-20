@@ -87,5 +87,8 @@
 - [x] 2026-03-19: Phase 1+2 `JwtSession` production pattern fully validated on `fix/jwtsession-production-pattern`
 - [x] 2026-03-19: BackchannelLogoutHandler ES256/EC fix complete (`646a45a`, `d2eb8e9`)
 - [x] 2026-03-19: Full login+logout validation PASS on Stack A, Stack B, and Stack C
+- [x] 2026-03-20: hoàn thành L-1/L-3 (`8f17e7b`), L-2 (`d2a0411`), L-4/L-6 (`e4485f1`), và Code-M3 Stack B `VaultCredentialFilter.groovy` consolidation (`e22a855`)
+- [x] 2026-03-20: fix regression `BUG-TOKENREFKEY` (`8e9f729`) bằng per-app `tokenRefKey` (`token_ref_id_app1` .. `token_ref_id_app6`) để chặn cross-app same-cookie contamination
+- [x] 2026-03-20: end-of-session audit synced backlog, gap report, deliverables, rules, Obsidian stack/debug notes, progress, and `.memory` before compact
 
 ---

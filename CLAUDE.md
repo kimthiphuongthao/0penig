@@ -71,6 +71,11 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] Phase 2: Redis Token Reference Pattern — `TokenReferenceFilter.groovy`, dynamic oauth2 session key discovery, `IG_SSO_C` shrunk to `849` chars (`9b2d109`, `47cbab9`)
 - [x] BackchannelLogoutHandler ES256/EC fix — accept `ES256` alg + EC key reconstruction + `SHA256withECDSA` (`646a45a`, `d2eb8e9`)
 - [x] Full validation login+logout all 3 stacks on `fix/jwtsession-production-pattern` — PASS (2026-03-19)
+- [x] L-1 + L-3: Redis port externalized from hardcoded `6379` and Groovy log prefixes standardized across stacks (`8f17e7b`)
+- [x] L-2: Backchannel Redis blacklist TTL externalized from hardcoded `28800` via route args + env-backed defaults (`d2a0411`)
+- [x] L-4 + L-6: `SloHandlerJellyfin.groovy` now proceeds without `id_token` and Jellyfin `deviceId` derives from stable `sub` hash (`e4485f1`)
+- [x] Code-M3: Stack B `VaultCredentialFilter.groovy` consolidated into a single parameterized script; Redmine/Jellyfin copies deleted (`e22a855`)
+- [x] Regression fix: `TokenReferenceFilter.groovy` now binds per-app `tokenRefKey` (`token_ref_id_app1` .. `token_ref_id_app6`) to prevent cross-app same-cookie contamination (`8e9f729`)
 
 ### Phase tiếp theo
 - Active branch for JwtSession work: `fix/jwtsession-production-pattern` (created from `9a7b855` before rename experiment commit `e37536d`)

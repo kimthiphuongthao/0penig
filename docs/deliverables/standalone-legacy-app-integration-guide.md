@@ -277,7 +277,7 @@ Stack B dùng chuỗi:
 
 1. `OAuth2ClientFilter` (`clientEndpoint: /openid/app4`, client `openig-client-b-app4`)
 2. `SessionBlacklistFilter.groovy` (parameterized via route `args` cho app4)
-3. `VaultCredentialFilterJellyfin`
+3. `VaultCredentialFilter.groovy` (parameterized for Jellyfin)
 4. `JellyfinTokenInjectorFilter`
 5. `JellyfinResponseRewriterFilter`
 
@@ -289,7 +289,7 @@ Stack B dùng chuỗi:
 
 1. `OAuth2ClientFilter` (`clientEndpoint: /openid/app3`, client `openig-client-b`)
 2. `SessionBlacklistFilter.groovy` (parameterized via route `args` cho app3)
-3. `VaultCredentialFilterRedmine`
+3. `VaultCredentialFilter.groovy` (parameterized for Redmine)
 4. `RedmineCredentialInjectorFilter`
 
 ### 6.4 App5 (Grafana) — Stack C
@@ -361,7 +361,7 @@ Trong stack hiện tại:
 
 ### 8.2 Luồng Jellyfin (Stack B)
 
-1. `VaultCredentialFilterJellyfin` đọc credential từ `secret/data/jellyfin-creds/{username}`.
+1. `VaultCredentialFilter.groovy` đọc credential từ `secret/data/jellyfin-creds/{username}`.
 2. `JellyfinTokenInjector.groovy` gọi `POST /Users/AuthenticateByName` để lấy `AccessToken` dạng JSON.
 3. Token được cache vào session OpenIG.
 4. `JellyfinResponseRewriter.groovy` inject script vào HTML để set `localStorage` đúng format Jellyfin SPA mong đợi.
@@ -369,7 +369,7 @@ Trong stack hiện tại:
 
 ### 8.3 Luồng Redmine (Stack B)
 
-1. `VaultCredentialFilterRedmine` đọc credential từ `secret/data/redmine-creds/{username}`.
+1. `VaultCredentialFilter.groovy` đọc credential từ `secret/data/redmine-creds/{username}`.
 2. `RedmineCredentialInjector.groovy` GET `/login` để lấy `authenticity_token` và init cookie.
 3. Sau đó script POST credentials + token + init cookies vào Redmine.
 4. Session cookie Redmine được cache vào session OpenIG rồi inject vào request upstream.

@@ -1,11 +1,11 @@
 ---
 # Standard OpenIG SSO/SLO Gateway Pattern
 **Version:** 1.2
-**Date:** 2026-03-19
+**Date:** 2026-03-20
 **Derived from:** Code and security review of 3 integration stacks (WordPress, Redmine+Jellyfin, Grafana+phpMyAdmin)
 **Scope:** OpenIG 6 + Keycloak + Vault + Redis
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. The lab implementation now also matches more of this pattern operationally: Redmine no longer exposes host port `3000`, Stack C nginx carries the same proxy buffer settings as A/B, all 3 stacks declare app-specific `CANONICAL_ORIGIN_APP*` env vars, Stack C OIDC secrets were rotated, and compose secrets now live in gitignored `.env` files while OpenIG stays pinned to `6.0.1`. Follow-up 2026-03-18: APP5 was re-rotated to a strong alphanumeric-only secret after confirming OpenIG `OAuth2ClientFilter` does not URL-encode `client_secret`, Stack A/C Keycloak routes now use env-driven browser/internal URLs, Stack C compose and timeout settings are aligned to the baseline, all 6 OpenIG nodes are Linux-portable via `extra_hosts`, and all three nginx configs ship the shared HTTP-safe response-header baseline. Validation follow-up 2026-03-19: Phase 1+2 `JwtSession` production pattern passed full login+logout validation on all three stacks, `TokenReferenceFilter.groovy` keeps `oauth2:*` blobs out of the browser cookie, and `BackchannelLogoutHandler.groovy` now supports `RS256` plus `ES256` / EC JWKS validation.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. The lab implementation now also matches more of this pattern operationally: Redmine no longer exposes host port `3000`, Stack C nginx carries the same proxy buffer settings as A/B, all 3 stacks declare app-specific `CANONICAL_ORIGIN_APP*` env vars, Stack C OIDC secrets were rotated, and compose secrets now live in gitignored `.env` files while OpenIG stays pinned to `6.0.1`. Follow-up 2026-03-18: APP5 was re-rotated to a strong alphanumeric-only secret after confirming OpenIG `OAuth2ClientFilter` does not URL-encode `client_secret`, Stack A/C Keycloak routes now use env-driven browser/internal URLs, Stack C compose and timeout settings are aligned to the baseline, all 6 OpenIG nodes are Linux-portable via `extra_hosts`, and all three nginx configs ship the shared HTTP-safe response-header baseline. Validation follow-up 2026-03-19: Phase 1+2 `JwtSession` production pattern passed full login+logout validation on all three stacks, `TokenReferenceFilter.groovy` keeps `oauth2:*` blobs out of the browser cookie, and `BackchannelLogoutHandler.groovy` now supports `RS256` plus `ES256` / EC JWKS validation. Follow-up 2026-03-20: backchannel Redis TTL and Redis port are now env/route-arg driven instead of hardcoded, Stack B uses one parameterized `VaultCredentialFilter.groovy` for both apps, `TokenReferenceFilter.groovy` binds per-app `tokenRefKey` values for shared-cookie safety, and Jellyfin derives its stable `deviceId` from OIDC `sub`.
 
 ---
 
@@ -78,11 +78,11 @@ What it is: Redis blacklist TTL MUST be greater than or equal to `JwtSession.ses
 
 Why: The reviewed stacks show the same two failure modes repeatedly: revocation state expires before the browser session does, and revocation checks continue on Redis failure. Stack B also shows that `sid`/`sub` drift can break enforcement even when both paths exist. [Note: B F11 (sid vs sub mismatch) was confirmed by 1/4 reviewers and flagged for investigation.] Derived from: Stack A `§5 F2-F3`; Stack B `F2-F3`, `F11`; Stack C `§4 F2-F3`; Cross-Stack Summary Universal Findings.
 
-How to implement in OpenIG: `BackchannelLogoutHandler` must validate logout tokens before writing `blacklist:<sid>` to Redis with TTL aligned to session lifetime, and `SessionBlacklistFilter` must read that same `sid` key on every authenticated request. The logout token validator MUST check that `alg` is an allowed asymmetric signing algorithm (`RS256` or `ES256` in the current lab), resolve the signing key from JWKS by `kid`, reconstruct RSA or EC `P-256` keys as required, and validate `iss`, `aud`, `events`, `iat`, and `exp` before writing revocation state. Redis `requirepass` MUST be enabled, and each OpenIG revocation socket MUST send `AUTH` before the subsequent `GET` or `SET` command. Derived from: Stack A `§4`; Stack B "Confirmed Strengths"; Stack C `§3`.
+How to implement in OpenIG: `BackchannelLogoutHandler` must validate logout tokens before writing `blacklist:<sid>` to Redis with TTL aligned to session lifetime, and `SessionBlacklistFilter` must read that same `sid` key on every authenticated request. The logout token validator MUST check that `alg` is an allowed asymmetric signing algorithm (`RS256` or `ES256` in the current lab), resolve the signing key from JWKS by `kid`, reconstruct RSA or EC `P-256` keys as required, and validate `iss`, `aud`, `events`, `iat`, and `exp` before writing revocation state. Redis `requirepass` MUST be enabled, each OpenIG revocation socket MUST send `AUTH` before the subsequent `GET` or `SET` command, and Redis port / blacklist TTL values MUST come from route args or environment-backed defaults rather than hardcoded `6379` / `28800` literals. Derived from: Stack A `§4`; Stack B "Confirmed Strengths"; Stack C `§3`.
 
 > **Implementation (2026-03-17):** SessionBlacklistFilter.groovy — parameterized template, configured via route args: clientEndpoint, sessionCacheKey, canonicalOrigin.
 >
-> **Implementation (2026-03-19):** TokenReferenceFilter.groovy — route-scoped `JwtSession` guard that stores heavyweight `oauth2:*` state in Redis and leaves only `token_ref_id` plus small identity markers in the browser cookie.
+> **Implementation (2026-03-20):** TokenReferenceFilter.groovy — route-scoped `JwtSession` guard that stores heavyweight `oauth2:*` state in Redis and leaves only a per-app token reference key (`token_ref_id_appN` on shared-cookie stacks, fallback `token_ref_id`) plus small identity markers in the browser cookie.
 
 ### 2. Secret Externalization
 [Derived from: A F1, B F1, C F1]
@@ -125,7 +125,7 @@ What it is: `JwtSession` MUST NOT store Vault tokens, downstream app credentials
 
 Why: Stack B stores Vault tokens and downstream session material in the browser-bound gateway session and exposes Jellyfin access tokens in `localStorage`. Stack C stores Vault token and phpMyAdmin credentials inside the browser-bound `JwtSession`. Those findings show that adapter convenience can collapse the boundary between gateway identity state and privileged backend material. [Note: B F6 (tokens in JwtSession) was confirmed by 1/4 reviewers.] Derived from: Stack B `F6`, `F8`; Stack C `§4 F5`; Cross-Stack Summary Stack-Specific Findings.
 
-How to implement in OpenIG: Keep only opaque identity/session references in `JwtSession`; keep privileged adapter material server-side and rehydrate it in the adapter filter chain as needed. For browser-facing token delivery, prefer `httpOnly`, `Secure` cookies over response rewriting into JavaScript-visible storage. Derived from: Stack B `F6`, `F8`; Stack C `§4 F5`.
+How to implement in OpenIG: Keep only opaque identity/session references in `JwtSession`; keep privileged adapter material server-side and rehydrate it in the adapter filter chain as needed. For browser-facing token delivery, prefer `httpOnly`, `Secure` cookies over response rewriting into JavaScript-visible storage. If an adapter needs a reusable downstream device identifier, derive it from stable user identity such as `SHA-256("jellyfin-<sub>")` rather than JVM- or session-local values such as `session.hashCode()`, and keep any adapter-specific session markers to short strings only. Derived from: Stack B `F6`, `F8`; Stack C `§4 F5`.
 
 ### 5. Pinned Origins and Redirect Integrity
 [Derived from: A F5 [low confidence: 2/4 reviewers], B F7, C F9, B F5]
@@ -235,7 +235,7 @@ Derived from: Cross-Stack Summary Universal Findings and Stack-Specific Findings
 | Hardcoded secrets in config or route files | Repository or filesystem access exposes gateway signing material and OIDC client credentials | `A F1`, `B F1`, `C F1` | Externalize gateway and OIDC secrets to Vault or environment at runtime |
 | Revocation TTL shorter than session lifetime | Revoked browser session becomes valid again after Redis entry expires | `A F3`, `B F2`, `C F2` | Set blacklist TTL to at least `JwtSession.sessionTimeout` |
 | Fail-open on Redis errors | Redis outage turns logout enforcement into best-effort behavior | `A F2`, `B F3`, `C F3` | Fail closed for authenticated sessions when revocation state is indeterminate |
-| Raw `oauth2:*` session blobs kept in `JwtSession` | Browser cookie exceeds the 4 KB budget and the production cookie-backed session pattern collapses | Phase 1+2 validation, 2026-03-19 | Offload `oauth2:*` state through `TokenReferenceFilter` and keep only `token_ref_id` plus small markers in `JwtSession` |
+| Raw `oauth2:*` session blobs kept in `JwtSession` | Browser cookie exceeds the 4 KB budget and the production cookie-backed session pattern collapses | Phase 1+2 validation, 2026-03-19 | Offload `oauth2:*` state through `TokenReferenceFilter` and keep only a per-app token reference key (`token_ref_id_appN` on shared-cookie stacks) plus small markers in `JwtSession` |
 | Host-derived redirects | Redirect integrity and session lookup depend on attacker-influenced request headers | `A F5`, `B F7`, `C F9` | Pin origins and redirect targets in static config |
 | Vault or app credentials in `JwtSession` | Cookie theft or shared-secret compromise exposes privileged backend material | `B F6`, `C F5` | Keep privileged adapter state server-side behind an opaque session reference |
 | Bearer tokens in `localStorage` | Any same-origin JavaScript can read and persist bearer tokens | `B F8` | Use `httpOnly`, `Secure` cookies or server-side storage |
@@ -262,7 +262,8 @@ Derived from: Cross-Stack Summary "Recommended Standard Pattern" and "Next Steps
 - [ ] All revocation read paths use the same `sid` key written by the backchannel handler.
 - [ ] If Redis lookup fails for an authenticated session, the request fails closed rather than continuing downstream.
 - [ ] Redis read and write paths have explicit connect and read timeouts, and backchannel runtime failures return `5xx`.
-- [ ] Routes that use `OAuth2ClientFilter` with browser-bound `JwtSession` offload heavyweight `oauth2:*` state through `TokenReferenceFilter`, leaving only `token_ref_id` and small identity markers in the cookie.
+- [ ] Redis host, port, and blacklist TTL values are externalized through route args and environment-backed defaults rather than hardcoded literals such as `6379` or `28800`.
+- [ ] Routes that use `OAuth2ClientFilter` with browser-bound `JwtSession` offload heavyweight `oauth2:*` state through `TokenReferenceFilter`, leaving only a per-app token reference key (`token_ref_id_appN` on shared-cookie stacks) and small identity markers in the cookie.
 - [ ] `TokenReferenceFilter` discovers the real `oauth2:` namespace dynamically from the live session state rather than hardcoding `oauth2:/openid/appX`.
 
 ### Transport
@@ -293,4 +294,5 @@ Derived from: Cross-Stack Summary "Recommended Standard Pattern" and "Next Steps
 All shared gateway Groovy patterns now use a parameterized template architecture (Pattern Consolidation Steps 1-5). Each stack has its own copy of each template; configuration is per-route via JSON args binding.
 
 See docs/deliverables/legacy-auth-patterns-definitive.md section "Template-Based Integration" for full template catalogue and args reference.
-The validated browser-cookie session pattern also depends on `TokenReferenceFilter.groovy`, which is configured per route to offload `oauth2:*` state to Redis before OpenIG persists the response.
+The validated browser-cookie session pattern also depends on `TokenReferenceFilter.groovy`, which is configured per route to offload `oauth2:*` state to Redis before OpenIG persists the response and to bind a per-app `tokenRefKey` when multiple routes share one `JwtSession` cookie.
+Stack B now also uses a single parameterized `VaultCredentialFilter.groovy`; route args choose the secret path, response attribute, and log context for Redmine vs Jellyfin instead of maintaining separate Groovy copies.

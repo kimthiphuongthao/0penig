@@ -17,6 +17,9 @@ status: ready-for-test
 
 Related: [[OpenIG]] [[Keycloak]] [[Vault]] [[Stack A]] [[Stack B]] [[Stack C]]
 
+> [!warning]
+> 2026-03-20 follow-up: the original shared session field `token_ref_id` was later split into per-app keys (`token_ref_id_app1` .. `token_ref_id_app6`) by commit `8e9f729`. That change was required once multiple apps in the same stack started sharing one `JwtSession` cookie concurrently.
+
 ## Context
 
 - Request: implement Phase 2 token offload for all three stacks so OIDC token payloads no longer live inside the `JwtSession` cookie.
@@ -31,7 +34,7 @@ Related: [[OpenIG]] [[Keycloak]] [[Vault]] [[Stack A]] [[Stack B]] [[Stack C]]
   - `stack-b/openig_home/scripts/groovy/TokenReferenceFilter.groovy`
   - `stack-c/openig_home/scripts/groovy/TokenReferenceFilter.groovy`
 - Request path behavior:
-  - reads `token_ref_id` from session
+  - reads the route-bound token reference key from session (`token_ref_id` in the original Phase 2 implementation; per-app `token_ref_id_appN` on the current shared-cookie flows)
   - restores the OAuth session blob from [[Redis]] when the in-session `oauth2:*` entry is absent
   - fails closed with HTTP 502 if a referenced token blob cannot be restored
 - Response path behavior:

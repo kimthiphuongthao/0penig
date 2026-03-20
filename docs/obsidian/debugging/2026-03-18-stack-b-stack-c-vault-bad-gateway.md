@@ -15,6 +15,9 @@ status: complete
 
 Related: [[OpenIG]] [[Vault]] [[Stack B]] [[Stack C]]
 
+> [!tip]
+> 2026-03-20 follow-up: Stack B later consolidated `VaultCredentialFilterRedmine.groovy` and `VaultCredentialFilterJellyfin.groovy` into the single parameterized `VaultCredentialFilter.groovy` (`e22a855`). This note remains the historical record of the pre-consolidation `502` mapping change.
+
 ## Context
 
 - Requested scope: Stack B and Stack C only.

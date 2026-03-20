@@ -139,7 +139,7 @@ Kiểm chứng cơ chế login qua API và tiêm Token.
 |:---|:---|:---|:---|:---|:---|
 | TC-1101 | API Authentication | Stack B | Login Keycloak, truy cập Jellyfin. | OpenIG log báo gọi thành công API `/Users/AuthenticateByName`. | Chứng minh OpenIG có khả năng tự động thực hiện luồng login API. |
 | TC-1102 | Token Injection | Stack B | Kiểm tra request từ OpenIG gửi sang Jellyfin. | Header `Authorization` chứa chuỗi `MediaBrowser ... Token="..."`. | Chứng minh `JellyfinTokenInjector` đã duy trì và inject session token đúng định dạng. |
-| TC-1103 | Jellyfin Vault Mapping| Stack B | Login bằng user Keycloak. | `VaultCredentialFilterJellyfin` log lấy đúng pass ứng dụng dựa trên email user. | Chứng minh khả năng mapping linh hoạt (theo email thay vì username) khi lấy data từ Vault. |
+| TC-1103 | Jellyfin Vault Mapping| Stack B | Login bằng user Keycloak. | `VaultCredentialFilter.groovy` log lấy đúng pass ứng dụng dựa trên email user. | Chứng minh khả năng mapping linh hoạt (theo email thay vì username) khi lấy data từ Vault. |
 
 ## 12. Security Deep-check
 Kiểm chứng các cấu hình bảo mật nâng cao.

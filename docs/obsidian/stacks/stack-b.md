@@ -34,8 +34,8 @@ Related: [[Stack A]] [[Stack C]] [[OpenIG]] [[Keycloak]] [[Vault]]
 
 ## Auth Mechanisms
 
-- Redmine: form-based intercept (`VaultCredentialFilterRedmine.groovy` + `RedmineCredentialInjector.groovy`) to perform `/login` CSRF + form POST and inject Redmine cookies.
-- Jellyfin: token injection via API (`/Users/AuthenticateByName`) in `JellyfinTokenInjector.groovy`, then MediaBrowser `Authorization` header injection.
+- Redmine: form-based intercept (`VaultCredentialFilter.groovy` parameterized for `secret/data/redmine-creds/{email}` + `RedmineCredentialInjector.groovy`) to perform `/login` CSRF + form POST and inject Redmine cookies.
+- Jellyfin: token injection via API (`VaultCredentialFilter.groovy` parameterized for `secret/data/jellyfin-creds/{email}` + `JellyfinTokenInjector.groovy`), then MediaBrowser `Authorization` header injection.
 
 ## Routes
 
@@ -44,11 +44,11 @@ Related: [[Stack A]] [[Stack C]] [[OpenIG]] [[Keycloak]] [[Vault]]
 | `00-backchannel-logout-app3.json` | Handles Keycloak `POST /openid/app3/backchannel_logout` for Redmine and runs `BackchannelLogoutHandler.groovy`. |
 | `00-backchannel-logout-app4.json` | Handles Keycloak `POST /openid/app4/backchannel_logout` for Jellyfin and runs `BackchannelLogoutHandler.groovy`. |
 | `00-dotnet-logout.json` (DELETED) | Legacy `/app3/Account/Logout` intercept on `openigb.sso.local`, handled by `DotnetSloHandler.groovy`. |
-| `00-jellyfin-logout.json` | Intercepts Jellyfin logout requests, runs `TokenReferenceFilter.groovy` for `/openid/app4`, then delegates to `SloHandlerJellyfin.groovy`. |
-| `00-redmine-logout.json` | Intercepts Redmine `POST /logout`, runs `TokenReferenceFilter.groovy` for `/openid/app3`, then delegates to the consolidated `SloHandler.groovy`; the old `SloHandlerRedmine.groovy` file was leftover only and has been deleted. |
+| `00-jellyfin-logout.json` | Intercepts Jellyfin logout requests, runs `TokenReferenceFilter.groovy` for `/openid/app4` with `tokenRefKey=token_ref_id_app4`, then delegates to `SloHandlerJellyfin.groovy`. |
+| `00-redmine-logout.json` | Intercepts Redmine `POST /logout`, runs `TokenReferenceFilter.groovy` for `/openid/app3` with `tokenRefKey=token_ref_id_app3`, then delegates to the consolidated `SloHandler.groovy`; the old `SloHandlerRedmine.groovy` file was leftover only and has been deleted. |
 | `01-dotnet.json` (DELETED) | Legacy .NET SSO chain for `/app3*` and `/openid/app3*` to `dotnet-app:5000`, with OAuth2 + blacklist + credential injection. |
-| `01-jellyfin.json` | Main Jellyfin SSO chain to `jellyfin:8096`: OAuth2 (`/openid/app4`) + TokenReferenceFilter + app4 blacklist + Vault creds + token injector + response rewrite. |
-| `02-redmine.json` | Main Redmine SSO chain to `redmine:3000`: OAuth2 (`/openid/app3`) + TokenReferenceFilter + app3 blacklist + Vault creds + form-login credential injector. |
+| `01-jellyfin.json` | Main Jellyfin SSO chain to `jellyfin:8096`: OAuth2 (`/openid/app4`) + TokenReferenceFilter (`token_ref_id_app4`) + app4 blacklist + parameterized Vault creds + token injector + response rewrite. |
+| `02-redmine.json` | Main Redmine SSO chain to `redmine:3000`: OAuth2 (`/openid/app3`) + TokenReferenceFilter (`token_ref_id_app3`) + app3 blacklist + parameterized Vault creds + form-login credential injector. |
 
 ## Groovy Scripts
 
@@ -60,12 +60,11 @@ Related: [[Stack A]] [[Stack C]] [[OpenIG]] [[Keycloak]] [[Vault]]
 | `JellyfinResponseRewriter.groovy` | Rewrites Jellyfin HTML to seed `localStorage` credentials and steer browser flow away from local login. |
 | `JellyfinTokenInjector.groovy` | Calls Jellyfin auth API, derives a stable Jellyfin `deviceId` from OIDC `sub`, stores token/user/device markers in session, injects MediaBrowser `Authorization`, and clears state on `401`. |
 | `RedmineCredentialInjector.groovy` | Performs Redmine `/login` GET+POST (CSRF + credentials), returns upstream cookies to the browser, removes legacy `redmine_session_cookies` state, and retries on `/login` redirect. |
-| `TokenReferenceFilter.groovy` | Stores and restores the live `oauth2:*` session namespace in Redis so `IG_SSO_B` only carries `token_ref_id` plus small identity markers. |
+| `TokenReferenceFilter.groovy` | Stores and restores the live `oauth2:*` session namespace in Redis so `IG_SSO_B` only carries per-app token refs (`token_ref_id_app3` / `token_ref_id_app4`) plus small identity markers. |
 | `SessionBlacklistFilter.groovy` | Shared blacklist filter used by both Stack B routes via `args` (`clientEndpoint`, `sessionCacheKey`, `canonicalOrigin`, `canonicalOriginEnvVar`). |
 | `SloHandlerJellyfin.groovy` | Calls Jellyfin `/Sessions/Logout` when token exists, rebuilds the stable Jellyfin `deviceId` from OIDC `sub` if needed, clears OpenIG session, and always redirects through Keycloak logout while omitting `id_token_hint` only when it is missing. |
 | `SloHandler.groovy` | Consolidated Redmine/logout handler shared after Step 4 parameterization. |
-| `VaultCredentialFilterJellyfin.groovy` | AppRole login to Vault and fetch `secret/data/jellyfin-creds/{email}` into `attributes.jellyfin_credentials`. |
-| `VaultCredentialFilterRedmine.groovy` | AppRole login to Vault and fetch `secret/data/redmine-creds/{email}` into `attributes.redmine_credentials`. |
+| `VaultCredentialFilter.groovy` | Single parameterized Stack B Vault AppRole filter shared by Redmine and Jellyfin; route args choose secret path, target attribute (`redmine_credentials` / `jellyfin_credentials`), and log context. |
 
 > [!success]
 > Full 2026-03-19 validation PASS: `IG_SSO_B` present, TokenRef Store/Restore OK, and backchannel Redis blacklist logout works for both `redmine-b.sso.local` and `jellyfin-b.sso.local`. Post-audit cleanup confirmed `SloHandlerRedmine.groovy` was an unreferenced leftover from Step 4 and has been deleted.
@@ -108,7 +107,7 @@ Related: [[Stack A]] [[Stack C]] [[OpenIG]] [[Keycloak]] [[Vault]]
 
 ## 2026-03-18 Phase 2b hardening batch
 
-- `STEP-07` / `[M-9/Code-M6]`: `VaultCredentialFilterRedmine.groovy` and `VaultCredentialFilterJellyfin.groovy` now return `502 BAD_GATEWAY` for Vault auth/read upstream failures, aligning Stack B with the shared [[OpenIG]] contract.
+- `STEP-07` / `[M-9/Code-M6]`: the Stack B Vault credential path now returns `502 BAD_GATEWAY` for Vault auth/read upstream failures, aligning Stack B with the shared [[OpenIG]] contract; the later Code-M3 consolidation preserved that behavior in the single parameterized `VaultCredentialFilter.groovy`.
 - `STEP-08` / `[M-11]`: `BackchannelLogoutHandler.groovy` now throws `IOException("EOF")` on unexpected Redis socket closure so backchannel logout fails closed instead of silently continuing.
 - `STEP-11` / `[A-4]`: `openig-b1` and `openig-b2` now declare `extra_hosts: host.docker.internal:host-gateway`, so `KEYCLOAK_INTERNAL_URL` remains portable on Linux Docker hosts as well as Docker Desktop.
 - `STEP-12` / `[M-3/S-7]`: `stack-b/nginx/nginx.conf` now sets `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, and `Referrer-Policy: strict-origin-when-cross-origin`; `Content-Security-Policy` stays app-specific and HSTS remains deferred until TLS exists.
@@ -132,3 +131,22 @@ Related: [[Stack A]] [[Stack C]] [[OpenIG]] [[Keycloak]] [[Vault]]
 
 > [!success]
 > Validation on `2026-03-20`: `docker restart sso-b-openig-1 sso-b-openig-2` completed successfully. `docker logs sso-b-openig-1 2>&1 | grep 'Loaded the route'` showed `00-redmine-logout`, `02-redmine`, `00-jellyfin-logout`, `01-jellyfin`, `00-backchannel-logout-app3`, and `00-backchannel-logout-app4`.
+
+## 2026-03-20 Stack B consolidation and tokenRefKey isolation
+
+- Resolved `[Code-M3]`: [stack-b/openig_home/scripts/groovy/VaultCredentialFilter.groovy](/Volumes/OS/claude/openig/sso-lab/stack-b/openig_home/scripts/groovy/VaultCredentialFilter.groovy) now serves both Redmine and Jellyfin through route args; the old per-app Groovy copies were deleted.
+- Resolved `[BUG-TOKENREFKEY]`: [stack-b/openig_home/scripts/groovy/TokenReferenceFilter.groovy](/Volumes/OS/claude/openig/sso-lab/stack-b/openig_home/scripts/groovy/TokenReferenceFilter.groovy) now binds `token_ref_id_app3` for Redmine and `token_ref_id_app4` for Jellyfin, preventing shared `IG_SSO_B` state from being overwritten across apps in the same browser session.
+- Stack B remains PASS after the Jellyfin L-4/L-6 fixes, the Vault filter consolidation, and the per-app token reference regression fix.
+
+> [!success]
+> Validation on `2026-03-20`: the sampled monitor window after the regression fix stayed clean. No fresh cross-app `invalid_request`, `JWT session is too large`, `VaultCredential`, or `token_ref_id_app3` / `token_ref_id_app4` contamination symptoms appeared on either Stack B OpenIG node.
+
+## 2026-03-20 SSO/SLO monitor window
+
+- UTC start time recorded: `2026-03-20T04:13:20Z`.
+- Waited 90 seconds, then checked both [[OpenIG]] nodes with `docker logs sso-b-openig-{1,2} --since 180s` filtered to `ERROR|WARN|TokenRef|token_ref_id(_app[34])?|SloHandler|Jellyfin|Redmine|invalid_request|too large|VaultCredential|blacklist`.
+- Filtered output from `sso-b-openig-1` was empty.
+- Filtered output from `sso-b-openig-2` was empty.
+
+> [!success]
+> Validation on `2026-03-20`: no `token_ref_id_app3` or `token_ref_id_app4` Store/Restore activity, no cross-app `invalid_request`, no JWT session `too large` errors, no `VaultCredential` errors, and no `SloHandler` or `blacklist` entries were emitted by either Stack B node in the sampled window. Result: `PASS`.
