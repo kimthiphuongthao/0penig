@@ -71,9 +71,6 @@ try {
         if (!idToken?.trim()) {
             idToken = oauth2Entry?.get('atr')?.get('id_token') as String
         }
-        if (!userSub?.trim()) {
-            userSub = oauth2Entry?.get('user_info')?.get('sub') as String
-        }
         if (idToken?.trim() && userSub?.trim()) {
             break
         }
