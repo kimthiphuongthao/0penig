@@ -6,6 +6,7 @@ import static org.forgerock.util.promise.Promises.newResultPromise
 
 import java.net.InetSocketAddress
 import java.net.Socket
+import java.util.Base64
 import java.util.UUID
 
 String configuredClientEndpoint = binding.hasVariable('clientEndpoint') ? (clientEndpoint as String) : null
@@ -15,6 +16,7 @@ configuredRedisHost = configuredRedisHost?.trim()
 int configuredRedisTtl = binding.hasVariable('redisTtl') ? (redisTtl as Number).intValue() : 1800
 String configuredRedisPassword = System.getenv('REDIS_PASSWORD') ?: ''
 def tokenRefKey = binding.hasVariable('tokenRefKey') ? (tokenRefKey as String) : 'token_ref_id'
+String configuredSessionCacheKey = binding.hasVariable('sessionCacheKey') ? (sessionCacheKey as String)?.trim() : null
 
 def readRespLine = { InputStream input ->
     ByteArrayOutputStream buffer = new ByteArrayOutputStream()
@@ -207,6 +209,49 @@ def stripOauth2EntriesFromSession = { String newTokenRefId ->
     session[tokenRefKey] = newTokenRefId
 }
 
+def cacheSidFromOauth2Session = {
+    if (!configuredSessionCacheKey) {
+        return null
+    }
+
+    String oauth2SessionKey = null
+    try {
+        oauth2SessionKey = session.keySet()
+            .collect { String.valueOf(it) }
+            .find { it.startsWith('oauth2:') && it.endsWith(configuredClientEndpoint) }
+    } catch (Exception e) {
+        logger.warn('[TokenReferenceFilter] Failed to enumerate oauth2 session keys for sid cache endpoint={}', configuredClientEndpoint, e)
+    }
+
+    if (!oauth2SessionKey) {
+        oauth2SessionKey = discoverOauth2SessionKeys().find { it.startsWith('oauth2:') }
+    }
+
+    if (!oauth2SessionKey) {
+        return null
+    }
+
+    String idToken = session[oauth2SessionKey]?.get('atr')?.get('id_token') as String
+    if (!idToken?.trim()) {
+        return null
+    }
+
+    String[] tokenParts = idToken.split('\\.')
+    if (tokenParts.length < 2) {
+        return null
+    }
+
+    String payloadJson = new String(Base64.getUrlDecoder().decode(tokenParts[1]), 'UTF-8')
+    def payload = new JsonSlurper().parseText(payloadJson)
+    String sid = payload?.sid as String
+    if (!sid?.trim()) {
+        return null
+    }
+
+    session[configuredSessionCacheKey] = sid
+    sid
+}
+
 try {
     if (!configuredClientEndpoint) {
         throw new IllegalStateException('TokenReferenceFilter requires clientEndpoint arg')
@@ -253,13 +298,16 @@ try {
             String newTokenRefId = UUID.randomUUID().toString()
             String redisPayload = JsonOutput.toJson([oauth2Entries: oauth2EntriesForResponse])
             setInRedis(newTokenRefId, redisPayload)
+            String cachedSid = cacheSidFromOauth2Session()
             stripOauth2EntriesFromSession(newTokenRefId)
             logger.info(
-                '[TokenReferenceFilter] Stored oauth2 session keys={} endpoint={} tokenRefKey={} tokenRefId={}',
+                '[TokenReferenceFilter] Stored oauth2 session keys={} endpoint={} tokenRefKey={} tokenRefId={} sessionCacheKey={} sidCached={}',
                 oauth2EntriesForResponse.keySet(),
                 configuredClientEndpoint,
                 tokenRefKey,
-                newTokenRefId
+                newTokenRefId,
+                configuredSessionCacheKey,
+                cachedSid != null
             )
         } catch (Exception e) {
             logger.error('[TokenReferenceFilter] Failed to offload oauth2 session for endpoint={}', configuredClientEndpoint, e)
