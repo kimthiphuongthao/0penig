@@ -1,11 +1,11 @@
 ---
 # Standard OpenIG SSO/SLO Gateway Pattern
 **Version:** 1.2
-**Date:** 2026-03-20
+**Date:** 2026-03-22
 **Derived from:** Code and security review of 3 integration stacks (WordPress, Redmine+Jellyfin, Grafana+phpMyAdmin)
 **Scope:** OpenIG 6 + Keycloak + Vault + Redis
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. The lab implementation now also matches more of this pattern operationally: Redmine no longer exposes host port `3000`, Stack C nginx carries the same proxy buffer settings as A/B, all 3 stacks declare app-specific `CANONICAL_ORIGIN_APP*` env vars, Stack C OIDC secrets were rotated, and compose secrets now live in gitignored `.env` files while OpenIG stays pinned to `6.0.1`. Follow-up 2026-03-18: APP5 was re-rotated to a strong alphanumeric-only secret after confirming OpenIG `OAuth2ClientFilter` does not URL-encode `client_secret`, Stack A/C Keycloak routes now use env-driven browser/internal URLs, Stack C compose and timeout settings are aligned to the baseline, all 6 OpenIG nodes are Linux-portable via `extra_hosts`, and all three nginx configs ship the shared HTTP-safe response-header baseline. Validation follow-up 2026-03-19: Phase 1+2 `JwtSession` production pattern passed full login+logout validation on all three stacks, `TokenReferenceFilter.groovy` keeps `oauth2:*` blobs out of the browser cookie, and `BackchannelLogoutHandler.groovy` now supports `RS256` plus `ES256` / EC JWKS validation. Follow-up 2026-03-20: backchannel Redis TTL and Redis port are now env/route-arg driven instead of hardcoded, Stack B uses one parameterized `VaultCredentialFilter.groovy` for both apps, `TokenReferenceFilter.groovy` binds per-app `tokenRefKey` values for shared-cookie safety, and Jellyfin derives its stable `deviceId` from OIDC `sub`.
+> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. The lab implementation now also matches more of this pattern operationally: Redmine no longer exposes host port `3000`, Stack C nginx carries the same proxy buffer settings as A/B, all 3 stacks declare app-specific `CANONICAL_ORIGIN_APP*` env vars, Stack C OIDC secrets were rotated, and compose secrets now live in gitignored `.env` files while OpenIG stays pinned to `6.0.1`. Follow-up 2026-03-18: APP5 was re-rotated to a strong alphanumeric-only secret after confirming OpenIG `OAuth2ClientFilter` does not URL-encode `client_secret`, Stack A/C Keycloak routes now use env-driven browser/internal URLs, Stack C compose and timeout settings are aligned to the baseline, all 6 OpenIG nodes are Linux-portable via `extra_hosts`, and all three nginx configs ship the shared HTTP-safe response-header baseline. Validation follow-up 2026-03-19: Phase 1+2 `JwtSession` production pattern passed full login+logout validation on all three stacks, `TokenReferenceFilter.groovy` keeps `oauth2:*` blobs out of the browser cookie, and `BackchannelLogoutHandler.groovy` now supports `RS256` plus `ES256` / EC JWKS validation. Follow-up 2026-03-20: backchannel Redis TTL and Redis port are now env/route-arg driven instead of hardcoded, Stack B uses one parameterized `VaultCredentialFilter.groovy` for both apps, `TokenReferenceFilter.groovy` binds per-app `tokenRefKey` values for shared-cookie safety, and Jellyfin derives its stable `deviceId` from OIDC `sub`. Follow-up 2026-03-22: `TokenReferenceFilter.groovy` now skips Redis restore on OAuth2 callback requests, skips offload when the live OAuth2 namespace has no real tokens yet, scopes OAuth2 stripping to the current app namespace only, and `StripGatewaySessionCookies.groovy` is wired into all 6 app routes. Multi-tenant readiness is now explicit: per-tenant isolation = cookie name + Redis prefix + Vault path namespace, while apps inside one tenant still share a single gateway cookie by design.
 
 ---
 
@@ -64,10 +64,12 @@ Redis    <---- blacklist read/write ----------------------- OpenIG
 Key components and roles:
 
 - `nginx`: terminate TLS, normalize routing before OpenIG, and remove inbound trusted identity/header inputs that the downstream app must accept only from the gateway. The HA sticky-routing note is an inference from Stack B's reviewed 2-node HA topology rather than a direct finding. Derived from: Stack B "Scope" and "Summary"; Stack B `F4`, `F7`; Stack C `§4 F4`, `§4 F9`.
-- `OpenIG` filter chain: keep the browser-bound `JwtSession` small by offloading heavyweight `oauth2:*` state through `TokenReferenceFilter`, enforce revocation before the downstream adapter path, then run the adapter-specific filters needed for the chosen login mechanism before proxying. App cleanup and logout helpers are part of this route contract only when they are wired into the chain. Derived from: Stack A `§5 F2-F5`, `§6`; Stack B `F5`; Stack C `§4 F6`.
+- `OpenIG` filter chain: keep the browser-bound `JwtSession` small by offloading heavyweight `oauth2:*` state through `TokenReferenceFilter`, enforce revocation before the downstream adapter path, strip gateway-owned session cookies from the upstream `Cookie` header after session load and before proxying, then run the adapter-specific filters needed for the chosen login mechanism. App cleanup and logout helpers are part of this route contract only when they are wired into the chain. Derived from: Stack A `§5 F2-F5`, `§6`; Stack B `F5`; Stack C `§4 F6`.
 - `Vault`: provide runtime secret material for gateway crypto, OIDC clients, and downstream credentials instead of repo-managed literals. Derived from: Stack A `§5 F1`; Stack B `F1`; Stack C `§4 F1` and `§3`.
 - `Redis`: hold revocation state with TTL at least equal to the gateway session lifetime and with bounded socket behavior. Derived from: Stack A `§5 F2-F3`, `§6`; Stack B `F2-F3`, `F9-F10`, `F11`; Stack C `§4 F2-F3`, `§4 F7-F8`.
 - `Keycloak`: act as the shared IdP, OIDC issuer, and backchannel logout sender. The reviewed strengths show that OpenIG must validate logout tokens fully before writing revocation state. Because Keycloak is a shared dependency across all stacks, the production reference must plan explicit HA/availability coverage for new logins, frontchannel logout, and backchannel delivery rather than assuming the gateway tier alone removes that dependency. Derived from: Stack A `§4`; Stack B "Confirmed Strengths"; Stack C `§3`.
+
+Multi-tenant isolation rule: the tenant boundary is cookie name + Redis namespace + Vault path. Each tenant MUST get a distinct gateway cookie name, a distinct Redis prefix for token-reference and blacklist keys, and a distinct Vault path namespace. Applications within the same tenant MAY share one gateway cookie intentionally, but they still require unique `clientEndpoint` and `tokenRefKey` values inside that tenant.
 
 ## Required Controls (MUST)
 
@@ -85,6 +87,8 @@ How to implement in OpenIG: `BackchannelLogoutHandler` must validate logout toke
 > **Implementation (2026-03-17):** SessionBlacklistFilter.groovy — parameterized template, configured via route args: clientEndpoint, sessionCacheKey, canonicalOrigin.
 >
 > **Implementation (2026-03-20):** TokenReferenceFilter.groovy — route-scoped `JwtSession` guard that stores heavyweight `oauth2:*` state in Redis and leaves only a per-app token reference key (`token_ref_id_appN` on shared-cookie stacks, fallback `token_ref_id`) plus small identity markers in the browser cookie.
+>
+> **Implementation (2026-03-22):** On shared-cookie routes, `TokenReferenceFilter.groovy` MUST skip Redis restore when `request.uri.path` contains `configuredClientEndpoint + '/callback'`, MUST skip Redis offload when the discovered OAuth2 state has no real tokens yet (`atr` or `access_token` absent), and MUST remove only the current app's discovered OAuth2 keys (`discoverOauth2SessionKeys().toSet()`), never every `oauth2:*` key in the shared `JwtSession`.
 
 ### 2. Secret Externalization
 [Derived from: A F1, B F1, C F1]
@@ -241,6 +245,8 @@ Derived from: Cross-Stack Summary Universal Findings and Stack-Specific Findings
 | Host-derived redirects | Redirect integrity and session lookup depend on attacker-influenced request headers | `A F5`, `B F7`, `C F9` | Pin origins and redirect targets in static config |
 | Vault or app credentials in `JwtSession` | Cookie theft or shared-secret compromise exposes privileged backend material | `B F6`, `C F5` | Keep privileged adapter state server-side behind an opaque session reference |
 | Bearer tokens in `localStorage` | Any same-origin JavaScript can read and persist bearer tokens | `B F8` | Use `httpOnly`, `Secure` cookies or server-side storage |
+| Shared-cookie `TokenReferenceFilter` restores on callback or clears every `oauth2:*` namespace | One app can overwrite pending callback state or delete another app's nonce/state, breaking OAuth2 with `no authorization in progress` | `BUG-TOKENREFKEY`, `91e9cb0`, `742dc32` | Keep per-app `tokenRefKey`, skip restore on `<clientEndpoint>/callback`, offload only real-token state, and strip only the current app's discovered OAuth2 keys |
+| Gateway-owned session cookies forwarded downstream | Backends receive OpenIG session cookies that belong only to the gateway, increasing coupling and cross-app leakage risk | `SEC-COOKIE-STRIP`, `3f0f731` | Strip `IG_SSO*` (or tenant-specific equivalent) in OpenIG after session load and before proxying |
 | Unwired adapter safeguard scripts | Intended cleanup control exists in code but is inactive in the live route chain | `C F6` | Make required adapter filters explicit route-chain elements |
 | HTTP `400` for infrastructure failures in backchannel handler | IdP may treat transient failures as permanent and stop retrying logout delivery | `B F10`, `C F8` | Return `400` only for invalid logout tokens and `5xx` for internal failures |
 | `id_token_hint` read from wrong OIDC namespace | RP-initiated logout silently fails because the expected OIDC session is not found | `B F5` | Bind logout handlers to the exact `OAuth2ClientFilter` namespace/client ID in the route. **RESOLVED** in Stack B (commit a3cb6c3, 2026-03-15). |
@@ -257,6 +263,7 @@ Derived from: Cross-Stack Summary "Recommended Standard Pattern" and "Next Steps
 - [ ] OIDC client secrets used by OpenIG `OAuth2ClientFilter` use strong random alphanumeric-only values. Trivially guessable values such as `secret-c` are a P1 security issue, and Base64 values containing `+`, `/`, `=` are unsafe for this path. Generate with `openssl rand -hex 24` or equivalent.
 - [ ] For non-`OAuth2ClientFilter` secrets that remain Base64, preserve the full value including any trailing `=` padding when copying into `.env` or another secret store. Do not trim or re-wrap generated secrets.
 - [ ] Route JSON externalizes Keycloak endpoints with `KEYCLOAK_BROWSER_URL` for browser-facing issuer/authorize/logout semantics and `KEYCLOAK_INTERNAL_URL` for OpenIG-to-Keycloak token, userinfo, and JWKS calls.
+- [ ] Multi-tenant deployments namespace Vault paths per tenant so one tenant cannot read another tenant's gateway or app credentials.
 
 ### Session and revocation
 
@@ -268,6 +275,9 @@ Derived from: Cross-Stack Summary "Recommended Standard Pattern" and "Next Steps
 - [ ] Redis host, port, and blacklist TTL values are externalized through route args and environment-backed defaults rather than hardcoded literals such as `6379` or `28800`.
 - [ ] Routes that use `OAuth2ClientFilter` with browser-bound `JwtSession` offload heavyweight `oauth2:*` state through `TokenReferenceFilter`, leaving only a per-app token reference key (`token_ref_id_appN` on shared-cookie stacks) and small identity markers in the cookie.
 - [ ] `TokenReferenceFilter` discovers the real `oauth2:` namespace dynamically from the live session state rather than hardcoding `oauth2:/openid/appX`.
+- [ ] Shared-cookie `TokenReferenceFilter` routes skip Redis restore on `<clientEndpoint>/callback`, skip Redis offload when the discovered OAuth2 state has no real tokens yet, and remove only the current app's discovered OAuth2 keys from `JwtSession`.
+- [ ] The route chain strips gateway-owned session cookies (`IG_SSO`, `IG_SSO_B`, `IG_SSO_C`, or tenant-specific equivalent) after session load and before forwarding to downstream apps.
+- [ ] In multi-tenant deployments, each tenant gets a distinct gateway cookie name and Redis key prefix for token-reference / blacklist data; apps inside the same tenant still require unique `clientEndpoint` + `tokenRefKey` values.
 
 ### Transport
 

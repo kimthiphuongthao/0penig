@@ -48,6 +48,8 @@ Bạn **không cần** quan tâm đến những phần sau — gateway team xử
 
 > **Gateway shared-instance rule (2026-03-20):** If one OpenIG instance fronts multiple apps, gateway team MUST allocate both a unique `clientEndpoint` and a unique `tokenRefKey` per app (for example `token_ref_id_app3`, `token_ref_id_app4`). Redis host/port and blacklist TTL must stay env/route-arg driven; do not hardcode `6379` or `28800`.
 
+> **Gateway shared-cookie guardrail (2026-03-22):** Khi nhiều app trong cùng tenant share một OpenIG `JwtSession` cookie, `TokenReferenceFilter` phải luôn app-scoped: unique `clientEndpoint` + unique `tokenRefKey` per app, skip Redis restore trên `<clientEndpoint>/callback`, skip Redis offload khi OAuth2 state chưa có token thật, và chỉ strip đúng `oauth2:*` namespace của app hiện tại. Nếu không, App A có thể làm App B mất pending nonce/state và callback fail với `no authorization in progress`.
+
 **Action item cho bạn:** Không có. Phần này chỉ để bạn biết gateway team đang làm gì.
 
 ---
@@ -138,6 +140,8 @@ Bạn có thể tìm thông tin này bằng cách: mở DevTools (F12) > tab Net
 
 Bạn có thể tìm thông tin này bằng cách: mở DevTools (F12) > tab Application > Cookies, sau khi đăng nhập thủ công.
 
+> **Lưu ý:** Cookie gateway `IG_SSO`, `IG_SSO_B`, `IG_SSO_C` (và cookie tenant-equivalent sau này) là session nội bộ của OpenIG. Gateway team strip các cookie này khỏi upstream request trước khi forward vào app, nên ở bảng dưới bạn chỉ cần liệt kê cookie do chính app của bạn phát hành.
+
 | Thông tin | Giá trị |
 |-----------|---------|
 | Loại session | `cookie` / `token localStorage` / `stateless` |
@@ -175,6 +179,8 @@ Bạn có thể tìm thông tin này bằng cách: mở DevTools (F12) > tab App
 - [ ] Pin container image bằng version cụ thể; với OpenIG 6, không dùng `:latest`.
 - [ ] Nếu app dùng OIDC client secret qua OpenIG, secret phải là strong random alphanumeric-only (không chứa `+`, `/`, `=`).
 - [ ] Nếu deploy trên Linux Docker (không phải Docker Desktop), thêm `extra_hosts: host.docker.internal:host-gateway` vào tất cả service OpenIG trong `docker-compose.yml`; Docker Desktop tự resolve `host.docker.internal`, còn Linux Docker thì không.
+
+> **Ghi chú multi-tenancy (chuẩn bị K8s):** Mỗi tenant phải có namespace riêng ở 3 lớp: tên cookie gateway riêng, Redis key prefix riêng (thường encode qua naming `tokenRefKey`/blacklist keys), và Vault path namespace riêng. Các app trong cùng tenant vẫn share một cookie gateway theo design SSO; isolation giữa app trong cùng tenant nằm ở `clientEndpoint` + `tokenRefKey`, không phải tách cookie per app.
 
 Ghi chú về deployment hiện tại (port, reverse proxy đang dùng, v.v.):
 
@@ -389,7 +395,7 @@ LDAP cần đánh giá riêng vì cơ chế xác thực và SLO khác với 4 nh
 
 **9. Tối đa bao nhiêu app trên 1 gateway?**
 
-Không có giới hạn cứng. Mỗi app có cấu hình riêng độc lập (ví dụ: nhiều app đang chạy song song trên cùng gateway). Khi thêm app mới, gateway team thêm cấu hình mới mà không ảnh hưởng app đang chạy. Khi nhiều app share cùng một OpenIG instance, mỗi app vẫn PHẢI có `clientEndpoint` riêng và `tokenRefKey` riêng để tránh đè OAuth/session state của nhau trong cùng browser session.
+Không có giới hạn cứng. Mỗi app có cấu hình riêng độc lập (ví dụ: nhiều app đang chạy song song trên cùng gateway). Khi thêm app mới, gateway team thêm cấu hình mới mà không ảnh hưởng app đang chạy. Khi nhiều app share cùng một OpenIG instance, mỗi app vẫn PHẢI có `clientEndpoint` riêng và `tokenRefKey` riêng để tránh đè OAuth/session state của nhau trong cùng browser session. Trong phase multi-tenancy, ranh giới isolation là tenant: mỗi tenant tách bằng tên cookie riêng, Redis namespace/prefix riêng, và Vault path namespace riêng; còn các app trong cùng tenant vẫn share một cookie gateway theo design SSO.
 
 **10. Liên hệ ai khi có vấn đề?**
 
