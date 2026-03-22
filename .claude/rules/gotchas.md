@@ -1,13 +1,14 @@
 # Gotchas & Decision Log
 
 ## Known gaps (chưa xong)
-- Stack C infra gap: phpMyAdmin path cho `bob` chưa support được vì live MariaDB chưa provision user `bob`
+- Không có known infra gap nào đang mở cho Stack C phpMyAdmin `bob`; `INFRA-C-BOB` đã DONE (`306f4b4`)
 
 ## Gotchas đã biết
 
 | Vấn đề | Nguyên nhân | Fix |
 |--------|-------------|-----|
 | "SSO authentication failed" | openig-2 có file `role_id`/`secret_id` rỗng | Regenerate AppRole credentials → ghi vào shared mount |
+| Vault AppRole `secret_id` stale sau khi lab down >72h | `secret_id_ttl: 72h` nên nếu lab shutdown > 3 ngày thì `secret_id` hết hạn, OpenIG nhận `403` từ Vault | Regenerate: `docker exec -e VAULT_ADDR=... -e VAULT_TOKEN=... <vault-container> vault write -f -field=secret_id auth/approle/role/<role>/secret-id > vault/file/openig-secret-id` rồi restart OpenIG |
 | Vault "bind: address already in use" | `command: server -config=...` + entrypoint tự thêm `-config` → 2 listeners | Dùng `command: server` only |
 | Bootstrap script abort silently | `vault status` exit 2 khi sealed + `set -euo pipefail` | `code=$(vault status >/dev/null 2>&1; echo $?)` + `|| true` |
 | phpMyAdmin không nhận Basic Auth từ env | `PMA_AUTH_TYPE=http` env var không hoạt động với Docker image | Mount `config.user.inc.php` với `$cfg['Servers'][1]['auth_type'] = 'http'` |
@@ -51,7 +52,7 @@
 | JwtSession 4KB budget bị đội lên rất nhanh khi cache app cookies trong session | Khi serialized `JwtSession` vượt 4096 chars, OpenIG `SessionFilter.handleResult()` catch `IOException`, log `Failed to save session`, rồi trả downstream response gốc mà không ghi `Set-Cookie` mới. Client vẫn nhận HTTP response bình thường nhưng session state bị silent loss. | Production pattern: browser giữ legacy app cookies, OpenIG session chỉ giữ marker nhỏ (`*_user_sub`, cookie names). TokenReferenceFilter Redis offload ngăn scenario này trong implementation hiện tại; size levers tiếp theo là trim access-token claims, `ES256`, và disable `refresh_token` |
 | OAuth2ClientFilter session key includes full app URL, không chỉ `clientEndpoint` path | OpenIG dùng request URL làm một phần session namespace, nên key thực tế có dạng `oauth2:<scheme>://<host>:<port><clientEndpoint>` (ví dụ `oauth2:http://grafana-c.sso.local:18080/openid/app5`) | Dùng `session.keySet().findAll { it.startsWith("oauth2:") }` rồi match endpoint động; không hardcode `oauth2:/openid/appX` |
 | Stack C MariaDB/Vault credential drift sau bootstrap | Live MariaDB seed `alice/AlicePass123`, nhưng Vault vẫn giữ password bootstrap cũ cho `secret/phpmyadmin/alice` nên phpMyAdmin SSO fail với MySQL `1045` dù OIDC/AppRole đều OK | Align lại Vault secret theo password MariaDB đang chạy và patch `stack-c/vault/init/vault-bootstrap.sh` để bootstrap lần sau ghi đúng giá trị |
-| Stack C phpMyAdmin bob login chưa thể hoạt động | Vault có thể giữ secret `bob`, nhưng live MariaDB chỉ provision `alice`; không có `bob@%` để authenticate | Xử lý như infra gap: tạo user `bob` ở MariaDB theo workflow được duyệt, rồi align Vault; nếu không support thì document rõ alice-only |
+| Stack C phpMyAdmin `bob` login phụ thuộc đồng bộ MariaDB + Vault | Khi MariaDB user `bob` hoặc Vault secret `secret/phpmyadmin/bob` lệch nhau, phpMyAdmin SSO sẽ fail dù OIDC/AppRole vẫn OK | Current baseline đã provision `bob` trong MariaDB + `vault-bootstrap.sh` (`306f4b4`). Nếu drift sau restart thì re-align cả DB user lẫn Vault secret |
 | OpenIG non-root blocked by Vault file permissions | `vault/file/openig-role-id` is `-rw-------` (root-only) on macOS host mounts, and `entrypoint.sh` writes `config.json` in place | Lab: keep `user: root` with macOS exception comment. Production: use K8s init container + Vault Agent sidecar, no host mounts |
 | IG_SSO* cookies forwarded to backend apps unstripped | No explicit strip logic in nginx or OpenIG routes. All backends under `.sso.local` receive all 3 gateway session cookies. Oversight — stripWpCookies/stripRedmineCookies show intent for app cookies but gateway cookies were not addressed | Strip `IG_SSO\|IG_SSO_B\|IG_SSO_C` from Cookie header in OpenIG route chain AFTER session loaded, BEFORE forwarding. NOT at nginx ingress. Fix tracked as `SEC-COOKIE-STRIP` |
 | TokenReferenceFilter restore trên OAuth2 callback phá pending state/nonce | Request callback vẫn chạy restore path nên filter kéo token cũ từ Redis đè lên `oauth2:*` pending state trong shared `JwtSession`, sau đó `OAuth2ClientFilter` fail với `no authorization in progress` | Thêm guard `isOauthCallback = request.uri.path?.contains(configuredClientEndpoint + '/callback')`; nếu true thì bỏ qua Redis restore hoàn toàn |

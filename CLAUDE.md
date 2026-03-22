@@ -78,7 +78,7 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] Regression fix: `TokenReferenceFilter.groovy` now binds per-app `tokenRefKey` (`token_ref_id_app1` .. `token_ref_id_app6`) to prevent cross-app same-cookie contamination (`8e9f729`)
 
 ### Phase tiếp theo
-- Active branch for JwtSession work: `fix/jwtsession-production-pattern` (created from `9a7b855` before rename experiment commit `e37536d`)
+- JwtSession production-pattern work is merged to `main` (`fix/jwtsession-production-pattern` was created from `9a7b855` before rename experiment commit `e37536d`)
 - Backup branch: `feat/subdomain-test` at `cdb5425` = working HttpSession fallback snapshot
 - [x] **Fix phase COMPLETE**: 15 fixes (11 implemented, 2 WONT_FIX, 2 verified-no-action) — tracking: `docs/fix-phase/checklist.md`
 - [x] Phase 3: Vault Production Hardening — 6/9 RESOLVED, 1 PARTIAL (CIDR), 2 deferred (TLS, Raft)
@@ -100,8 +100,8 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] Redis persistence (appendonly yes) — đảm bảo SLO blacklist survive restart
 - [x] Vault audit logging
 - [x] Stack C Grafana SSO re-validation/fix — root cause: OpenIG OAuth2ClientFilter không URL-encode client_secret; Base64 secret chứa '+' → Keycloak decode thành space → invalid_client_credentials. Fix: rotate secret alphanumeric-only (commit a403b3d)
-- [ ] Merge `fix/jwtsession-production-pattern` -> `main`
-- [ ] Provision MariaDB user `bob` for Stack C phpMyAdmin or document alice-only support explicitly
+- [x] Merge `fix/jwtsession-production-pattern` -> `main`
+- [x] Provision MariaDB user `bob` for Stack C phpMyAdmin or document alice-only support explicitly
 - [ ] Đóng gói: OVA / Docker Compose bundle — single-command deploy
 - [ ] Slide + tài liệu báo cáo phương án giải pháp
 
