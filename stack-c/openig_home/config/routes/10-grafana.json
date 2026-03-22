@@ -74,6 +74,18 @@
       }
     },
     {
+      "name": "SpaAuthGuardApp5",
+      "type": "ScriptableFilter",
+      "config": {
+        "type": "application/x-groovy",
+        "file": "SpaAuthGuardFilter.groovy",
+        "args": {
+          "clientEndpoint": "/openid/app5",
+          "tokenRefKey": "token_ref_id_app5"
+        }
+      }
+    },
+    {
       "name": "SessionBlacklistFilterApp5",
       "type": "ScriptableFilter",
       "config": {
@@ -85,6 +97,14 @@
           "canonicalOrigin": "http://grafana-c.sso.local:18080",
           "canonicalOriginEnvVar": "CANONICAL_ORIGIN_APP5"
         }
+      }
+    },
+    {
+      "name": "StripGatewaySessionCookiesApp5",
+      "type": "ScriptableFilter",
+      "config": {
+        "type": "application/x-groovy",
+        "file": "StripGatewaySessionCookies.groovy"
       }
     },
     {
@@ -115,8 +135,10 @@
     "config": {
       "filters": [
         "TokenReferenceFilterApp5",
+        "SpaAuthGuardApp5",
         "OidcFilterApp5",
         "SessionBlacklistFilterApp5",
+        "StripGatewaySessionCookiesApp5",
         "GrafanaUserHeader"
       ],
       "handler": "GrafanaProxy"

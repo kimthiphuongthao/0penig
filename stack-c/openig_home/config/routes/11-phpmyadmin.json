@@ -88,6 +88,14 @@
       }
     },
     {
+      "name": "StripGatewaySessionCookiesApp6",
+      "type": "ScriptableFilter",
+      "config": {
+        "type": "application/x-groovy",
+        "file": "StripGatewaySessionCookies.groovy"
+      }
+    },
+    {
       "name": "VaultCredentialFilter",
       "type": "ScriptableFilter",
       "config": {
@@ -149,6 +157,7 @@
         "TokenReferenceFilterApp6",
         "OidcFilterApp6",
         "SessionBlacklistFilterApp6",
+        "StripGatewaySessionCookiesApp6",
         "VaultCredentialFilter",
         "PhpMyAdminBasicAuth"
       ],

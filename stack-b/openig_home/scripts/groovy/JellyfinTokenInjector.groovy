@@ -29,6 +29,47 @@ def buildDeviceId = { String sub ->
     return digest.encodeHex().toString().substring(0, 32)
 }
 
+def splitCookieHeader = { String cookieHeader ->
+    def cookies = []
+    if (cookieHeader == null || cookieHeader.trim().isEmpty()) {
+        return cookies
+    }
+
+    for (def cookiePart : cookieHeader.split(';')) {
+        def trimmed = cookiePart?.trim()
+        if (trimmed == null || trimmed.isEmpty()) {
+            continue
+        }
+        def eqIndex = trimmed.indexOf('=')
+        if (eqIndex <= 0) {
+            continue
+        }
+        def cookieName = trimmed.substring(0, eqIndex).trim()
+        def cookieValue = trimmed.substring(eqIndex + 1).trim()
+        if (cookieName.isEmpty()) {
+            continue
+        }
+        cookies.add([name: cookieName, raw: cookieName + '=' + cookieValue])
+    }
+
+    return cookies
+}
+
+def GATEWAY_SESSION_COOKIE_NAMES = ['IG_SSO', 'IG_SSO_B', 'IG_SSO_C'] as Set
+
+def stripGatewaySessionCookies = { request ->
+    def filteredCookieHeader = splitCookieHeader(request.headers.getFirst('Cookie'))
+        .findAll { cookie -> !GATEWAY_SESSION_COOKIE_NAMES.contains(cookie.name) }
+        .collect { cookie -> cookie.raw }
+        .join('; ')
+
+    if (filteredCookieHeader != null && !filteredCookieHeader.isEmpty()) {
+        request.headers.put('Cookie', [filteredCookieHeader])
+    } else {
+        request.headers.remove('Cookie')
+    }
+}
+
 try {
     def jellyfinCredentials = attributes.jellyfin_credentials
     String username = jellyfinCredentials != null ? (jellyfinCredentials['username'] as String) : null
@@ -65,6 +106,7 @@ try {
         String acceptHeader = request.headers.getFirst('Accept') as String
         boolean isHtmlRequest = acceptHeader?.contains('text/html')
         if (!isHtmlRequest) {
+            stripGatewaySessionCookies(request)
             return next.handle(context, request)
         }
 
@@ -121,6 +163,7 @@ try {
 
     String authorizationHeader = 'MediaBrowser Client="OpenIG", Device="SSO-Gateway", DeviceId="' + (session['jellyfin_device_id'] as String) + '", Version="10.0.0", Token="' + (session['jellyfin_token'] as String) + '"'
     request.headers.put('Authorization', [authorizationHeader as String])
+    stripGatewaySessionCookies(request)
 
     return next.handle(context, request).then({ response ->
         if (response.status.code == 401) {
