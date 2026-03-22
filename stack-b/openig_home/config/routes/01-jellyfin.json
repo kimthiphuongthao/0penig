@@ -82,6 +82,14 @@
       }
     },
     {
+      "name": "StripGatewaySessionCookiesApp4",
+      "type": "ScriptableFilter",
+      "config": {
+        "type": "application/x-groovy",
+        "file": "StripGatewaySessionCookies.groovy"
+      }
+    },
+    {
       "name": "VaultCredentialFilterJellyfin",
       "type": "ScriptableFilter",
       "config": {
@@ -141,6 +149,7 @@
           }
         },
         "SessionBlacklistFilterApp4",
+        "StripGatewaySessionCookiesApp4",
         "VaultCredentialFilterJellyfin",
         "JellyfinTokenInjectorFilter",
         "JellyfinResponseRewriterFilter"

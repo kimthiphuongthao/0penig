@@ -53,12 +53,6 @@ def isWpCookieName = { String cookieName ->
     )
 }
 
-def isGatewaySessionCookieName = { String cookieName ->
-    return cookieName == 'IG_SSO' ||
-        cookieName == 'IG_SSO_B' ||
-        cookieName == 'IG_SSO_C'
-}
-
 def mergeCookieHeader = { String existingCookieHeader, Collection cookiePairs ->
     def mergedByName = new LinkedHashMap<String, String>()
 
@@ -89,7 +83,7 @@ def mergeCookieHeader = { String existingCookieHeader, Collection cookiePairs ->
 
 def stripWpCookies = { String cookieHeader ->
     def remaining = splitCookieHeader(cookieHeader)
-        .findAll { cookie -> !isWpCookieName(cookie.name) && !isGatewaySessionCookieName(cookie.name) }
+        .findAll { cookie -> !isWpCookieName(cookie.name) }
         .collect { cookie -> cookie.raw }
     return remaining.join('; ')
 }

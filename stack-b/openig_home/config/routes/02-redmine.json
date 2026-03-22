@@ -76,6 +76,14 @@
       }
     },
     {
+      "name": "StripGatewaySessionCookiesApp3",
+      "type": "ScriptableFilter",
+      "config": {
+        "type": "application/x-groovy",
+        "file": "StripGatewaySessionCookies.groovy"
+      }
+    },
+    {
       "name": "VaultCredentialFilterRedmine",
       "type": "ScriptableFilter",
       "config": {
@@ -121,6 +129,7 @@
           }
         },
         "SessionBlacklistFilterApp3",
+        "StripGatewaySessionCookiesApp3",
         "VaultCredentialFilterRedmine",
         "RedmineCredentialInjectorFilter"
       ],

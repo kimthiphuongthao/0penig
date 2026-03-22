@@ -95,6 +95,14 @@
       }
     },
     {
+      "name": "StripGatewaySessionCookiesApp1",
+      "type": "ScriptableFilter",
+      "config": {
+        "type": "application/x-groovy",
+        "file": "StripGatewaySessionCookies.groovy"
+      }
+    },
+    {
       "name": "WpSessionInjector",
       "type": "ScriptableFilter",
       "config": {
@@ -117,6 +125,7 @@
         "TokenReferenceFilterApp1",
         "OidcFilter",
         "SessionBlacklistFilter",
+        "StripGatewaySessionCookiesApp1",
         "VaultCredentialFilter",
         "WpSessionInjector"
       ],

@@ -11,7 +11,6 @@ def logPrefix = '[RedmineCredentialInjector] '
 def CANONICAL_ORIGIN = System.getenv('CANONICAL_ORIGIN_APP3') ?: 'http://redmine-b.sso.local:9080'
 def CANONICAL_HOST = 'redmine-b.sso.local'
 def REDMINE_LOGIN_URL = 'http://redmine:3000/login'
-def GATEWAY_SESSION_COOKIE_NAMES = ['IG_SSO', 'IG_SSO_B', 'IG_SSO_C'] as Set
 
 def splitCookieHeader = { String cookieHeader ->
     def cookies = []
@@ -241,7 +240,7 @@ try {
 
     def stripRedmineCookies = { String cookieHeader ->
         def remaining = splitCookieHeader(cookieHeader)
-            .findAll { cookie -> !isRedmineCookieName(cookie.name) && !GATEWAY_SESSION_COOKIE_NAMES.contains(cookie.name) }
+            .findAll { cookie -> !isRedmineCookieName(cookie.name) }
             .collect { cookie -> cookie.raw }
         return remaining.join('; ')
     }

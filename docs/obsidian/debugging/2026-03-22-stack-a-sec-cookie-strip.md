@@ -20,23 +20,33 @@ That exposed `IG_SSO`, `IG_SSO_B`, and `IG_SSO_C` to applications that do not ne
 
 ## Fix
 
+Updated `stack-a/openig_home/config/routes/01-wordpress.json`:
+
+- Added `StripGatewaySessionCookiesApp1` immediately after `SessionBlacklistFilter`.
+- Kept `VaultCredentialFilter`, `WpSessionInjector`, and the backend proxy downstream of the strip point.
+
+Updated `stack-a/openig_home/config/routes/02-app2.json`:
+
+- Added `StripGatewaySessionCookiesApp2` immediately after `SessionBlacklistFilterApp2`.
+- Kept `App2HeaderFilter` and the backend proxy downstream of the strip point.
+
 Updated `stack-a/openig_home/scripts/groovy/CredentialInjector.groovy`:
 
-- Extended the existing cookie-strip helper to remove exact-match gateway cookie names `IG_SSO`, `IG_SSO_B`, and `IG_SSO_C`.
-- Kept the strip point before upstream forwarding, alongside the existing WordPress cookie filtering.
+- Removed the local helper that stripped exact-match gateway cookie names `IG_SSO`, `IG_SSO_B`, and `IG_SSO_C`.
+- Kept `stripWpCookies` for WordPress cookie removal only; gateway cookie stripping is now handled in the shared route filter.
 
-Updated `stack-a/openig_home/config/routes/02-app2.json` and `stack-a/openig_home/scripts/groovy/StripGatewaySessionCookies.groovy`:
+Retained `stack-a/openig_home/scripts/groovy/StripGatewaySessionCookies.groovy` as the shared helper:
 
-- Added a new post-blacklist `ScriptableFilter` for the WhoAmI route.
-- Stripped exact-match gateway cookie names `IG_SSO`, `IG_SSO_B`, and `IG_SSO_C` before the request reaches the backend handler.
+- Removes exact-match gateway cookie names `IG_SSO`, `IG_SSO_B`, and `IG_SSO_C` before the request reaches the backend handler.
+- Deletes the `Cookie` header entirely when those are the only cookies present.
 
 > [!success]
 > Stack A backend requests for [[WordPress]] and WhoAmI no longer forward OpenIG session cookies from these gateway paths.
 
 ## Decision rationale
 
-The strip is safe in Groovy because the gateway session has already been restored by framework-level cookie processing.
-Placing the WhoAmI strip filter after `SessionBlacklistFilter` preserves session-dependent checks while preventing backend cookie exposure.
+The strip is safe after the session blacklist check because `[[OpenIG]]` has already restored `JwtSession` from the gateway cookie before Groovy filters run.
+Using the shared route filter for both WordPress and WhoAmI removes duplicate cookie-name logic from `CredentialInjector.groovy` and keeps the strip contract in one place.
 
 > [!tip]
 > Keep gateway cookie stripping on exact names only so application cookies with unrelated prefixes are not affected.
@@ -46,6 +56,7 @@ Placing the WhoAmI strip filter after `SessionBlacklistFilter` preserves session
 
 ## Files changed
 
+- `stack-a/openig_home/config/routes/01-wordpress.json`
+- `stack-a/openig_home/config/routes/02-app2.json`
 - `stack-a/openig_home/scripts/groovy/CredentialInjector.groovy`
 - `stack-a/openig_home/scripts/groovy/StripGatewaySessionCookies.groovy`
-- `stack-a/openig_home/config/routes/02-app2.json`
