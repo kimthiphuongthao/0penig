@@ -216,7 +216,8 @@ try {
     }
 
     String tokenRefId = session[tokenRefKey] as String
-    if (tokenRefId?.trim() && collectOauth2SessionEntries().isEmpty()) {
+    boolean isOauthCallback = request.uri.path?.contains(configuredClientEndpoint + '/callback')
+    if (!isOauthCallback && tokenRefId?.trim() && collectOauth2SessionEntries().isEmpty()) {
         String redisPayload = getFromRedis(tokenRefId)
         if (!redisPayload) {
             logger.error('[TokenReferenceFilter] Missing Redis payload for tokenRefKey={} tokenRefId={} endpoint={}', tokenRefKey, tokenRefId, configuredClientEndpoint)
@@ -237,6 +238,14 @@ try {
         def oauth2EntriesForResponse = collectOauth2SessionEntries()
         if (oauth2EntriesForResponse.isEmpty()) {
             logger.warn('[TokenReferenceFilter] No oauth2 session value found during response phase endpoint={}', configuredClientEndpoint)
+            return response
+        }
+
+        boolean hasRealTokens = oauth2EntriesForResponse.any { k, v ->
+            v instanceof Map && (v.containsKey('atr') || v.containsKey('access_token'))
+        }
+        if (!hasRealTokens) {
+            logger.warn('[TokenReferenceFilter] oauth2 entries found but no real tokens (likely pending state), skipping Redis offload endpoint={}', configuredClientEndpoint)
             return response
         }
 
