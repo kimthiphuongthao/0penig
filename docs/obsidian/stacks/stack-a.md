@@ -127,6 +127,15 @@ Related: [[Stack B]] [[Stack C]] [[OpenIG]] [[Keycloak]] [[Vault]]
 > [!success]
 > Validation on `2026-03-20`: `docker restart sso-openig-1 sso-openig-2` completed successfully. `docker logs sso-openig-1 2>&1 | grep 'Loaded the route'` showed `00-wp-logout`, `00-backchannel-logout-app1`, `01-wordpress`, and `02-app2` after restart.
 
+## 2026-03-22 SEC-COOKIE-STRIP
+
+- Updated [stack-a/openig_home/scripts/groovy/CredentialInjector.groovy](/Volumes/OS/claude/openig/sso-lab/stack-a/openig_home/scripts/groovy/CredentialInjector.groovy) so the existing pre-forward cookie strip now removes exact-match gateway session cookies `IG_SSO`, `IG_SSO_B`, and `IG_SSO_C` together with WordPress cookies.
+- Added [stack-a/openig_home/scripts/groovy/StripGatewaySessionCookies.groovy](/Volumes/OS/claude/openig/sso-lab/stack-a/openig_home/scripts/groovy/StripGatewaySessionCookies.groovy) for the WhoAmI route and inserted it after `SessionBlacklistFilterApp2` in [stack-a/openig_home/config/routes/02-app2.json](/Volumes/OS/claude/openig/sso-lab/stack-a/openig_home/config/routes/02-app2.json).
+- This keeps OpenIG session restoration unchanged while preventing Stack A backends from receiving gateway session cookies.
+
+> [!warning]
+> Requested runtime verification on `2026-03-22` could not run from Codex because Docker socket access is blocked by the sandbox (`/Users/duykim/.docker/run/docker.sock`).
+
 ## Routes
 
 | File | Purpose |
@@ -134,15 +143,16 @@ Related: [[Stack B]] [[Stack C]] [[OpenIG]] [[Keycloak]] [[Vault]]
 | `00-backchannel-logout-app1.json` | Matches `POST /openid/app1/backchannel_logout`; passes route `args` (`audiences`, `redisHost`, `jwksUri`, `issuer`, `ttlSeconds`) into the consolidated `BackchannelLogoutHandler.groovy`. |
 | `00-wp-logout.json` | Intercepts WordPress logout requests (`wp-login.php?action=logout`) for `/app1` and `wp-a.sso.local`; delegates to `SloHandler.groovy`. |
 | `01-wordpress.json` | Main WordPress route for `Host: wp-a.sso.local.*`; chain includes `OAuth2ClientFilter` (`/openid/app1`), `TokenReferenceFilter` (`token_ref_id_app1`), `SessionBlacklistFilter`, `VaultCredentialFilter`, and `CredentialInjector`; proxies to `http://wordpress`. |
-| `02-app2.json` | Main WhoAmI route for `Host: whoami-a.sso.local.*`; uses `TokenReferenceFilter.groovy` (`token_ref_id_app2`), the shared `SessionBlacklistFilter.groovy` with route `args` for app2-specific endpoint/session settings, then `App2HeaderFilter`; proxies to `http://whoami`. |
+| `02-app2.json` | Main WhoAmI route for `Host: whoami-a.sso.local.*`; uses `TokenReferenceFilter.groovy` (`token_ref_id_app2`), the shared `SessionBlacklistFilter.groovy` with route `args` for app2-specific endpoint/session settings, then `StripGatewaySessionCookies.groovy` and `App2HeaderFilter`; proxies to `http://whoami`. |
 
 ## Groovy Scripts
 
 | Script | Purpose |
 |---|---|
 | `BackchannelLogoutHandler.groovy` | Shared consolidated handler: parses backchannel `logout_token`, validates `RS256` / `ES256` signatures via atomic `globals.compute()` JWKS cache, extracts `sid/sub`, and writes Redis key `blacklist:{sid}` with expiry. |
-| `CredentialInjector.groovy` | Uses Vault-provided app creds to submit the WordPress login form, returns upstream cookies to the browser, and clears any legacy `wp_session_cookies` state left by older sessions. |
+| `CredentialInjector.groovy` | Uses Vault-provided app creds to submit the WordPress login form, returns upstream cookies to the browser, strips `IG_SSO*` from the forwarded `Cookie` header, and clears any legacy `wp_session_cookies` state left by older sessions. |
 | `TokenReferenceFilter.groovy` | Stores and restores the live `oauth2:*` session namespace in Redis so the browser cookie only carries the per-app token refs `token_ref_id_app1` / `token_ref_id_app2` plus small identity markers. |
+| `StripGatewaySessionCookies.groovy` | Removes exact-match gateway session cookies `IG_SSO`, `IG_SSO_B`, and `IG_SSO_C` from WhoAmI requests after blacklist enforcement and before backend forwarding. |
 | `VaultCredentialFilter.groovy` | Logs into Vault via AppRole (`role_id`/`secret_id` files), caches Vault token in session, reads `secret/data/wp-creds/{preferred_username}`, sets `attributes.wp_credentials`. |
 | `SessionBlacklistFilter.groovy` | Shared blacklist enforcement used by both app1 and app2 via route `args` (`clientEndpoint`, `sessionCacheKey`, `canonicalOrigin`, `canonicalOriginEnvVar`). |
 | `SloHandler.groovy` | Frontchannel logout handler: resolve `id_token` from OpenIG session keys, clear session, redirect to Keycloak end-session with dynamic `post_logout_redirect_uri` and `id_token_hint` when available. |
