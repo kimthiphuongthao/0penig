@@ -53,6 +53,7 @@
 | Stack C MariaDB/Vault credential drift sau bootstrap | Live MariaDB seed `alice/AlicePass123`, nhưng Vault vẫn giữ password bootstrap cũ cho `secret/phpmyadmin/alice` nên phpMyAdmin SSO fail với MySQL `1045` dù OIDC/AppRole đều OK | Align lại Vault secret theo password MariaDB đang chạy và patch `stack-c/vault/init/vault-bootstrap.sh` để bootstrap lần sau ghi đúng giá trị |
 | Stack C phpMyAdmin bob login chưa thể hoạt động | Vault có thể giữ secret `bob`, nhưng live MariaDB chỉ provision `alice`; không có `bob@%` để authenticate | Xử lý như infra gap: tạo user `bob` ở MariaDB theo workflow được duyệt, rồi align Vault; nếu không support thì document rõ alice-only |
 | OpenIG non-root blocked by Vault file permissions | `vault/file/openig-role-id` is `-rw-------` (root-only) on macOS host mounts, and `entrypoint.sh` writes `config.json` in place | Lab: keep `user: root` with macOS exception comment. Production: use K8s init container + Vault Agent sidecar, no host mounts |
+| IG_SSO* cookies forwarded to backend apps unstripped | No explicit strip logic in nginx or OpenIG routes. All backends under `.sso.local` receive all 3 gateway session cookies. Oversight — stripWpCookies/stripRedmineCookies show intent for app cookies but gateway cookies were not addressed | Strip `IG_SSO\|IG_SSO_B\|IG_SSO_C` from Cookie header in OpenIG route chain AFTER session loaded, BEFORE forwarding. NOT at nginx ingress. Fix tracked as `SEC-COOKIE-STRIP` |
 
 ## Decision log
 
