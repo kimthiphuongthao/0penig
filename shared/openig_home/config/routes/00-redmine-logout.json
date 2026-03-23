@@ -30,7 +30,7 @@
           "args": {
             "clientEndpoint": "/openid/app3",
             "clientId": "openig-client-b",
-            "canonicalOrigin": "http://redmine-b.sso.local:9080",
+            "canonicalOrigin": "http://redmine-b.sso.local",
             "postLogoutPath": "/",
             "redisHost": "shared-redis",
             "redisUser": "openig-app3",

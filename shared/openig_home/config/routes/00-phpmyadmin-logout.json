@@ -31,7 +31,7 @@
           "args": {
             "clientEndpoint": "/openid/app6",
             "clientId": "openig-client-c-app6",
-            "canonicalOrigin": "http://phpmyadmin-c.sso.local:18080",
+            "canonicalOrigin": "http://phpmyadmin-c.sso.local",
             "postLogoutPath": "/",
             "redisHost": "shared-redis",
             "redisUser": "openig-app6",

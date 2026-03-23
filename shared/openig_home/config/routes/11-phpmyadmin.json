@@ -85,7 +85,7 @@
         "args": {
           "clientEndpoint": "/openid/app6",
           "sessionCacheKey": "oidc_sid_app6",
-          "canonicalOrigin": "http://phpmyadmin-c.sso.local:18080",
+          "canonicalOrigin": "http://phpmyadmin-c.sso.local",
           "canonicalOriginEnvVar": "CANONICAL_ORIGIN_APP6",
           "redisUser": "openig-app6",
           "redisPasswordEnvVar": "REDIS_PASSWORD_APP6",
@@ -138,9 +138,9 @@
             "args": {
               "clientEndpoint": "/openid/app6",
               "clientId": "openig-client-c-app6",
-              "canonicalOrigin": "http://phpmyadmin-c.sso.local:18080",
+              "canonicalOrigin": "http://phpmyadmin-c.sso.local",
               "postLogoutPath": "/",
-              "redirectUrl": "http://phpmyadmin-c.sso.local:18080/",
+              "redirectUrl": "http://phpmyadmin-c.sso.local/",
               "logoutPathNeedles": [
                 "logout"
               ],
@@ -153,7 +153,7 @@
               "retryQueryParam": "_ig_pma_retry",
               "retryQueryValue": "1",
               "sessionKeysToClear": [
-                "oauth2:http://phpmyadmin-c.sso.local:18080/openid/app6",
+                "oauth2:http://phpmyadmin-c.sso.local/openid/app6",
                 "oidc_sid_app6",
                 "token_ref_id_app6"
               ]

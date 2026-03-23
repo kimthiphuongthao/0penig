@@ -19,7 +19,7 @@
       "type": "ClientRegistration",
       "config": {
         "clientId": "openig-client-b",
-        "clientSecret": "${env['OIDC_CLIENT_SECRET']}",
+        "clientSecret": "${env['OIDC_CLIENT_SECRET_B']}",
         "issuer": "KeycloakIssuer",
         "scopes": [
           "openid",
@@ -79,7 +79,7 @@
         "args": {
           "clientEndpoint": "/openid/app3",
           "sessionCacheKey": "oidc_sid_app3",
-          "canonicalOrigin": "http://redmine-b.sso.local:9080",
+          "canonicalOrigin": "http://redmine-b.sso.local",
           "canonicalOriginEnvVar": "CANONICAL_ORIGIN_APP3",
           "redisUser": "openig-app3",
           "redisPasswordEnvVar": "REDIS_PASSWORD_APP3",

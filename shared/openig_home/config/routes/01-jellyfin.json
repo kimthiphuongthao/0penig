@@ -79,7 +79,7 @@
         "args": {
           "clientEndpoint": "/openid/app4",
           "sessionCacheKey": "oidc_sid_app4",
-          "canonicalOrigin": "http://jellyfin-b.sso.local:9080",
+          "canonicalOrigin": "http://jellyfin-b.sso.local",
           "canonicalOriginEnvVar": "CANONICAL_ORIGIN_APP4",
           "redisUser": "openig-app4",
           "redisPasswordEnvVar": "REDIS_PASSWORD_APP4",

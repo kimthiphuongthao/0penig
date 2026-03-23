@@ -97,7 +97,7 @@
         "args": {
           "clientEndpoint": "/openid/app5",
           "sessionCacheKey": "oidc_sid_app5",
-          "canonicalOrigin": "http://grafana-c.sso.local:18080",
+          "canonicalOrigin": "http://grafana-c.sso.local",
           "canonicalOriginEnvVar": "CANONICAL_ORIGIN_APP5",
           "redisUser": "openig-app5",
           "redisPasswordEnvVar": "REDIS_PASSWORD_APP5",

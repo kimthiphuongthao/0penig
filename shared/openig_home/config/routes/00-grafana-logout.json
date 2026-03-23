@@ -30,7 +30,7 @@
           "args": {
             "clientEndpoint": "/openid/app5",
             "clientId": "openig-client-c-app5",
-            "canonicalOrigin": "http://grafana-c.sso.local:18080",
+            "canonicalOrigin": "http://grafana-c.sso.local",
             "postLogoutPath": "/",
             "redisHost": "shared-redis",
             "redisUser": "openig-app5",
