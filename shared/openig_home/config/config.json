@@ -8,27 +8,25 @@
       }
     },
     {
+      "name": "JwtKeyStore",
+      "type": "KeyStore",
+      "config": {
+        "url": "file:///tmp/openig/keystore.p12",
+        "password": "__KEYSTORE_PASSWORD__",
+        "type": "PKCS12"
+      }
+    },
+    {
       "name": "Session",
-      "type": "JwtSessionManager",
+      "type": "JwtSession",
       "config": {
         "cookieName": "IG_SSO",
         "cookieDomain": ".sso.local",
         "sessionTimeout": "30 minutes",
         "sharedSecret": "__JWT_SHARED_SECRET__",
-        "keystore": {
-          "type": "KeyStore",
-          "config": {
-            "url": "file:///tmp/openig/keystore/keystore.p12",
-            "password": "__KEYSTORE_PASSWORD__",
-            "type": "PKCS12"
-          }
-        },
+        "keystore": "JwtKeyStore",
         "alias": "openig-jwt",
-        "password": "__KEYSTORE_PASSWORD__",
-        "cookieOptions": {
-          "path": "/",
-          "sameSite": "Lax"
-        }
+        "password": "__KEYSTORE_PASSWORD__"
       }
     }
   ],
