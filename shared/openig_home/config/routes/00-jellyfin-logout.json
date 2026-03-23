@@ -1,6 +1,22 @@
 {
   "name": "00-jellyfin-logout-intercept",
   "condition": "${matches(request.headers['Host'][0], 'jellyfin-b.sso.local.*') and (matches(request.uri.path, '^/logout$') or matches(request.uri.toString(), '.*/logout.*'))}",
+  "session": "SessionApp4",
+  "heap": [
+    {
+      "name": "SessionApp4",
+      "type": "JwtSession",
+      "config": {
+        "cookieName": "IG_SSO_APP4",
+        "cookieDomain": ".sso.local",
+        "sessionTimeout": "30 minutes",
+        "sharedSecret": "${env['JWT_SHARED_SECRET']}",
+        "keystore": "JwtKeyStore",
+        "alias": "openig-jwt",
+        "password": "${env['KEYSTORE_PASSWORD']}"
+      }
+    }
+  ],
   "handler": {
     "type": "Chain",
     "config": {

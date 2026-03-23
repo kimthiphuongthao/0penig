@@ -1,7 +1,8 @@
 {
   "name": "app2-whoami",
-  "baseURI": "http://whoami",
+  "baseURI": "http://shared-whoami",
   "condition": "${matches(request.headers['Host'][0], 'whoami-a.sso.local.*')}",
+  "session": "SessionApp2",
   "heap": [
     {
       "name": "KeycloakIssuer",
@@ -26,6 +27,19 @@
           "profile",
           "email"
         ]
+      }
+    },
+    {
+      "name": "SessionApp2",
+      "type": "JwtSession",
+      "config": {
+        "cookieName": "IG_SSO_APP2",
+        "cookieDomain": ".sso.local",
+        "sessionTimeout": "30 minutes",
+        "sharedSecret": "${env['JWT_SHARED_SECRET']}",
+        "keystore": "JwtKeyStore",
+        "alias": "openig-jwt",
+        "password": "${env['KEYSTORE_PASSWORD']}"
       }
     },
     {

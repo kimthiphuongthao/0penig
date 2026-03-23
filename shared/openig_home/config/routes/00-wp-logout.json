@@ -1,6 +1,22 @@
 {
   "name": "00-wp-logout-intercept",
   "condition": "${(matches(request.uri.path, '^/app1/wp-login[.]php$') or (request.headers['Host'] != null and request.headers['Host'][0] != null and matches(request.headers['Host'][0], '(?i)^wp-a[.]sso[.]local([.].*)?(:[0-9]+)?$') and matches(request.uri.path, '^/wp-login[.]php$'))) and request.uri.query != null and matches(request.uri.query, '(^|&)action=logout($|&)')}",
+  "session": "SessionApp1",
+  "heap": [
+    {
+      "name": "SessionApp1",
+      "type": "JwtSession",
+      "config": {
+        "cookieName": "IG_SSO_APP1",
+        "cookieDomain": ".sso.local",
+        "sessionTimeout": "30 minutes",
+        "sharedSecret": "${env['JWT_SHARED_SECRET']}",
+        "keystore": "JwtKeyStore",
+        "alias": "openig-jwt",
+        "password": "${env['KEYSTORE_PASSWORD']}"
+      }
+    }
+  ],
   "handler": {
     "type": "Chain",
     "config": {

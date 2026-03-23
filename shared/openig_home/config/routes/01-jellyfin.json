@@ -1,7 +1,8 @@
 {
   "name": "jellyfin-sso",
-  "baseURI": "http://jellyfin:8096",
+  "baseURI": "http://shared-jellyfin:8096",
   "condition": "${matches(request.headers['Host'][0], 'jellyfin-b.sso.local.*') and not(matches(request.uri.path, '^/openig.*'))}",
+  "session": "SessionApp4",
   "heap": [
     {
       "name": "KeycloakIssuer",
@@ -27,6 +28,19 @@
           "email"
         ],
         "tokenEndpointAuthMethod": "client_secret_post"
+      }
+    },
+    {
+      "name": "SessionApp4",
+      "type": "JwtSession",
+      "config": {
+        "cookieName": "IG_SSO_APP4",
+        "cookieDomain": ".sso.local",
+        "sessionTimeout": "30 minutes",
+        "sharedSecret": "${env['JWT_SHARED_SECRET']}",
+        "keystore": "JwtKeyStore",
+        "alias": "openig-jwt",
+        "password": "${env['KEYSTORE_PASSWORD']}"
       }
     },
     {

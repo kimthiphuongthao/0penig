@@ -1,7 +1,8 @@
 {
   "name": "wordpress-sso",
-  "baseURI": "http://wordpress",
+  "baseURI": "http://shared-wordpress",
   "condition": "${matches(request.headers['Host'][0], 'wp-a.sso.local.*')}",
+  "session": "SessionApp1",
   "heap": [
     {
       "name": "KeycloakIssuer",
@@ -26,6 +27,19 @@
           "profile",
           "email"
         ]
+      }
+    },
+    {
+      "name": "SessionApp1",
+      "type": "JwtSession",
+      "config": {
+        "cookieName": "IG_SSO_APP1",
+        "cookieDomain": ".sso.local",
+        "sessionTimeout": "30 minutes",
+        "sharedSecret": "${env['JWT_SHARED_SECRET']}",
+        "keystore": "JwtKeyStore",
+        "alias": "openig-jwt",
+        "password": "${env['KEYSTORE_PASSWORD']}"
       }
     },
     {

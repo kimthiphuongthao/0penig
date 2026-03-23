@@ -1,4 +1,4 @@
-def cookieNamesToStrip = ['IG_SSO', 'IG_SSO_B', 'IG_SSO_C'] as Set
+def cookieNamesToStrip = ['IG_SSO_APP1', 'IG_SSO_APP2', 'IG_SSO_APP3', 'IG_SSO_APP4', 'IG_SSO_APP5', 'IG_SSO_APP6'] as Set
 def cookieHeader = request.headers.getFirst('Cookie')
 
 if (cookieHeader != null && !cookieHeader.trim().isEmpty()) {

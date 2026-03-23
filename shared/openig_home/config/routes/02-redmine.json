@@ -1,7 +1,8 @@
 {
   "name": "redmine-sso",
-  "baseURI": "http://redmine:3000",
+  "baseURI": "http://shared-redmine:3000",
   "condition": "${matches(request.headers['Host'][0], 'redmine-b.sso.local.*') and not(matches(request.uri.path, '^/openig.*'))}",
+  "session": "SessionApp3",
   "heap": [
     {
       "name": "KeycloakIssuer",
@@ -27,6 +28,19 @@
           "email"
         ],
         "tokenEndpointAuthMethod": "client_secret_post"
+      }
+    },
+    {
+      "name": "SessionApp3",
+      "type": "JwtSession",
+      "config": {
+        "cookieName": "IG_SSO_APP3",
+        "cookieDomain": ".sso.local",
+        "sessionTimeout": "30 minutes",
+        "sharedSecret": "${env['JWT_SHARED_SECRET']}",
+        "keystore": "JwtKeyStore",
+        "alias": "openig-jwt",
+        "password": "${env['KEYSTORE_PASSWORD']}"
       }
     },
     {

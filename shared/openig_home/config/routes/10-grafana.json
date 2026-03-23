@@ -1,7 +1,8 @@
 {
   "name": "grafana-sso",
-  "baseURI": "http://grafana:3000",
+  "baseURI": "http://shared-grafana:3000",
   "condition": "${matches(request.headers['Host'][0], 'grafana-c.sso.local.*') and not(matches(request.uri.path, '^/openid/app5/backchannel_logout$'))}",
+  "session": "SessionApp5",
   "heap": [
     {
       "name": "KeycloakIssuer",
@@ -26,6 +27,19 @@
           "profile",
           "email"
         ]
+      }
+    },
+    {
+      "name": "SessionApp5",
+      "type": "JwtSession",
+      "config": {
+        "cookieName": "IG_SSO_APP5",
+        "cookieDomain": ".sso.local",
+        "sessionTimeout": "30 minutes",
+        "sharedSecret": "${env['JWT_SHARED_SECRET']}",
+        "keystore": "JwtKeyStore",
+        "alias": "openig-jwt",
+        "password": "${env['KEYSTORE_PASSWORD']}"
       }
     },
     {

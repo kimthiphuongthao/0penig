@@ -1,7 +1,8 @@
 {
   "name": "phpmyadmin-sso",
-  "baseURI": "http://phpmyadmin:80",
+  "baseURI": "http://shared-phpmyadmin:80",
   "condition": "${matches(request.headers['Host'][0], 'phpmyadmin-c.sso.local.*') and not(matches(request.uri.path, '^/openid/app6/backchannel_logout$'))}",
+  "session": "SessionApp6",
   "heap": [
     {
       "name": "KeycloakIssuer",
@@ -26,6 +27,19 @@
           "profile",
           "email"
         ]
+      }
+    },
+    {
+      "name": "SessionApp6",
+      "type": "JwtSession",
+      "config": {
+        "cookieName": "IG_SSO_APP6",
+        "cookieDomain": ".sso.local",
+        "sessionTimeout": "30 minutes",
+        "sharedSecret": "${env['JWT_SHARED_SECRET']}",
+        "keystore": "JwtKeyStore",
+        "alias": "openig-jwt",
+        "password": "${env['KEYSTORE_PASSWORD']}"
       }
     },
     {

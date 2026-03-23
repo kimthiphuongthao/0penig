@@ -1,6 +1,22 @@
 {
   "name": "00-phpmyadmin-logout",
   "condition": "${request.headers['Host'] != null and request.headers['Host'][0] != null and matches(request.headers['Host'][0], '(?i)^phpmyadmin-c[.]sso[.]local(:[0-9]+)?$') and (((request.method == 'GET') and matches(request.uri.path, '^/$') and request.uri.query != null and matches(request.uri.query, '(^|&)logout=1($|&)')) or (((request.method == 'GET') or (request.method == 'POST')) and matches(request.uri.path, '^/index[.]php$') and request.uri.query != null and matches(request.uri.query, '(^|&)route=(/|%2[Ff])logout($|&)')))}",
+  "session": "SessionApp6",
+  "heap": [
+    {
+      "name": "SessionApp6",
+      "type": "JwtSession",
+      "config": {
+        "cookieName": "IG_SSO_APP6",
+        "cookieDomain": ".sso.local",
+        "sessionTimeout": "30 minutes",
+        "sharedSecret": "${env['JWT_SHARED_SECRET']}",
+        "keystore": "JwtKeyStore",
+        "alias": "openig-jwt",
+        "password": "${env['KEYSTORE_PASSWORD']}"
+      }
+    }
+  ],
   "handler": {
     "type": "Chain",
     "config": {
