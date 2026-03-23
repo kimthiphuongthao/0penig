@@ -499,6 +499,8 @@ Vì sao cần `JSESSIONID`:
 
 Ghi chú: Stack C dùng `cookieName: "IG_SSO_C"` (unique per stack để tránh cross-stack cookie collision). Mỗi stack vẫn dùng `sharedSecret` khác nhau để đảm bảo independence.
 
+> **LAB-EXCEPTION (C-2/S-1):** `JwtSession` cookies (`IG_SSO`, `IG_SSO_B`, `IG_SSO_C`) vẫn đi qua plain HTTP trong lab này. Chỉ chấp nhận điều đó cho môi trường lab HTTP-only. Trước production, phải hoàn thành Checklist bước 13 (nginx TLS termination + trust CA cho OpenIG), rồi bật HTTPS cho OIDC/session path và phát hành `JwtSession` cookie với cờ `Secure`.
+
 ## 12) Environment variables quan trọng
 
 | Biến môi trường | Mục đích | Ghi chú |
@@ -649,7 +651,8 @@ Ví dụ trong lab: `GrafanaUserHeader` (`HeaderFilter`) trong `10-grafana.json`
 | 10 | Chọn đúng pattern theo loại app: Form+Cookie / SPA Token / HTTP Basic / Header-based | IAM/Gateway team | App login thành công theo đúng cơ chế auth của nó |
 | 11 | Verify session key candidates `oauth2:{FULL_PUBLIC_ORIGIN}/clientEndpoint` theo đúng host browser và `OPENIG_PUBLIC_URL` | IAM/Gateway team | Script đọc được `id_token` ổn định |
 | 12 | Strip trusted headers tại Nginx trước khi forward (nếu dùng Nhóm 3 hoặc Nhóm 4) | Platform | Client không tự inject credential |
-| 13 | Test SSO + SLO nội stack + cross-stack | QA + App team | Logout một app làm mất phiên đúng kỳ vọng |
+| 13 | Bật HTTPS cho browser/OIDC/Vault path: nginx TLS termination, trust CA trong OpenIG/JVM, `requireHttps: true`, và `JwtSession` cookie có cờ `Secure` | Platform + IAM/Gateway team | Không còn plaintext HTTP trên browser session, OIDC, và Vault traffic |
+| 14 | Test SSO + SLO nội stack + cross-stack | QA + App team | Logout một app làm mất phiên đúng kỳ vọng |
 
 ## 15) Troubleshooting thực tế
 

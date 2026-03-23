@@ -30,11 +30,18 @@
 
 ## Remaining Production Gaps
 1. **AppRole CIDR binding** — requires fixed Docker subnets or K8s pod CIDR
-2. **TLS** — enable mTLS when network isolation not guaranteed (Phase 7b)
-3. **Raft storage** — migrate from file to Raft for HA (production only)
-4. **Audit redundancy** — add second audit device (syslog/socket) for production SPOF prevention
-5. **Response wrapping** — wrap SecretID delivery for defense-in-depth
-6. **Admin token auto-renewal** — periodic token needs renewal within 8760h period
+2. **Vault listener TLS / mTLS** — replace `tls_disable=true` with real listener TLS before production
+3. **Vault UI exposure** — disable the UI or restrict it to an admin-only network segment
+4. **Raft storage** — migrate from file to Raft for HA (production only)
+5. **Audit redundancy** — add second audit device (syslog/socket) for production SPOF prevention
+6. **Response wrapping** — wrap SecretID delivery for defense-in-depth
+7. **Admin token auto-renewal** — periodic token needs renewal within 8760h period
+
+## LAB-EXCEPTION Hardening Actions
+- **TLS listener disabled (`tls_disable=true`)** — Production action: enable Vault listener TLS or mTLS and distribute the issuing CA to every OpenIG and admin client.
+- **Vault UI enabled in lab** — Production action: disable the UI entirely or restrict it to a dedicated admin network/VPN with explicit access control.
+- **CIDR-bound AppRole deferred** — Production action: bind AppRole SecretID use to fixed Docker/Kubernetes CIDRs or an equivalent network boundary before production.
+- **Raft HA deferred** — Production action: replace single-node file storage with an integrated Raft cluster (3+ nodes) before production.
 
 ## References
 - https://developer.hashicorp.com/vault/docs/concepts/production-hardening

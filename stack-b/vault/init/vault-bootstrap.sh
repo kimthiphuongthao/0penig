@@ -5,6 +5,10 @@ export VAULT_ADDR=http://127.0.0.1:8200
 KEYS_FILE=/vault/keys/.vault-keys
 BOOTSTRAP_FLAG=/vault/data/.bootstrap-done
 
+# LAB SEED DATA
+# All passwords below are deterministic lab values.
+# Rotate before production deployment.
+
 # Migrate keys from old location (one-time)
 if [ -f "/vault/data/.vault-keys.unseal" ] && [ ! -f "/vault/keys/.vault-keys.unseal" ]; then
   mkdir -p /vault/keys

@@ -315,6 +315,14 @@ App của bạn có thể chạy ở subdomain riêng không?
 - Gateway team sẽ không bao giờ lộ danh sách này ra ngoài Vault.
 - Sau khi go-live, mật khẩu trong app vẫn là mật khẩu reset đó — người dùng đăng nhập qua SSO, không cần nhớ mật khẩu app.
 
+### 6.1 Vault production readiness (bắt buộc trước PROD)
+
+- [ ] Bật TLS listener cho Vault và chuyển toàn bộ OpenIG/Vault/admin traffic sang HTTPS trước khi go-live production.
+- [ ] Tắt Vault UI trong production hoặc chỉ cho phép truy cập qua admin network/VPN với kiểm soát truy cập rõ ràng.
+- [ ] Nếu tiếp tục dùng AppRole, bind `secret_id`/role usage theo CIDR cố định (Docker subnet tĩnh hoặc K8s pod CIDR); không giữ cấu hình lab "no CIDR restriction".
+- [ ] Thay file storage single-node bằng Vault integrated Raft HA (tối thiểu 3 node) trước production; không mang kiến trúc lab single-node sang PROD.
+- [ ] Rotate TOÀN BỘ Vault bootstrap secrets trước production: root token, unseal keys, AppRole `role_id`, AppRole `secret_id`, và mọi mật khẩu user/app đang lưu trong Vault KV.
+
 **Action item cho bạn:** Xác nhận lịch với gateway team sau khi điền xong checklist. Bước 3 và Bước 4 có thể thực hiện song song.
 
 ---
