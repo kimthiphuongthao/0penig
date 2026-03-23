@@ -186,24 +186,8 @@ def restoreOauth2SessionEntries = { Object storedPayload ->
 }
 
 def stripOauth2EntriesFromSession = { String newTokenRefId ->
-    Set<String> keysToRemove = discoverOauth2SessionKeys().toSet()
-    Map<String, Object> preservedEntries = [:]
-    try {
-        session.keySet().collect { String.valueOf(it) }.sort().each { key ->
-            if (!keysToRemove.contains(key) && key != tokenRefKey) {
-                def value = session[key]
-                if (value != null) {
-                    preservedEntries[key] = value
-                }
-            }
-        }
-    } catch (Exception e) {
-        logger.warn('[TokenReferenceFilter] Failed to enumerate session keys before clear endpoint={} keysToRemove={}', configuredClientEndpoint, keysToRemove, e)
-    }
-
-    session.clear()
-    preservedEntries.each { key, value ->
-        session[key] = value
+    discoverOauth2SessionKeys().each { oauth2SessionKey ->
+        session.remove(oauth2SessionKey)
     }
     session[tokenRefKey] = newTokenRefId
 }
