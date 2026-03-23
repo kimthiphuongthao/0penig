@@ -187,14 +187,27 @@ def restoreOauth2SessionEntries = { Object storedPayload ->
     restoredEntries
 }
 
-def stripOauth2EntriesFromSession = { String newTokenRefId, String cachedSid ->
-    discoverOauth2SessionKeys().each { oauth2SessionKey ->
-        session.remove(oauth2SessionKey)
+def stripOauth2EntriesFromSession = { String newTokenRefId ->
+    Set<String> keysToRemove = discoverOauth2SessionKeys().toSet()
+    Map<String, Object> preservedEntries = [:]
+    try {
+        session.keySet().collect { String.valueOf(it) }.sort().each { key ->
+            if (!keysToRemove.contains(key) && key != tokenRefKey) {
+                def value = session[key]
+                if (value != null) {
+                    preservedEntries[key] = value
+                }
+            }
+        }
+    } catch (Exception e) {
+        logger.warn('[TokenReferenceFilter] Failed to enumerate session keys before clear endpoint={} keysToRemove={}', configuredClientEndpoint, keysToRemove, e)
+    }
+
+    session.clear()
+    preservedEntries.each { key, value ->
+        session[key] = value
     }
     session[tokenRefKey] = newTokenRefId
-    if (configuredSessionCacheKey && cachedSid?.trim()) {
-        session[configuredSessionCacheKey] = cachedSid
-    }
 }
 
 def cacheSidFromOauth2Session = {
@@ -236,6 +249,7 @@ def cacheSidFromOauth2Session = {
         return null
     }
 
+    session[configuredSessionCacheKey] = sid
     sid
 }
 
@@ -295,7 +309,7 @@ try {
             String redisPayload = JsonOutput.toJson([oauth2Entries: oauth2EntriesForResponse])
             setInRedis(newTokenRefId, redisPayload)
             String cachedSid = cacheSidFromOauth2Session()
-            stripOauth2EntriesFromSession(newTokenRefId, cachedSid)
+            stripOauth2EntriesFromSession(newTokenRefId)
             logger.info(
                 '[TokenReferenceFilter] Stored oauth2 session keys={} endpoint={} tokenRefKey={} tokenRefId={} sessionCacheKey={} sidCached={}',
                 oauth2EntriesForResponse.keySet(),
