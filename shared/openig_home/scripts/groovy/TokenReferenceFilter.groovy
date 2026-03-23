@@ -297,6 +297,32 @@ try {
             return response
         }
 
+        boolean hasPendingState = oauth2EntriesForResponse.any { k, v ->
+            v instanceof Map && !v.containsKey('atr') && !v.containsKey('access_token')
+        }
+        if (hasPendingState) {
+            logger.warn(
+                '[TokenReferenceFilter] Mixed state: pending OAuth2 state alongside stale tokens, removing only stale entries endpoint={} tokenRefKey={}',
+                configuredClientEndpoint,
+                tokenRefKey
+            )
+            oauth2EntriesForResponse.each { key, v ->
+                if (v instanceof Map && (v.containsKey('atr') || v.containsKey('access_token'))) {
+                    try {
+                        session.remove(key)
+                    } catch (Exception ignored) {
+                        session[key] = null
+                    }
+                }
+            }
+            try {
+                session.remove(tokenRefKey)
+            } catch (Exception ignored) {
+                session[tokenRefKey] = null
+            }
+            return response
+        }
+
         try {
             try {
                 logger.warn("[TokenReferenceFilter] Session keys at .then(): " + session.keySet().toString())
