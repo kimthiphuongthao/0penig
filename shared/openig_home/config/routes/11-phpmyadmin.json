@@ -34,7 +34,6 @@
       "type": "JwtSession",
       "config": {
         "cookieName": "IG_SSO_APP6",
-        "cookieDomain": ".sso.local",
         "sessionTimeout": "30 minutes",
         "sharedSecret": "${env['JWT_SHARED_SECRET']}",
         "keystore": "JwtKeyStore",
