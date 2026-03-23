@@ -261,6 +261,42 @@ try {
             return response
         }
 
+        String wwwAuthenticate = response.headers.getFirst('WWW-Authenticate') as String
+        if (response.status.code == 401 && wwwAuthenticate?.contains('error=')) {
+            logger.warn(
+                '[TokenReferenceFilter] OAuth2 error response, cleaning stale token ref to break loop endpoint={} tokenRefKey={}',
+                configuredClientEndpoint,
+                tokenRefKey
+            )
+            String currentTokenRefId = session[tokenRefKey] as String
+            if (currentTokenRefId != null) {
+                String key = (configuredRedisKeyPrefix ? configuredRedisKeyPrefix + ':' : '') + "token_ref:${currentTokenRefId}"
+                int keySize = key.getBytes('UTF-8').length
+                String command = "*2\r\n\$3\r\nDEL\r\n\$${keySize}\r\n${key}\r\n"
+                withRedisSocket { Socket socket ->
+                    socket.outputStream.write(command.getBytes('UTF-8'))
+                    socket.outputStream.flush()
+                    String deleteReply = readRespLine(socket.inputStream)
+                    if (!deleteReply?.startsWith(':')) {
+                        throw new IOException("Unexpected Redis DEL response: ${deleteReply}")
+                    }
+                }
+            }
+            try {
+                session.remove(tokenRefKey)
+            } catch (Exception ignored) {
+                session[tokenRefKey] = null
+            }
+            discoverOauth2SessionKeys().each { key ->
+                try {
+                    session.remove(key)
+                } catch (Exception ignored) {
+                    session[key] = null
+                }
+            }
+            return response
+        }
+
         try {
             try {
                 logger.warn("[TokenReferenceFilter] Session keys at .then(): " + session.keySet().toString())
