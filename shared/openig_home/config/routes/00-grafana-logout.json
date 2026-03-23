@@ -1,0 +1,45 @@
+{
+  "name": "00-grafana-logout",
+  "condition": "${request.headers['Host'] != null and request.headers['Host'][0] != null and matches(request.headers['Host'][0], '(?i)^grafana-c[.]sso[.]local(:[0-9]+)?$') and matches(request.method, '^(GET|POST)$') and matches(request.uri.path, '^/logout/?$')}",
+  "handler": {
+    "type": "Chain",
+    "config": {
+      "filters": [
+        {
+          "type": "ScriptableFilter",
+          "config": {
+            "type": "application/x-groovy",
+            "file": "TokenReferenceFilter.groovy",
+            "args": {
+              "clientEndpoint": "/openid/app5",
+              "redisHost": "shared-redis",
+              "redisTtl": 1800,
+              "tokenRefKey": "token_ref_id_app5",
+              "redisUser": "openig-app5",
+              "redisPasswordEnvVar": "REDIS_PASSWORD_APP5",
+              "redisKeyPrefix": "app5"
+            }
+          }
+        }
+      ],
+      "handler": {
+        "type": "ScriptableHandler",
+        "config": {
+          "type": "application/x-groovy",
+          "file": "SloHandler.groovy",
+          "args": {
+            "clientEndpoint": "/openid/app5",
+            "clientId": "openig-client-c-app5",
+            "canonicalOrigin": "http://grafana-c.sso.local:18080",
+            "postLogoutPath": "/",
+            "redisHost": "shared-redis",
+            "redisUser": "openig-app5",
+            "redisPasswordEnvVar": "REDIS_PASSWORD_APP5",
+            "redisKeyPrefix": "app5",
+            "tokenRefKey": "token_ref_id_app5"
+          }
+        }
+      }
+    }
+  }
+}

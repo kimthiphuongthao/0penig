@@ -1,0 +1,36 @@
+{
+  "heap": [
+    {
+      "name": "Router",
+      "type": "Router",
+      "config": {
+        "directory": "/tmp/openig/config/routes"
+      }
+    },
+    {
+      "name": "Session",
+      "type": "JwtSessionManager",
+      "config": {
+        "cookieName": "IG_SSO",
+        "cookieDomain": ".sso.local",
+        "sessionTimeout": "30 minutes",
+        "sharedSecret": "__JWT_SHARED_SECRET__",
+        "keystore": {
+          "type": "KeyStore",
+          "config": {
+            "url": "file:///tmp/openig/keystore/keystore.p12",
+            "password": "__KEYSTORE_PASSWORD__",
+            "type": "PKCS12"
+          }
+        },
+        "alias": "openig-jwt",
+        "password": "__KEYSTORE_PASSWORD__",
+        "cookieOptions": {
+          "path": "/",
+          "sameSite": "Lax"
+        }
+      }
+    }
+  ],
+  "handler": "Router"
+}

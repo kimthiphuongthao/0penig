@@ -1,0 +1,41 @@
+{
+  "name": "00-jellyfin-logout-intercept",
+  "condition": "${matches(request.headers['Host'][0], 'jellyfin-b.sso.local.*') and (matches(request.uri.path, '^/logout$') or matches(request.uri.toString(), '.*/logout.*'))}",
+  "handler": {
+    "type": "Chain",
+    "config": {
+      "filters": [
+        {
+          "type": "ScriptableFilter",
+          "config": {
+            "type": "application/x-groovy",
+            "file": "TokenReferenceFilter.groovy",
+            "args": {
+              "clientEndpoint": "/openid/app4",
+              "redisHost": "shared-redis",
+              "redisTtl": 1800,
+              "tokenRefKey": "token_ref_id_app4",
+              "redisUser": "openig-app4",
+              "redisPasswordEnvVar": "REDIS_PASSWORD_APP4",
+              "redisKeyPrefix": "app4"
+            }
+          }
+        }
+      ],
+      "handler": {
+        "type": "ScriptableHandler",
+        "config": {
+          "type": "application/x-groovy",
+          "file": "SloHandlerJellyfin.groovy",
+          "args": {
+            "redisHost": "shared-redis",
+            "redisUser": "openig-app4",
+            "redisPasswordEnvVar": "REDIS_PASSWORD_APP4",
+            "redisKeyPrefix": "app4",
+            "tokenRefKey": "token_ref_id_app4"
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,323 @@
+x-openig-env: &openig-env
+  OPENIG_CONFIG_DIR: /opt/openig-config
+  OPENIG_PUBLIC_URL: "${OPENIG_PUBLIC_URL:-http://openig.sso.local}"
+  KEYCLOAK_BROWSER_URL: "${KEYCLOAK_BROWSER_URL:-http://auth.sso.local:8080}"
+  KEYCLOAK_INTERNAL_URL: "${KEYCLOAK_INTERNAL_URL:-http://host.docker.internal:8080}"
+  OIDC_CLIENT_ID: "${OIDC_CLIENT_ID:-openig-client}"
+  OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET:-changeme_oidc_client_secret}"
+  OIDC_CLIENT_ID_B: "${OIDC_CLIENT_ID_B:-openig-client-b}"
+  OIDC_CLIENT_SECRET_B: "${OIDC_CLIENT_SECRET_B:-changeme_oidc_client_secret_b}"
+  OIDC_CLIENT_ID_APP4: "${OIDC_CLIENT_ID_APP4:-openig-client-b-app4}"
+  OIDC_CLIENT_SECRET_APP4: "${OIDC_CLIENT_SECRET_APP4:-changeme_oidc_client_secret_app4}"
+  OIDC_CLIENT_ID_APP5: "${OIDC_CLIENT_ID_APP5:-openig-client-c-app5}"
+  OIDC_CLIENT_SECRET_APP5: "${OIDC_CLIENT_SECRET_APP5:-changeme_oidc_client_secret_app5}"
+  OIDC_CLIENT_ID_APP6: "${OIDC_CLIENT_ID_APP6:-openig-client-c-app6}"
+  OIDC_CLIENT_SECRET_APP6: "${OIDC_CLIENT_SECRET_APP6:-changeme_oidc_client_secret_app6}"
+  JWT_SHARED_SECRET: "${JWT_SHARED_SECRET:-changeme_jwt_shared_secret}"
+  KEYSTORE_PASSWORD: "${KEYSTORE_PASSWORD:-changeme_keystore_password}"
+  REDIS_HOST: shared-redis
+  REDIS_PORT: "${REDIS_PORT:-6379}"
+  REDIS_PASSWORD_APP1: "${REDIS_PASSWORD_APP1:-changeme_app1}"
+  REDIS_PASSWORD_APP2: "${REDIS_PASSWORD_APP2:-changeme_app2}"
+  REDIS_PASSWORD_APP3: "${REDIS_PASSWORD_APP3:-changeme_app3}"
+  REDIS_PASSWORD_APP4: "${REDIS_PASSWORD_APP4:-changeme_app4}"
+  REDIS_PASSWORD_APP5: "${REDIS_PASSWORD_APP5:-changeme_app5}"
+  REDIS_PASSWORD_APP6: "${REDIS_PASSWORD_APP6:-changeme_app6}"
+  VAULT_ADDR: "http://shared-vault:8200"
+  VAULT_ROLE_ID_FILE_APP1: /vault/file/openig-app1-role-id
+  VAULT_SECRET_ID_FILE_APP1: /vault/file/openig-app1-secret-id
+  VAULT_ROLE_ID_FILE_APP2: /vault/file/openig-app2-role-id
+  VAULT_SECRET_ID_FILE_APP2: /vault/file/openig-app2-secret-id
+  VAULT_ROLE_ID_FILE_APP3: /vault/file/openig-app3-role-id
+  VAULT_SECRET_ID_FILE_APP3: /vault/file/openig-app3-secret-id
+  VAULT_ROLE_ID_FILE_APP4: /vault/file/openig-app4-role-id
+  VAULT_SECRET_ID_FILE_APP4: /vault/file/openig-app4-secret-id
+  VAULT_ROLE_ID_FILE_APP5: /vault/file/openig-app5-role-id
+  VAULT_SECRET_ID_FILE_APP5: /vault/file/openig-app5-secret-id
+  VAULT_ROLE_ID_FILE_APP6: /vault/file/openig-app6-role-id
+  VAULT_SECRET_ID_FILE_APP6: /vault/file/openig-app6-secret-id
+  CANONICAL_ORIGIN_APP1: "${CANONICAL_ORIGIN_APP1:-http://wp-a.sso.local}"
+  CANONICAL_ORIGIN_APP2: "${CANONICAL_ORIGIN_APP2:-http://whoami-a.sso.local}"
+  CANONICAL_ORIGIN_APP3: "${CANONICAL_ORIGIN_APP3:-http://redmine-b.sso.local}"
+  CANONICAL_ORIGIN_APP4: "${CANONICAL_ORIGIN_APP4:-http://jellyfin-b.sso.local}"
+  CANONICAL_ORIGIN_APP5: "${CANONICAL_ORIGIN_APP5:-http://grafana-c.sso.local}"
+  CANONICAL_ORIGIN_APP6: "${CANONICAL_ORIGIN_APP6:-http://phpmyadmin-c.sso.local}"
+  REDIS_TTL_APP1: "${REDIS_TTL_APP1:-1800}"
+  REDIS_TTL_APP2: "${REDIS_TTL_APP2:-1800}"
+  REDIS_TTL_APP3: "${REDIS_TTL_APP3:-1800}"
+  REDIS_TTL_APP4: "${REDIS_TTL_APP4:-1800}"
+  REDIS_TTL_APP5: "${REDIS_TTL_APP5:-1800}"
+  REDIS_TTL_APP6: "${REDIS_TTL_APP6:-1800}"
+  REDIS_BLACKLIST_TTL_APP1: "${REDIS_BLACKLIST_TTL_APP1:-28800}"
+  REDIS_BLACKLIST_TTL_APP2: "${REDIS_BLACKLIST_TTL_APP2:-28800}"
+  REDIS_BLACKLIST_TTL_APP3: "${REDIS_BLACKLIST_TTL_APP3:-28800}"
+  REDIS_BLACKLIST_TTL_APP4: "${REDIS_BLACKLIST_TTL_APP4:-28800}"
+  REDIS_BLACKLIST_TTL_APP5: "${REDIS_BLACKLIST_TTL_APP5:-28800}"
+  REDIS_BLACKLIST_TTL_APP6: "${REDIS_BLACKLIST_TTL_APP6:-28800}"
+  REDIS_BACKCHANNEL_PORT: "${REDIS_BACKCHANNEL_PORT:-6379}"
+  JELLYFIN_SERVER_ID: "${JELLYFIN_SERVER_ID:-8a4467ecf1d4422583f472d90cb8c78f}"
+
+x-openig-volumes: &openig-volumes
+  - ./openig_home:/opt/openig-config:ro
+  - ./docker/openig/server.xml:/usr/local/tomcat/conf/server.xml:ro
+  - ./docker/openig/docker-entrypoint.sh:/docker-entrypoint.sh:ro
+  - ./vault/file:/vault/file:ro
+
+x-openig-healthcheck: &openig-healthcheck
+  test: ["CMD", "curl", "-f", "http://localhost:8080/openig/api/info"]
+  interval: 30s
+  timeout: 10s
+  retries: 5
+  start_period: 60s
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+
+volumes:
+  proxy_temp:
+  redis_data:
+  mysql_data_a:
+  mysql_data_b:
+  wordpress_data:
+  redmine_data:
+  jellyfin_data:
+  grafana_data:
+  mariadb_data:
+
+services:
+  shared-nginx:
+    image: nginx:alpine
+    container_name: shared-nginx
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - proxy_temp:/var/cache/nginx
+    depends_on:
+      shared-openig-1:
+        condition: service_healthy
+      shared-openig-2:
+        condition: service_healthy
+    networks:
+      - frontend
+      - backend
+    restart: unless-stopped
+
+  shared-openig-1:
+    image: openidentityplatform/openig:6.0.1
+    platform: linux/amd64
+    container_name: shared-openig-1
+    user: root
+    entrypoint: ["/docker-entrypoint.sh"]
+    volumes: *openig-volumes
+    environment:
+      <<: *openig-env
+      OPENIG_NODE_NAME: shared-openig-1
+    networks:
+      - backend
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    healthcheck: *openig-healthcheck
+    restart: unless-stopped
+
+  shared-openig-2:
+    image: openidentityplatform/openig:6.0.1
+    platform: linux/amd64
+    container_name: shared-openig-2
+    user: root
+    entrypoint: ["/docker-entrypoint.sh"]
+    volumes: *openig-volumes
+    environment:
+      <<: *openig-env
+      OPENIG_NODE_NAME: shared-openig-2
+    networks:
+      - backend
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    healthcheck: *openig-healthcheck
+    restart: unless-stopped
+
+  shared-redis:
+    image: redis:7-alpine
+    container_name: shared-redis
+    entrypoint: ["/redis-entrypoint.sh"]
+    volumes:
+      - ./redis/acl.conf:/etc/redis/acl.conf.template:ro
+      - ./docker/redis/redis-entrypoint.sh:/redis-entrypoint.sh:ro
+      - redis_data:/data
+    environment:
+      REDIS_PASSWORD_APP1: "${REDIS_PASSWORD_APP1:-changeme_app1}"
+      REDIS_PASSWORD_APP2: "${REDIS_PASSWORD_APP2:-changeme_app2}"
+      REDIS_PASSWORD_APP3: "${REDIS_PASSWORD_APP3:-changeme_app3}"
+      REDIS_PASSWORD_APP4: "${REDIS_PASSWORD_APP4:-changeme_app4}"
+      REDIS_PASSWORD_APP5: "${REDIS_PASSWORD_APP5:-changeme_app5}"
+      REDIS_PASSWORD_APP6: "${REDIS_PASSWORD_APP6:-changeme_app6}"
+    networks:
+      - backend
+    restart: unless-stopped
+
+  shared-vault:
+    image: hashicorp/vault:1.15
+    container_name: shared-vault
+    command: server
+    volumes:
+      - ./vault/config:/vault/config:ro
+      - ./vault/data:/vault/data
+      - ./vault/file:/vault/file
+      - ./vault/init:/vault/init:ro
+      - ./vault/keys:/vault/keys
+    networks:
+      - backend
+    cap_add:
+      - IPC_LOCK
+    environment:
+      VAULT_ADDR: http://127.0.0.1:8200
+    restart: unless-stopped
+
+  shared-wordpress:
+    image: wordpress:latest
+    container_name: shared-wordpress
+    entrypoint: ["bash", "-c", "a2enmod alias && exec docker-entrypoint.sh apache2-foreground"]
+    environment:
+      WORDPRESS_DB_HOST: shared-mysql-a
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: "${WORDPRESS_DB_PASSWORD:-wordpress_pass}"
+      WORDPRESS_TABLE_PREFIX: wp_
+    volumes:
+      - wordpress_data:/var/www/html
+      - ./docker/wordpress/app1.conf:/etc/apache2/conf-enabled/app1.conf:ro
+    depends_on:
+      shared-mysql-a:
+        condition: service_healthy
+    networks:
+      - backend
+    restart: unless-stopped
+
+  shared-mysql-a:
+    image: mysql:8
+    container_name: shared-mysql-a
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD_A:-changeme_mysql_root_password_a}"
+    volumes:
+      - mysql_data_a:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  shared-whoami:
+    image: traefik/whoami
+    container_name: shared-whoami
+    networks:
+      - backend
+    restart: unless-stopped
+
+  shared-redmine:
+    image: redmine:5
+    container_name: shared-redmine
+    environment:
+      REDMINE_DB_MYSQL: shared-mysql-b
+      REDMINE_DB_DATABASE: redmine
+      REDMINE_DB_USERNAME: redmine
+      REDMINE_DB_PASSWORD: "${REDMINE_DB_PASSWORD:-changeme_redmine_db_password}"
+      REDMINE_SECRET_KEY_BASE: "${REDMINE_SECRET_KEY_BASE:-changeme_redmine_secret_key_base}"
+    depends_on:
+      shared-mysql-b:
+        condition: service_healthy
+    volumes:
+      - redmine_data:/usr/src/redmine/files
+    networks:
+      - backend
+    restart: unless-stopped
+
+  shared-mysql-b:
+    image: mysql:8
+    container_name: shared-mysql-b
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD_B:-changeme_mysql_root_password_b}"
+      MYSQL_DATABASE: redmine
+      MYSQL_USER: redmine
+      MYSQL_PASSWORD: "${REDMINE_DB_PASSWORD:-changeme_redmine_db_password}"
+    volumes:
+      - mysql_data_b:/var/lib/mysql
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  shared-jellyfin:
+    image: jellyfin/jellyfin
+    container_name: shared-jellyfin
+    environment:
+      TZ: "${TZ:-Asia/Ho_Chi_Minh}"
+    volumes:
+      - jellyfin_data:/config
+    networks:
+      - backend
+    restart: unless-stopped
+
+  shared-grafana:
+    image: grafana/grafana
+    container_name: shared-grafana
+    environment:
+      GF_AUTH_PROXY_ENABLED: "true"
+      GF_AUTH_PROXY_HEADER_NAME: X-WEBAUTH-USER
+      GF_AUTH_PROXY_HEADER_PROPERTY: username
+      GF_AUTH_PROXY_AUTO_SIGN_UP: "true"
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_SERVER_ROOT_URL: "${CANONICAL_ORIGIN_APP5:-http://grafana-c.sso.local}"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - backend
+    restart: unless-stopped
+
+  shared-phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: shared-phpmyadmin
+    environment:
+      PMA_HOST: shared-mariadb
+      PMA_AUTH_TYPE: http
+    volumes:
+      - ./openig_home/phpmyadmin/config.user.inc.php:/etc/phpmyadmin/config.user.inc.php:ro
+    depends_on:
+      shared-mariadb:
+        condition: service_healthy
+    networks:
+      - backend
+    restart: unless-stopped
+
+  shared-mariadb:
+    image: mariadb:11
+    container_name: shared-mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD_C:-changeme_mysql_root_password_c}"
+      MYSQL_DATABASE: appdb
+      MYSQL_USER: alice
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD_C:-AlicePass123}"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h localhost -uroot -p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped

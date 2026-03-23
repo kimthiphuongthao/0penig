@@ -1,0 +1,45 @@
+{
+  "name": "00-wp-logout-intercept",
+  "condition": "${(matches(request.uri.path, '^/app1/wp-login[.]php$') or (request.headers['Host'] != null and request.headers['Host'][0] != null and matches(request.headers['Host'][0], '(?i)^wp-a[.]sso[.]local([.].*)?(:[0-9]+)?$') and matches(request.uri.path, '^/wp-login[.]php$'))) and request.uri.query != null and matches(request.uri.query, '(^|&)action=logout($|&)')}",
+  "handler": {
+    "type": "Chain",
+    "config": {
+      "filters": [
+        {
+          "type": "ScriptableFilter",
+          "config": {
+            "type": "application/x-groovy",
+            "file": "TokenReferenceFilter.groovy",
+            "args": {
+              "clientEndpoint": "/openid/app1",
+              "redisHost": "shared-redis",
+              "redisTtl": 1800,
+              "tokenRefKey": "token_ref_id_app1",
+              "redisUser": "openig-app1",
+              "redisPasswordEnvVar": "REDIS_PASSWORD_APP1",
+              "redisKeyPrefix": "app1"
+            }
+          }
+        }
+      ],
+      "handler": {
+        "type": "ScriptableHandler",
+        "config": {
+          "type": "application/x-groovy",
+          "file": "SloHandler.groovy",
+          "args": {
+            "clientEndpoint": "/openid/app1",
+            "clientId": "openig-client",
+            "canonicalOrigin": "http://wp-a.sso.local",
+            "postLogoutPath": "/",
+            "redisHost": "shared-redis",
+            "redisUser": "openig-app1",
+            "redisPasswordEnvVar": "REDIS_PASSWORD_APP1",
+            "redisKeyPrefix": "app1",
+            "tokenRefKey": "token_ref_id_app1"
+          }
+        }
+      }
+    }
+  }
+}

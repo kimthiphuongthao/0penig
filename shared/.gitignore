@@ -1,0 +1,11 @@
+.env
+vault/keys/*
+!vault/keys/.gitkeep
+vault/data/*
+!vault/data/.gitkeep
+vault/file/*
+!vault/file/.gitkeep
+openig_home/vault/*
+!openig_home/vault/.gitkeep
+openig_home/keystore/
+*.pid

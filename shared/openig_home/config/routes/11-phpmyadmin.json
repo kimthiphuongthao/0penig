@@ -1,0 +1,187 @@
+{
+  "name": "phpmyadmin-sso",
+  "baseURI": "http://phpmyadmin:80",
+  "condition": "${matches(request.headers['Host'][0], 'phpmyadmin-c.sso.local.*') and not(matches(request.uri.path, '^/openid/app6/backchannel_logout$'))}",
+  "heap": [
+    {
+      "name": "KeycloakIssuer",
+      "type": "Issuer",
+      "config": {
+        "issuer": "${env['KEYCLOAK_BROWSER_URL']}/realms/sso-realm",
+        "authorizeEndpoint": "${env['KEYCLOAK_BROWSER_URL']}/realms/sso-realm/protocol/openid-connect/auth",
+        "tokenEndpoint": "${env['KEYCLOAK_INTERNAL_URL']}/realms/sso-realm/protocol/openid-connect/token",
+        "userInfoEndpoint": "${env['KEYCLOAK_INTERNAL_URL']}/realms/sso-realm/protocol/openid-connect/userinfo",
+        "jwksUri": "${env['KEYCLOAK_INTERNAL_URL']}/realms/sso-realm/protocol/openid-connect/certs"
+      }
+    },
+    {
+      "name": "PhpMyAdminClientReg",
+      "type": "ClientRegistration",
+      "config": {
+        "clientId": "openig-client-c-app6",
+        "clientSecret": "${env['OIDC_CLIENT_SECRET_APP6']}",
+        "issuer": "KeycloakIssuer",
+        "scopes": [
+          "openid",
+          "profile",
+          "email"
+        ]
+      }
+    },
+    {
+      "name": "OidcFilterApp6",
+      "type": "OAuth2ClientFilter",
+      "config": {
+        "clientEndpoint": "/openid/app6",
+        "registrations": [
+          "PhpMyAdminClientReg"
+        ],
+        "scopes": [
+          "openid",
+          "profile",
+          "email"
+        ],
+        "requireHttps": false,
+        "target": "${attributes.openid}",
+        "failureHandler": {
+          "type": "StaticResponseHandler",
+          "config": {
+            "status": 500,
+            "reason": "Internal Server Error",
+            "headers": {
+              "Content-Type": [
+                "text/html"
+              ]
+            },
+            "entity": "<html><body><h2>SSO authentication failed. Please contact support.</h2></body></html>"
+          }
+        }
+      }
+    },
+    {
+      "name": "TokenReferenceFilterApp6",
+      "type": "ScriptableFilter",
+      "config": {
+        "type": "application/x-groovy",
+        "file": "TokenReferenceFilter.groovy",
+        "args": {
+          "clientEndpoint": "/openid/app6",
+          "redisHost": "shared-redis",
+          "redisTtl": 1800,
+          "tokenRefKey": "token_ref_id_app6",
+          "sessionCacheKey": "oidc_sid_app6",
+          "redisUser": "openig-app6",
+          "redisPasswordEnvVar": "REDIS_PASSWORD_APP6",
+          "redisKeyPrefix": "app6"
+        }
+      }
+    },
+    {
+      "name": "SessionBlacklistFilterApp6",
+      "type": "ScriptableFilter",
+      "config": {
+        "type": "application/x-groovy",
+        "file": "SessionBlacklistFilter.groovy",
+        "args": {
+          "clientEndpoint": "/openid/app6",
+          "sessionCacheKey": "oidc_sid_app6",
+          "canonicalOrigin": "http://phpmyadmin-c.sso.local:18080",
+          "canonicalOriginEnvVar": "CANONICAL_ORIGIN_APP6",
+          "redisUser": "openig-app6",
+          "redisPasswordEnvVar": "REDIS_PASSWORD_APP6",
+          "redisKeyPrefix": "app6"
+        }
+      }
+    },
+    {
+      "name": "StripGatewaySessionCookiesApp6",
+      "type": "ScriptableFilter",
+      "config": {
+        "type": "application/x-groovy",
+        "file": "StripGatewaySessionCookies.groovy"
+      }
+    },
+    {
+      "name": "VaultCredentialFilter",
+      "type": "ScriptableFilter",
+      "config": {
+        "type": "application/x-groovy",
+        "file": "VaultCredentialFilter.groovy",
+        "args": {
+          "appDisplayName": "phpMyAdmin",
+          "secretPathPrefix": "phpmyadmin",
+          "lookupUserInfoField": "preferred_username",
+          "credentialAttributeName": "phpmyadmin_credentials",
+          "credentialUsernameSource": "secret",
+          "credentialUsernameField": "username",
+          "attributeUsernameField": "username",
+          "credentialPasswordField": "password",
+          "attributePasswordField": "password",
+          "appRoleName": "openig-app6",
+          "vaultRoleIdFile": "/vault/file/openig-app6-role-id",
+          "vaultSecretIdFile": "/vault/file/openig-app6-secret-id"
+        }
+      }
+    },
+    {
+      "name": "PhpMyAdminBasicAuth",
+      "type": "HttpBasicAuthFilter",
+      "config": {
+        "username": "${attributes.phpmyadmin_credentials['username']}",
+        "password": "${attributes.phpmyadmin_credentials['password']}",
+        "cacheHeader": false,
+        "failureHandler": {
+          "type": "ScriptableHandler",
+          "config": {
+            "type": "application/x-groovy",
+            "file": "PhpMyAdminAuthFailureHandler.groovy",
+            "args": {
+              "clientEndpoint": "/openid/app6",
+              "clientId": "openig-client-c-app6",
+              "canonicalOrigin": "http://phpmyadmin-c.sso.local:18080",
+              "postLogoutPath": "/",
+              "redirectUrl": "http://phpmyadmin-c.sso.local:18080/",
+              "logoutPathNeedles": [
+                "logout"
+              ],
+              "logoutQueryNeedles": [
+                "logout=1",
+                "route=/logout",
+                "route=%2flogout",
+                "old_usr="
+              ],
+              "retryQueryParam": "_ig_pma_retry",
+              "retryQueryValue": "1",
+              "sessionKeysToClear": [
+                "oauth2:http://phpmyadmin-c.sso.local:18080/openid/app6",
+                "oidc_sid_app6",
+                "token_ref_id_app6"
+              ]
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "PhpMyAdminProxy",
+      "type": "ClientHandler",
+      "config": {
+        "soTimeout": "10 seconds"
+      }
+    }
+  ],
+  "handler": {
+    "type": "Chain",
+    "config": {
+      "filters": [
+        "TokenReferenceFilterApp6",
+        "OidcFilterApp6",
+        "SessionBlacklistFilterApp6",
+        "StripGatewaySessionCookiesApp6",
+        "VaultCredentialFilter",
+        "PhpMyAdminBasicAuth"
+      ],
+      "handler": "PhpMyAdminProxy"
+    }
+  }
+}
