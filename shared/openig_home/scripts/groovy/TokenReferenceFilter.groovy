@@ -352,9 +352,10 @@ try {
                 tokenRefKey,
                 newTokenRefId
             )
-        } catch (Exception e) {
-            logger.error('[TokenReferenceFilter] Failed to offload oauth2 session for endpoint={}', configuredClientEndpoint, e)
-        }
+          } catch (Exception e) {
+              logger.error('[TokenReferenceFilter] Failed to offload oauth2 session for endpoint={}', configuredClientEndpoint, e)
+              return new Response(Status.INTERNAL_SERVER_ERROR)
+          }
 
         response
     })

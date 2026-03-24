@@ -182,7 +182,9 @@ path "sys/mounts" { capabilities = ["read"] }
 path "sys/mounts/*" { capabilities = ["read"] }
 ADMIN_POLICY
 
-  admin_token=$(vault token create -orphan -policy=vault-admin -period=8760h -field=token)
+  # Admin token: period=720h (30d). Renew with: vault token renew <token> before expiry.
+  # If expired, re-run bootstrap to generate a new token.
+  admin_token=$(vault token create -orphan -policy=vault-admin -period=720h -field=token)
   if [ -z "$admin_token" ]; then
     echo "WARNING: Failed to create admin token. Root token NOT revoked."
     return 0
