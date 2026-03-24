@@ -265,7 +265,9 @@ shared/
 ### Step 3: Migrate Stack A (WordPress + WhoAmI) + Validate
 **Goal:** Bring Stack A apps into the shared infrastructure, update Keycloak, and validate SSO/SLO.
 
-**Status (2026-03-24):** DONE for user-confirmed Stack A SSO/SLO coverage on `shared-openig-2`. User testing confirmed WordPress and WhoAmI SSO login, WordPress logout with backchannel + blacklist write, and cross-app SLO. The remaining Redis CLI isolation checks and rollback verification stay open.
+**Status (2026-03-24):** PARTIAL. Shared infra starts cleanly for Stack A and routes load on `shared-openig-2`, but explicit per-app Stack A SSO/SLO confirmation is still pending.
+
+> 2026-03-24 partial test: hasPendingState fix verified on shared-openig-2 (1 app, no errors). Full per-app SSO/SLO matrix still pending.
 
 **Sub-tasks:**
 
@@ -309,10 +311,10 @@ shared/
 **Acceptance criteria:**
 - [x] `docker compose up -d` starts all services without errors
 - [x] All routes loaded (grep `Loaded the route` in OpenIG logs)
-- [x] WordPress SSO login works (alice + bob)
-- [x] WhoAmI SSO login works
-- [x] WordPress SLO logout works (backchannel fires, blacklist written)
-- [x] Cross-app SLO works (logout from WordPress logs out WhoAmI)
+- [ ] WordPress SSO login works (alice + bob)
+- [ ] WhoAmI SSO login works
+- [ ] WordPress SLO logout works (backchannel fires, blacklist written)
+- [ ] Cross-app SLO works (logout from WordPress logs out WhoAmI)
 - [ ] Redis keys are prefixed (`app1:*`, `app2:*`)
 - [ ] Redis ACL blocks cross-app key access
 - [ ] Old Stack A still functional on port 80 if needed for rollback (stop shared nginx first)
@@ -322,7 +324,9 @@ shared/
 ### Step 4: Migrate Stack B + C (Redmine, Jellyfin, Grafana, phpMyAdmin) + Full Validation
 **Goal:** Add remaining 4 apps to shared infrastructure and validate all 6 apps together.
 
-**Status (2026-03-24):** PARTIAL. The shared runtime is serving Stack B/C, the `TokenReferenceFilter` mixed-state regression is fixed by `5fb549d`, and user SSO/SLO testing on `shared-openig-2` confirmed end-to-end login/logout coverage across all 6 apps with zero OpenIG `ERROR` lines. The remaining CLI isolation checks and targeted edge-case verification are still open.
+**Status (2026-03-24):** PARTIAL. The shared runtime is serving Stack B/C, and the `TokenReferenceFilter` mixed-state regression fix in `5fb549d` was verified on `shared-openig-2` without runtime errors during the partial test session. Full per-app SSO/SLO confirmation across all 6 apps is still pending.
+
+> 2026-03-24 partial test: hasPendingState fix verified on shared-openig-2 (1 app, no errors). Full per-app SSO/SLO matrix still pending.
 
 **Sub-tasks:**
 
@@ -361,9 +365,9 @@ shared/
    - `vault read secret/data/wp-creds/alice` with app3 token → access denied
 
 **Acceptance criteria:**
-- [x] All 6 apps SSO login works (alice for all, bob where applicable)
-- [x] All 6 apps SLO logout works (backchannel fires, blacklist written)
-- [x] Cross-app SLO works (logout from any app triggers backchannel for all)
+- [ ] All 6 apps SSO login works (alice for all, bob where applicable)
+- [ ] All 6 apps SLO logout works (backchannel fires, blacklist written)
+- [ ] Cross-app SLO works (logout from any app triggers backchannel for all)
 - [ ] Redis keys properly prefixed per app (no cross-contamination)
 - [ ] Redis ACL blocks cross-app access (verified via CLI)
 - [ ] Vault per-app AppRoles scoped correctly (verified via CLI)
