@@ -5,8 +5,9 @@ tags:
   - stack-shared
   - openig
   - planning
-date: 2026-03-23
-status: ready
+  - validation
+date: 2026-03-24
+status: active
 ---
 
 # Shared Stack
@@ -42,11 +43,43 @@ Primary output: `.omc/plans/shared-infra.md`
 - The plan includes 5 execution steps, acceptance criteria, open questions, estimated complexity, and risk mitigation.
 - Existing per-stack implementations in [[Stack A]], [[Stack B]], and [[Stack C]] remain unchanged.
 
+## 2026-03-24 Acceptance Update
+
+User-confirmed testing on `shared-openig-2` closed the main Step 3 and Step 4 SSO/SLO acceptance items in `.omc/plans/shared-infra.md`.
+
+Confirmed done:
+
+- Step 3: WordPress SSO works for `alice` and `bob`.
+- Step 3: [[WhoAmI]] SSO works.
+- Step 3: WordPress SLO triggers backchannel logout and writes the blacklist entry.
+- Step 3: Cross-app SLO works between WordPress and [[WhoAmI]].
+- Step 4: All 6 apps complete SSO login successfully, with `alice` across all apps and `bob` where applicable.
+- Step 4: All 6 apps complete SLO logout successfully, with backchannel firing and blacklist writes confirmed.
+- Step 4: Cross-app SLO works across the full 6-app shared runtime.
+- Step 4: Testing session stayed at zero OpenIG `ERROR` lines on `shared-openig-2`.
+
+Still open by design:
+
+- Redis key-prefix verification via `redis-cli`.
+- Redis ACL cross-app denial verification via `redis-cli`.
+- [[Vault]] per-app AppRole scope verification via Vault CLI.
+- Explicit `JWT session is too large` log check.
+- Jellyfin `deviceId` stability check across sessions.
+- phpMyAdmin `bob` login verification.
+- Step 5 cleanup and documentation items.
+- Step 1 committed-secret hygiene item.
+
+> [!success]
+> The shared stack is now documented as functionally passing user-confirmed end-to-end SSO/SLO coverage for Step 3 and the major Step 4 flow checks.
+
+> [!warning]
+> Isolation guarantees are not fully closed until the Redis and [[Vault]] CLI checks are executed and recorded.
+
 ## Next Steps
 
-- Review `.omc/plans/shared-infra.md` for any final scope corrections before implementation starts.
-- Execute the plan in order, beginning with shared foundation scaffolding and secret/bootstrap contracts.
-- Keep implementation limited to allowed gateway-side assets: OpenIG routes, Groovy scripts, nginx, and Vault/bootstrap wiring.
+- Run the remaining Redis CLI checks for key prefixes and ACL denial.
+- Run the remaining [[Vault]] AppRole isolation checks.
+- Decide when to close Step 5 packaging and final documentation migration.
 
 > [!tip] Implementation guardrail
 > Preserve zero blast radius by keeping Redis ACL, Vault AppRole, and per-route session isolation aligned per app from the first shared-stack commit.
