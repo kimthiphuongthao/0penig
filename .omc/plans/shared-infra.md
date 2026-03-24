@@ -1,6 +1,6 @@
 # Shared Infrastructure Consolidation Plan
 
-> Status update 2026-03-24: Shared runtime is active on branch `feat/shared-infra`. `shared-openig-1/2` serve the shared mount at `shared/openig_home`, `cd shared && docker compose config` validates, and `stack-c-openig-c1-1` / `stack-c-openig-c2-1` were confirmed orphaned and stopped. The blocking SSO-after-SLO bug is now fixed in shared infra by `5fb549d`; full Step 4/5 closeout still needs the remaining Redis ACL CLI checks, Vault isolation checks, packaging, and final documentation migration.
+> Status update 2026-03-24: Shared runtime is active on branch `feat/shared-infra`. `shared-openig-1/2` serve the shared mount at `shared/openig_home`, `cd shared && docker compose config` validates, and `stack-c-openig-c1-1` / `stack-c-openig-c2-1` were confirmed orphaned and stopped. The blocking SSO-after-SLO bug is fixed in shared infra by `5fb549d`. Current validation is `5/6` apps PASS for SSO/SLO (`app1`, `app3`, `app4`, `app5`, `app6`), with `app2` WhoAmI pending one user login/logout test. Redis ACL is hardened to the minimal command set, Vault per-app isolation is PASS, and Step 5 cleanup/documentation migration is next.
 
 ## Context
 
@@ -268,9 +268,9 @@ shared/
 ### Step 3: Migrate Stack A (WordPress + WhoAmI) + Validate
 **Goal:** Bring Stack A apps into the shared infrastructure, update Keycloak, and validate SSO/SLO.
 
-**Status (2026-03-24):** PARTIAL. Shared infra starts cleanly for Stack A, routes load on `shared-openig-2`, and Redis CLI checks now confirm prefixed keys plus blocked cross-app writes. Explicit per-app Stack A SSO/SLO confirmation is still pending.
+**Status (2026-03-24):** PARTIAL. Stack A is mostly validated on shared infra: WordPress is PASS for SSO/SLO, while app2 WhoAmI still needs one user login/logout test before Stack A can be closed.
 
-> 2026-03-24 partial test: hasPendingState fix verified on shared-openig-2 (1 app, no errors). Redis CLI also confirmed `appN:` key prefixes, `default` user disabled, and cross-app `SET` blocked for per-app users. Remaining Redis ACL finding: `KEYS *` / `SCAN` can still enumerate other apps' key names because ACLs still grant `+@all`; user decision pending on tightening the command set or accepting the limitation.
+> 2026-03-24 session: 5/6 apps SSO/SLO PASS. app2 WhoAmI pending 1 test. Redis ACL hardened to minimal commands. Vault isolation PASS. nginx cookie fix applied.
 
 > Open item: `shared/openig_home/config/routes/00-backchannel-logout-app2.json` is missing, so Keycloak backchannel logout initiated from app1 currently does not revoke app2 (WhoAmI) sessions.
 
@@ -316,13 +316,13 @@ shared/
 **Acceptance criteria:**
 - [x] `docker compose up -d` starts all services without errors
 - [x] All routes loaded (grep `Loaded the route` in OpenIG logs)
-- [ ] WordPress SSO login works (alice + bob)
+- [x] WordPress SSO login works (alice + bob)
 - [ ] WhoAmI SSO login works
-- [ ] WordPress SLO logout works (backchannel fires, blacklist written)
+- [x] WordPress SLO logout works (backchannel fires, blacklist written)
 - [ ] Cross-app SLO works (logout from WordPress logs out WhoAmI)
 - [x] Redis keys are prefixed (`app1:*`, `app2:*`)
 - [x] Redis ACL blocks cross-app writes
-- [ ] Redis key-name enumeration is isolated across apps (`KEYS` / `SCAN`) (pending user decision)
+- [x] Redis ACL minimal command set verified (`+set`, `+get`, `+del`, `+exists`, `+ping`)
 - [ ] Old Stack A still functional on port 80 if needed for rollback (stop shared nginx first)
 
 ---
@@ -330,9 +330,9 @@ shared/
 ### Step 4: Migrate Stack B + C (Redmine, Jellyfin, Grafana, phpMyAdmin) + Full Validation
 **Goal:** Add remaining 4 apps to shared infrastructure and validate all 6 apps together.
 
-**Status (2026-03-24):** PARTIAL. The shared runtime is serving Stack B/C, and the `TokenReferenceFilter` mixed-state regression fix in `5fb549d` was verified on `shared-openig-2` without runtime errors during the partial test session. Full per-app SSO/SLO confirmation across all 6 apps is still pending.
+**Status (2026-03-24):** PARTIAL. Stack B/C validation is functionally complete on shared infra: Redmine, Jellyfin, Grafana, and phpMyAdmin are PASS for SSO/SLO. Overall validation remains open only because app2 WhoAmI still needs one user test to finish the 6-app matrix.
 
-> 2026-03-24 partial test: hasPendingState fix verified on shared-openig-2 (1 app, no errors). Full per-app SSO/SLO matrix still pending.
+> 2026-03-24 session: 5/6 apps SSO/SLO PASS. app2 WhoAmI pending 1 test. Redis ACL hardened to minimal commands. Vault isolation PASS. nginx cookie fix applied.
 
 **Sub-tasks:**
 
@@ -371,16 +371,20 @@ shared/
    - `vault read secret/data/wp-creds/alice` with app3 token → access denied
 
 **Acceptance criteria:**
-- [ ] All 6 apps SSO login works (alice for all, bob where applicable)
-- [ ] All 6 apps SLO logout works (backchannel fires, blacklist written)
+- [x] Redmine SSO/SLO works
+- [x] Jellyfin SSO/SLO works (1 login confirmed)
+- [x] Grafana SSO/SLO works
+- [x] phpMyAdmin SSO/SLO works (alice + bob confirmed)
+- [ ] All 6 apps SSO/SLO matrix complete (app2 WhoAmI pending)
 - [ ] Cross-app SLO works (logout from any app triggers backchannel for all)
-- [ ] Redis keys properly prefixed per app (no cross-contamination)
-- [ ] Redis ACL blocks cross-app access (verified via CLI)
-- [ ] Vault per-app AppRoles scoped correctly (verified via CLI)
-- [ ] No `JWT session is too large` errors in logs
+- [x] Redis keys properly prefixed per app (no cross-contamination)
+- [x] Redis ACL blocks cross-app access (verified via CLI)
+- [x] Redis ACL minimal command set verified (`+set`, `+get`, `+del`, `+exists`, `+ping`)
+- [x] Vault per-app AppRoles scoped correctly (verified via CLI)
+- [x] No `JWT session is too large` errors in logs
 - [x] TokenReferenceFilter store/restore works for all 6 apps
 - [ ] Jellyfin deviceId stable across sessions (SHA-256 from sub)
-- [ ] phpMyAdmin bob login works (MariaDB user + Vault secret aligned)
+- [x] phpMyAdmin bob login works (MariaDB user + Vault secret aligned)
 
 ---
 
