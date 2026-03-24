@@ -1,5 +1,7 @@
 # Shared Infrastructure Consolidation Plan
 
+> Status update 2026-03-24: Shared runtime is active on branch `feat/shared-infra`. `shared-openig-1/2` serve the shared mount at `shared/openig_home`, `cd shared && docker compose config` validates, and `stack-c-openig-c1-1` / `stack-c-openig-c2-1` were confirmed orphaned and stopped. The blocking SSO-after-SLO bug is now fixed in shared infra by `5fb549d`; full Step 4/5 closeout still needs the remaining Redis ACL CLI checks, Vault isolation checks, packaging, and final documentation migration.
+
 ## Context
 
 The SSO Lab currently runs 3 independent stacks, each with its own nginx, 2 OpenIG HA nodes, Redis, and Vault instance. This creates 6 OpenIG containers, 3 Redis containers, 3 Vault containers, and 3 nginx containers serving 6 legacy apps. After pattern consolidation (Steps 1-6), Groovy scripts are already parameterized templates shared across stacks via route `args`. The goal is to consolidate into a single shared infrastructure with banking-grade isolation at the application layer.
@@ -38,7 +40,7 @@ Container count: 18 -> 11 (nginx 3->1, OpenIG 6->2, Redis 3->1, Vault 3->1, apps
 
 ## Prerequisites
 
-- **BUG-SSO2-AFTER-SLO must be fixed and merged first.** Consolidation should start from a known-good state. The 3-part fix (SloHandler Redis cleanup, SloHandlerJellyfin Redis cleanup, TokenReferenceFilter targeted removal) is designed and ready for implementation. Attempting consolidation with this bug present would make debugging significantly harder.
+- [x] **BUG-SSO2-AFTER-SLO fixed in shared infra.** Confirmed root cause: `TokenReferenceFilter.groovy` `.then()` mishandled mixed state after SLO, where pending OAuth2 authorization state coexisted with stale real-token entries under different URL-format keys; the next SSO callback then failed with `no authorization in progress` and a 500. Current fix: `hasPendingState` cleanup in `shared/openig_home/scripts/groovy/TokenReferenceFilter.groovy` (`5fb549d`), verified after restart `2026-03-24T02:29:40Z` with clean post-test logs on `shared-openig-2` (no `invalid_token`, `no authorization in progress`, or `Missing Redis`).
 
 ## Design Decisions (User-Confirmed)
 
@@ -69,6 +71,8 @@ Container count: 18 -> 11 (nginx 3->1, OpenIG 6->2, Redis 3->1, Vault 3->1, apps
 
 ### Step 1: Foundation Infrastructure
 **Goal:** Create the `shared/` directory with all infrastructure components configured and ready, before wiring any apps.
+
+**Status (2026-03-24):** MOSTLY DONE. The shared directory, merged nginx/OpenIG/Redis/Vault layout, and compose wiring are present and runnable. The remaining unchecked acceptance item is secret hygiene in committed bootstrap material.
 
 **Directory structure:**
 ```
@@ -169,18 +173,20 @@ shared/
    - `MYSQL_ROOT_PASSWORD_C`, `MYSQL_PASSWORD_C`
 
 **Acceptance criteria:**
-- [ ] `shared/` directory created with all files above
-- [ ] `cd shared && docker compose config` validates without error
-- [ ] Redis ACL config has 6 users with distinct key prefixes
-- [ ] Vault bootstrap creates 6 AppRoles with scoped policies
-- [ ] nginx.conf has all 6 server blocks on port 80
-- [ ] config.json has single JwtSession named `"Session"` with cookie `IG_SSO`
+- [x] `shared/` directory created with all files above
+- [x] `cd shared && docker compose config` validates without error
+- [x] Redis ACL config has 6 users with distinct key prefixes
+- [x] Vault bootstrap creates 6 AppRoles with scoped policies
+- [x] nginx.conf has all 6 server blocks on port 80
+- [x] config.json has single JwtSession named `"Session"` with cookie `IG_SSO`
 - [ ] No hardcoded secrets in committed files (all via `.env` or placeholders)
 
 ---
 
 ### Step 2: Groovy Script Adaptation for Redis ACL + Per-App Vault
 **Goal:** Modify the 4 Groovy scripts that connect to Redis or Vault so they work with ACL authentication and per-app AppRoles. Update all 16 route files with new args.
+
+**Status (2026-03-24):** DONE. Shared Groovy templates and shared route files carry the Redis ACL / per-app Vault adaptation and load successfully in the active shared OpenIG runtime.
 
 **Sub-tasks:**
 
@@ -247,17 +253,19 @@ shared/
    ```
 
 **Acceptance criteria:**
-- [ ] TokenReferenceFilter, BackchannelLogoutHandler, SessionBlacklistFilter all support `AUTH <username> <password>` via `redisUser` arg
-- [ ] All 3 scripts prefix Redis keys with `redisKeyPrefix` arg
-- [ ] VaultCredentialFilter uses per-app cache key `vault_token_${appRoleName}`
-- [ ] VaultCredentialFilter reads per-app role_id/secret_id file paths from args
-- [ ] All 16 route files have correct new args for their respective app
-- [ ] No Groovy compilation errors (verify via container startup log)
+- [x] TokenReferenceFilter, BackchannelLogoutHandler, SessionBlacklistFilter all support `AUTH <username> <password>` via `redisUser` arg
+- [x] All 3 scripts prefix Redis keys with `redisKeyPrefix` arg
+- [x] VaultCredentialFilter uses per-app cache key `vault_token_${appRoleName}`
+- [x] VaultCredentialFilter reads per-app role_id/secret_id file paths from args
+- [x] All 16 route files have correct new args for their respective app
+- [x] No Groovy compilation errors (verify via container startup log)
 
 ---
 
 ### Step 3: Migrate Stack A (WordPress + WhoAmI) + Validate
 **Goal:** Bring Stack A apps into the shared infrastructure, update Keycloak, and validate SSO/SLO.
+
+**Status (2026-03-24):** PARTIAL. Shared services are up and the shared route set loads, but this audit did not replay the full Stack A validation matrix, so only the infrastructure-level confirmations are closed here.
 
 **Sub-tasks:**
 
@@ -299,8 +307,8 @@ shared/
    - After SLO backchannel, check: `app1:blacklist:*` exists
 
 **Acceptance criteria:**
-- [ ] `docker compose up -d` starts all services without errors
-- [ ] All routes loaded (grep `Loaded the route` in OpenIG logs)
+- [x] `docker compose up -d` starts all services without errors
+- [x] All routes loaded (grep `Loaded the route` in OpenIG logs)
 - [ ] WordPress SSO login works (alice + bob)
 - [ ] WhoAmI SSO login works
 - [ ] WordPress SLO logout works (backchannel fires, blacklist written)
@@ -313,6 +321,8 @@ shared/
 
 ### Step 4: Migrate Stack B + C (Redmine, Jellyfin, Grafana, phpMyAdmin) + Full Validation
 **Goal:** Add remaining 4 apps to shared infrastructure and validate all 6 apps together.
+
+**Status (2026-03-24):** PARTIAL. The shared runtime is serving Stack B/C, the `TokenReferenceFilter` mixed-state regression is fixed by `5fb549d`, and post-fix user SSO/SLO testing on `shared-openig-2` stayed free of `invalid_token`, `no authorization in progress`, and `Missing Redis`. The remaining CLI isolation checks and full acceptance-matrix replay are still open.
 
 **Sub-tasks:**
 
@@ -358,7 +368,7 @@ shared/
 - [ ] Redis ACL blocks cross-app access (verified via CLI)
 - [ ] Vault per-app AppRoles scoped correctly (verified via CLI)
 - [ ] No `JWT session is too large` errors in logs
-- [ ] TokenReferenceFilter store/restore works for all 6 apps
+- [x] TokenReferenceFilter store/restore works for all 6 apps
 - [ ] Jellyfin deviceId stable across sessions (SHA-256 from sub)
 - [ ] phpMyAdmin bob login works (MariaDB user + Vault secret aligned)
 

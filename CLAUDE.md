@@ -76,6 +76,8 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] L-4 + L-6: `SloHandlerJellyfin.groovy` now proceeds without `id_token` and Jellyfin `deviceId` derives from stable `sub` hash (`e4485f1`)
 - [x] Code-M3: Stack B `VaultCredentialFilter.groovy` consolidated into a single parameterized script; Redmine/Jellyfin copies deleted (`e22a855`)
 - [x] Regression fix: `TokenReferenceFilter.groovy` now binds per-app `tokenRefKey` (`token_ref_id_app1` .. `token_ref_id_app6`) to prevent cross-app same-cookie contamination (`8e9f729`)
+- [x] Shared infra runtime now serves the consolidated lab on `feat/shared-infra`: `shared-openig-1/2` mount `shared/openig_home`, `cd shared && docker compose config` passes, and orphaned `stack-c-openig-c1-1` / `stack-c-openig-c2-1` were stopped
+- [x] Shared infra SSO-after-SLO fix: `TokenReferenceFilter.groovy` preserves pending OAuth2 state while removing stale real-token entries via `hasPendingState` (`5fb549d`); verified after restart `2026-03-24T02:29:40Z` with no `invalid_token`, `no authorization in progress`, or `Missing Redis` on `shared-openig-2` during user SSO/SLO testing
 
 ### Phase tiếp theo
 - JwtSession production-pattern work is merged to `main` (`fix/jwtsession-production-pattern` was created from `9a7b855` before rename experiment commit `e37536d`)
