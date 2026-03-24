@@ -33,8 +33,10 @@ The SSO Lab currently runs 3 independent stacks, each with its own nginx, 2 Open
 | Redis | 1 instance, Redis 7 ACL (6 per-app users) |
 | Vault | 1 instance, 6 per-app AppRoles |
 | Apps | All 6 apps + their databases |
-| Cookie | Single `IG_SSO`, `cookieDomain: ".sso.local"` |
+| Cookie | Per-app host-only `IG_SSO_APP1..APP6` via route-local `SessionApp1..6`; global `IG_SSO` in `config.json` is unused by routes |
 | Port | 80 (hostname-based routing for all apps) |
+
+Isolation model: primary isolation is route-local `SessionApp1..6` + per-app `IG_SSO_APP1..APP6`; per-app `tokenRefKey` values (`token_ref_id_app1..app6`) remain a secondary defense-in-depth layer.
 
 Container count: 18 -> 11 (nginx 3->1, OpenIG 6->2, Redis 3->1, Vault 3->1, apps+DBs unchanged at 6)
 
@@ -85,9 +87,9 @@ shared/
   redis/
     acl.conf                  # Redis ACL: 6 per-app users + default user disabled
   openig_home/
-    config/
-      config.json             # Merged: single JwtSession (cookie=IG_SSO), all OIDC client secrets
-      routes/                 # All 16 route files (merged from 3 stacks)
+      config/
+        config.json             # Global fallback JwtSession (cookie=IG_SSO); shared routes override it
+        routes/                 # All 16 route files + route-local JwtSession heaps (SessionApp1..6)
     scripts/groovy/           # Single copy of each Groovy script (12 files)
     vault/                    # role_id/secret_id per-app files (created by bootstrap)
     phpmyadmin/
@@ -152,13 +154,14 @@ shared/
    - All on `listen 80` (hostname-based routing)
    - Security headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy)
    - Backchannel logout locations preserved per-app
-   - Cookie flags: `proxy_cookie_flags IG_SSO samesite=lax` (single cookie name)
+   - Cookie flags: `proxy_cookie_flags ~IG_SSO_APP samesite=lax` (regex match for per-app cookies)
    - Keep existing proxy buffer, timeout, WebSocket upgrade settings
 
-5. **openig_home/config/config.json** — Merged JwtSession config:
+5. **openig_home/config/config.json** — Global fallback JwtSession config:
    - Heap object name: `"Session"` (required for OpenIG auto-wire)
-   - Cookie name: `IG_SSO` (single cookie for all apps)
-   - `cookieDomain: ".sso.local"`
+   - Cookie name: `IG_SSO` in the fallback heap only; all shared-infra routes override to `IG_SSO_APP1..APP6`
+   - `cookieDomain: ".sso.local"` on the fallback heap; per-route `SessionAppN` objects do not set `cookieDomain`, so shared cookies are host-only
+   - Shared routes declare `"session": "SessionAppN"` plus a route-local `JwtSession` heap, so the global `Session` heap is not used by app flows
    - `sharedSecret`: from `__JWT_SHARED_SECRET__` placeholder (sed in entrypoint)
    - PKCS12 keystore: `__KEYSTORE_PASSWORD__` placeholder
    - All OIDC client secrets as `${env['OIDC_CLIENT_SECRET']}` etc.
@@ -178,7 +181,7 @@ shared/
 - [x] Redis ACL config has 6 users with distinct key prefixes
 - [x] Vault bootstrap creates 6 AppRoles with scoped policies
 - [x] nginx.conf has all 6 server blocks on port 80
-- [x] config.json has single JwtSession named `"Session"` with cookie `IG_SSO`
+- [x] `config.json` keeps fallback heap `Session`/`IG_SSO`, while all shared routes override it with per-app `SessionApp1..6` / `IG_SSO_APP1..APP6`
 - [ ] No hardcoded secrets in committed files (all via `.env` or placeholders)
 
 ---
@@ -269,6 +272,8 @@ shared/
 
 > 2026-03-24 partial test: hasPendingState fix verified on shared-openig-2 (1 app, no errors). Redis CLI also confirmed `appN:` key prefixes, `default` user disabled, and cross-app `SET` blocked for per-app users. Remaining Redis ACL finding: `KEYS *` / `SCAN` can still enumerate other apps' key names because ACLs still grant `+@all`; user decision pending on tightening the command set or accepting the limitation.
 
+> Open item: `shared/openig_home/config/routes/00-backchannel-logout-app2.json` is missing, so Keycloak backchannel logout initiated from app1 currently does not revoke app2 (WhoAmI) sessions.
+
 **Sub-tasks:**
 
 1. **Keycloak client URL updates** (runtime change via admin API, persistent):
@@ -295,7 +300,7 @@ shared/
 
 4. **Validate SSO/SLO for app1 (WordPress):**
    - Login as alice via `http://wp-a.sso.local` → redirected to Keycloak → SSO → WordPress dashboard
-   - Verify `IG_SSO` cookie present (not `IG_SSO_B` or `IG_SSO_C`)
+   - Verify `IG_SSO_APP1` cookie present and route-local `SessionApp1` is used (not the global `IG_SSO` fallback heap)
    - Logout → Keycloak end-session → backchannel logout fires → Redis blacklist written
    - Re-access WordPress → redirected to Keycloak login
 
@@ -423,7 +428,7 @@ shared/
 2. Redis ACL enforces per-app key isolation (verified by attempted cross-access)
 3. Vault per-app AppRoles enforce secret path isolation (verified by attempted cross-read)
 4. Container count reduced from 18 to 11
-5. Single JwtSession cookie (`IG_SSO`) with per-app tokenRefKey isolation (`token_ref_id_app1..app6`)
+5. Per-route JwtSession isolation: `SessionApp1..6` issue per-app cookies `IG_SSO_APP1..APP6`; `tokenRefKey` isolation (`token_ref_id_app1..app6`) remains a secondary layer
 6. All apps accessible on port 80 via hostname-based routing
 7. Zero `JWT session is too large` errors
 8. Backchannel SLO works cross-app (logout any app -> all apps receive backchannel)

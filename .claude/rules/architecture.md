@@ -67,10 +67,9 @@ Why unique: OpenIG does not keep a server-global clientEndpoint registry. Each O
 - Tất cả 6 OpenIG services đã thêm `extra_hosts: host.docker.internal:host-gateway` để Linux portability không phụ thuộc Docker Desktop magic hostname
 
 ## Cookie session
-- Stack A: `IG_SSO`, `cookieDomain: ".sso.local"`
-- Stack B: `IG_SSO_B`, `cookieDomain: ".sso.local"`
-- Stack C: `IG_SSO_C`, `cookieDomain: ".sso.local"`
-- Current lab state on `fix/jwtsession-production-pattern`: cả 3 stacks đã chạy `JwtSession` heap `Session` với Redis token reference offload + per-app `tokenRefKey` isolation; full validation login+logout PASS trên cả 3 stacks ngày 2026-03-19, regression shared-cookie contamination đã fix ngày 2026-03-20, branch ready để merge
+- Shared infra trên `feat/shared-infra`: mỗi app dùng route-local `JwtSession` riêng (`SessionApp1..6`) với cookie riêng `IG_SSO_APP1` .. `IG_SSO_APP6`
+- Per-route `JwtSession` objects không set `cookieDomain`, nên cookies là host-only; stricter hơn stack A/B/C vốn dùng domain cookie `.sso.local`
+- `shared/openig_home/config/config.json` vẫn có global heap `Session` với cookie `IG_SSO` + `cookieDomain: ".sso.local"`, nhưng tất cả shared-infra routes đều override bằng `"session": "SessionAppN"`, nên global heap này không được dùng cho app flows
 
 ## SLO mechanism
 - Keycloak → backchannel logout → `BackchannelLogoutHandler.groovy` → Redis blacklist
