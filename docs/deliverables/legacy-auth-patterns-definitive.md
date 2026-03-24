@@ -1,9 +1,9 @@
 # Legacy Authentication/Logout Mechanisms - Definitive Reference
-**Date:** 2026-03-12
+**Date:** 2026-03-24
 **Purpose:** Tài liệu reference để đối chiếu với hiện trạng triển khai và tìm gaps
 **Sources:** Claude (Exa MCP) + Codex (web search) + Gemini (deep research)
 
-> Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. The live lab now uses consolidated SessionBlacklistFilter / BackchannelLogoutHandler / SloHandler templates; STEP-02 rotated Stack C OIDC secrets; STEP-03 moved compose secrets into gitignored `.env` files and pinned OpenIG to `6.0.1`. Operational follow-up 2026-03-18: Stack C Grafana re-validation passed after rotating APP5 to an alphanumeric-only secret because OpenIG `OAuth2ClientFilter` does not URL-encode `client_secret`. Validation follow-up 2026-03-19: the Phase 1+2 `JwtSession` production pattern is now fully validated across all three stacks, with `TokenReferenceFilter.groovy` offloading `oauth2:*` state and `BackchannelLogoutHandler.groovy` supporting both `RS256` and `ES256`.
+> Update 2026-03-24: The live lab now runs on one shared runtime in `shared/`. All 6 apps are published via hostname routing on port 80, each app uses a route-local `JwtSession` heap with cookie `IG_SSO_APP1..APP6`, Redis isolation is enforced with ACL users `openig-app1..6`, and Vault isolation is enforced with AppRoles `openig-app1..6`. Pattern Consolidation Steps 1-6 remain the template baseline, OpenIG stays pinned to `6.0.1`, and `BackchannelLogoutHandler.groovy` supports both `RS256` and `ES256`.
 
 ---
 
@@ -334,9 +334,9 @@ Runtime note: pin OpenIG images to `openidentityplatform/openig:6.0.1`. Do not u
 
 OpenIG compatibility note: when `OAuth2ClientFilter` consumes an OIDC `clientSecret`, generate a strong random alphanumeric-only value. Avoid Base64 secrets containing `+`, `/`, or `=` because OpenIG 6 sends `client_secret` without URL-encoding in the token request body.
 
-Validated session note: when routes use browser-bound `JwtSession`, place `TokenReferenceFilter.groovy` immediately after `OAuth2ClientFilter` so the heavy `oauth2:*` entry is offloaded to Redis and the browser cookie keeps only a per-app token reference key (`token_ref_id_appN` on shared-cookie stacks, fallback `token_ref_id`) plus small identity markers. OIDC data-model note: `target = ${attributes.openid}` is request-scoped output written by `OAuth2ClientFilter.fillTarget()`; it does not mirror data into session. Persisted `session[oauth2Key]` state is written separately by `OAuth2Utils.saveSession()`, so lookups such as `session[oauth2Key].atr.id_token` must use the persisted blob, while live `user_info` belongs under `attributes.openid`.
+Validated session note: when routes use browser-bound `JwtSession`, place `TokenReferenceFilter.groovy` immediately after `OAuth2ClientFilter` so the heavy `oauth2:*` entry is offloaded to Redis and the browser cookie keeps only a per-app token reference key (`token_ref_id_appN`) plus small identity markers. In the shared runtime, that pattern sits on top of route-local cookies `IG_SSO_APP1..APP6`. OIDC data-model note: `target = ${attributes.openid}` is request-scoped output written by `OAuth2ClientFilter.fillTarget()`; it does not mirror data into session. Persisted `session[oauth2Key]` state is written separately by `OAuth2Utils.saveSession()`, so lookups such as `session[oauth2Key].atr.id_token` must use the persisted blob, while live `user_info` belongs under `attributes.openid`.
 
-### Available Templates (per stack)
+### Available Templates (shared runtime)
 
 | Template | File | Args | Purpose |
 |----------|------|------|---------|

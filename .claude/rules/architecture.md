@@ -1,119 +1,136 @@
 # Architecture
 
-## ⚠️ NGUYÊN TẮC ĐỘC LẬP — BẮT BUỘC TUÂN THỦ MỌI LÚC
+## Shared-infra baseline
 
-Mỗi stack là một **bộ hoàn chỉnh độc lập**. Khi triển khai/debug/fix bất kỳ stack nào:
+The active lab deployment is `shared/`: one nginx, two OpenIG nodes, one Redis, one Vault, and all six apps behind hostname routing on port 80.
 
-- **KHÔNG** dùng chung credential, secret, key, config với stack khác
-- Mỗi stack có OpenIG riêng, Vault riêng, Redis riêng, nginx riêng
-- `sharedSecret` trong `config.json` phải **khác nhau** giữa các stacks
-- Backchannel logout URL phải tự đăng ký độc lập trong Keycloak — không phụ thuộc stack khác
-- Keycloak là **shared IdP duy nhất** được phép dùng chung — mọi thứ khác phải độc lập
+- Keycloak remains the shared IdP at `http://auth.sso.local:8080`
+- Browser entrypoints are `http://<hostname>.sso.local` on port 80
+- `stack-a/`, `stack-b/`, and `stack-c/` are legacy rollback assets, not the active deployment
 
-Vi phạm nguyên tắc này = lỗi thiết kế nghiêm trọng, **dừng lại và sửa ngay**.
+## Isolation model
+
+- App isolation is per app inside the shared runtime, not per legacy stack
+- Every app has a unique `clientEndpoint`
+- Every app has a route-local `JwtSession` heap: `SessionApp1..6`
+- Every app has a unique host-only browser cookie: `IG_SSO_APP1..APP6`
+- Every app has a unique Redis ACL user and key prefix: `openig-app1..6`, `app1:*..app6:*`
+- Every app has a unique Vault AppRole and scoped policy: `openig-app1..6`
+- `CANONICAL_ORIGIN_APP1..6` are the only allowed bases for redirect/logout construction
 
 ## Stack overview
 
-| Stack | Port | Apps | Auth mechanism |
-|-------|------|------|----------------|
-| stack-a | 80 | WordPress, WhoAmI | Form login injection |
-| stack-b | 9080 | Redmine, Jellyfin | Form login injection, Token injection |
-| stack-c | 18080 | Grafana, phpMyAdmin | Header injection, HTTP Basic Auth |
+| Runtime | Public access | Apps | Auth mechanisms |
+|---------|---------------|------|-----------------|
+| `shared/` | Hostname routing on port 80 | WordPress, WhoAmI, Redmine, Jellyfin, Grafana, phpMyAdmin | Form, header, token, HTTP Basic |
 
-Keycloak shared: `http://auth.sso.local:8080`, realm `sso-realm`.
+## App routing and session map
 
-## clientEndpoint namespace (MỖI app trong cùng OpenIG instance PHẢI unique)
+| App | Hostname | Internal upstream | clientEndpoint | Keycloak client | Session heap | Cookie |
+|-----|----------|-------------------|----------------|-----------------|--------------|--------|
+| WordPress | `http://wp-a.sso.local` | `http://shared-wordpress` | `/openid/app1` | `openig-client` | `SessionApp1` | `IG_SSO_APP1` |
+| WhoAmI | `http://whoami-a.sso.local` | `http://shared-whoami` | `/openid/app2` | `openig-client` | `SessionApp2` | `IG_SSO_APP2` |
+| Redmine | `http://redmine-b.sso.local` | `http://shared-redmine:3000` | `/openid/app3` | `openig-client-b` | `SessionApp3` | `IG_SSO_APP3` |
+| Jellyfin | `http://jellyfin-b.sso.local` | `http://shared-jellyfin:8096` | `/openid/app4` | `openig-client-b-app4` | `SessionApp4` | `IG_SSO_APP4` |
+| Grafana | `http://grafana-c.sso.local` | `http://shared-grafana:3000` | `/openid/app5` | `openig-client-c-app5` | `SessionApp5` | `IG_SSO_APP5` |
+| phpMyAdmin | `http://phpmyadmin-c.sso.local` | `http://shared-phpmyadmin:80` | `/openid/app6` | `openig-client-c-app6` | `SessionApp6` | `IG_SSO_APP6` |
 
-Why unique: OpenIG does not keep a server-global clientEndpoint registry. Each OAuth2ClientFilter instance matches its own login, callback, and logout URIs inside the route-local filter chain, so collisions happen when more than one route can match the same clientEndpoint and lexicographic route order selects the wrong route first.
+## HA pattern
 
-| Stack | App | clientEndpoint | Keycloak client |
-|-------|-----|----------------|-----------------|
-| A | WordPress | `/openid/app1` | `openig-client` |
-| A | WhoAmI | `/openid/app2` | `openig-client` |
-| B | Redmine | `/openid/app3` | `openig-client-b` |
-| B | Jellyfin | `/openid/app4` | `openig-client-b-app4` |
-| C | Grafana | `/openid/app5` | `openig-client-c-app5` |
-| C | phpMyAdmin | `/openid/app6` | `openig-client-c-app6` |
-
-## HA pattern (tất cả stacks)
-- nginx `ip_hash` → sticky routing (cùng IP → cùng OpenIG node)
-- Production target: OpenIG `JwtSession` heap object phải được khai báo dưới tên heap `Session` → session mã hóa trong cookie, stateless, mọi node đọc được
-- Nếu heap object bị đặt tên `"JwtSession"` thay vì `"Session"`, OpenIG sẽ fall back sang Tomcat `HttpSession` (`JSESSIONID`) dù `type` vẫn là `JwtSession`
-- Legacy app cookies phải nằm ở browser; OpenIG session chỉ giữ OIDC tokens và marker nhỏ (`*_user_sub`, cookie names), không giữ raw upstream cookies như `wp_session_cookies` / `redmine_session_cookies`
-- `TokenReferenceFilter.groovy` offload `oauth2:*` session blob sang Redis; JwtSession cookie chỉ giữ per-app token reference key (`token_ref_id_app1` .. `token_ref_id_app6` trên shared-cookie flows, fallback `token_ref_id`) + marker nhỏ (`IG_SSO_C` sampled ~`849` chars trên Stack C sau fix)
-- OAuth2ClientFilter session key format = `oauth2:<full-URL>/<clientEndpoint>`; luôn dùng dynamic `session.keySet()` discovery, không hardcode `oauth2:/openid/appX`
-- OpenIG 6 hỗ trợ per-route `JwtSession` isolation: route JSON có thể khai báo `"session": "NamedSessionManager"` + heap object `JwtSession` riêng với `cookieName` riêng → mỗi app hoàn toàn độc lập, zero blast radius. Source confirmed: `Keys.java` (`SESSION_FACTORY_HEAP_KEY="Session"`), `RouteBuilder.java` (`config.get("session")`), `JwtSessionManager.java` (`cookieName` per-instance). **Banking-grade isolation pattern cho shared OpenIG instance.**
-- `BackchannelLogoutHandler.groovy` support cả `RS256` (RSA key) và `ES256` (EC `P-256` key) cho backchannel `logout_token` validation; khi Keycloak client dùng `ES256`, JWKS trả `kty=EC` và signature phải verify bằng `SHA256withECDSA` sau khi convert JWS raw `R\|\|S` sang DER
-- Vault credentials shared mount → cả 2 node dùng chung `role_id`/`secret_id`
-- Stack B `VaultCredentialFilter.groovy` đã consolidate thành 1 parameterized script dùng chung cho Redmine và Jellyfin; route args chọn secret path, attribute name, và log context. KHÔNG reintroduce per-app Vault filter copies
-
-## Pinned canonical origins
-- Stack A: `CANONICAL_ORIGIN_APP1`, `CANONICAL_ORIGIN_APP2` trên `sso-openig-1` và `sso-openig-2`
-- Stack B: `CANONICAL_ORIGIN_APP3`, `CANONICAL_ORIGIN_APP4` trên `sso-b-openig-1` và `sso-b-openig-2`
-- Stack C: `CANONICAL_ORIGIN_APP5`, `CANONICAL_ORIGIN_APP6` trên `stack-c-openig-c1-1` và `stack-c-openig-c2-1`
-- Tất cả logic redirect/logout/session re-entry PHẢI dùng pinned origin từ env var này, không dùng inbound `Host`
-- Stack B Redmine không còn public host port `3000`; browser chỉ truy cập qua `http://redmine-b.sso.local:9080`
-
-## Runtime secret + image pattern
-- Secret runtime của từng stack nằm trong file `.env` cục bộ (gitignored); chỉ commit `.env.example`
-- OIDC client secrets đi qua `OAuth2ClientFilter` PHẢI dùng strong random alphanumeric-only values; không dùng Base64 có `+`, `/`, `=` vì OpenIG 6 không URL-encode `client_secret` trong POST body
-- Với các secret Base64 khác (không đi qua `OAuth2ClientFilter`), phải copy nguyên vẹn. Dấu `=` cuối chuỗi là dữ liệu hợp lệ, không phải ký tự thừa
-- Tất cả OpenIG containers PHẢI pin `openidentityplatform/openig:6.0.1`
-- KHÔNG dùng `openidentityplatform/openig:latest` vì `latest=6.0.2` hiện đang broken trong lab; `6.0.1` là tag đã được verify chạy ổn định cho OpenIG 6 ở project này
-
-## Keycloak URL + compose baseline
-- Cả 3 stacks giờ dùng env-driven Keycloak URLs trong route JSON: `KEYCLOAK_BROWSER_URL` cho browser-facing `issuer`/authorize/logout semantics, `KEYCLOAK_INTERNAL_URL` cho OpenIG -> Keycloak `token`/`userinfo`/`jwks`
-- Stack C `docker-compose.yml` giờ parity-aligned với Stack B baseline về `container_name`, `restart`, `platform`, healthcheck, và OpenIG node naming; nếu lệch nữa phải là chủ ý và documented
-- Tất cả 6 OpenIG services đã thêm `extra_hosts: host.docker.internal:host-gateway` để Linux portability không phụ thuộc Docker Desktop magic hostname
+- `shared-nginx` uses `ip_hash` to `shared-openig-1` and `shared-openig-2`
+- `TokenReferenceFilter.groovy` offloads heavyweight `oauth2:*` state to Redis and keeps only per-app token-reference keys in the cookie (`token_ref_id_app1..6`)
+- `SessionBlacklistFilter.groovy` checks Redis on every authenticated request
+- `StripGatewaySessionCookies.groovy` removes gateway cookies before proxying to backends
+- All redirect and logout logic must use `CANONICAL_ORIGIN_APP1..6`, never the inbound `Host`
 
 ## Cookie session
-- Shared infra trên `feat/shared-infra`: mỗi app dùng route-local `JwtSession` riêng (`SessionApp1..6`) với cookie riêng `IG_SSO_APP1` .. `IG_SSO_APP6`
-- Per-route `JwtSession` objects không set `cookieDomain`, nên cookies là host-only; stricter hơn stack A/B/C vốn dùng domain cookie `.sso.local`
-- `shared/openig_home/config/config.json` vẫn có global heap `Session` với cookie `IG_SSO` + `cookieDomain: ".sso.local"`, nhưng tất cả shared-infra routes đều override bằng `"session": "SessionAppN"`, nên global heap này không được dùng cho app flows
 
-## SLO mechanism
-- Keycloak → backchannel logout → `BackchannelLogoutHandler.groovy` → Redis blacklist
-- `SessionBlacklistFilter.groovy` check Redis mỗi request → kick nếu blacklisted
-- Redis riêng mỗi stack: `sso-redis-a`, `sso-redis-b`, `stack-c-redis-c-1`
-
-## Vault — file storage
-- Config: `vault/config/vault.hcl` (multi-line HCL, KHÔNG semicolon)
-- docker-compose: `command: server` (KHÔNG explicit `-config` path)
-- Keys: `vault/keys/.vault-keys.unseal`, `vault/keys/.vault-keys.admin`
-- Bootstrap flag: `vault/data/.bootstrap-done`
-- Sau Docker restart: sealed → bootstrap → regenerate `secret_id` → restart OpenIG
+- Shared-infra routes override the global `Session` heap from `shared/openig_home/config/config.json`
+- Active app flows use route-local heaps `SessionApp1..6` with cookies `IG_SSO_APP1..APP6`
+- Route-local cookies do not set `cookieDomain`, so they are host-only
+- `shared/openig_home/config/config.json` still contains the fallback global heap `Session` with cookie `IG_SSO`, but active shared-infra routes do not use it
 
 ## Container names
 
-| Component | Stack A | Stack B | Stack C |
-|-----------|---------|---------|---------|
-| nginx | `sso-nginx` | `sso-b-nginx` | `stack-c-nginx-c-1` |
-| openig-1 | `sso-openig-1` | `sso-b-openig-1` | `stack-c-openig-c1-1` |
-| openig-2 | `sso-openig-2` | `sso-b-openig-2` | `stack-c-openig-c2-1` |
-| vault | `sso-vault` | `sso-b-vault` | `stack-c-vault-c-1` |
-| redis | `sso-redis-a` | `sso-redis-b` | `stack-c-redis-c-1` |
-| app1 | `sso-wordpress` | `sso-b-redmine` | `stack-c-grafana-1` |
-| app2 | `sso-whoami` | `sso-b-jellyfin` | `stack-c-phpmyadmin-1` |
-| db | `sso-mysql` | `sso-b-mysql-redmine` | `stack-c-mariadb-1` |
-| keycloak | `sso-keycloak` (shared) | — | — |
+| Component | Container name |
+|-----------|----------------|
+| nginx | `shared-nginx` |
+| openig-1 | `shared-openig-1` |
+| openig-2 | `shared-openig-2` |
+| redis | `shared-redis` |
+| vault | `shared-vault` |
+| wordpress | `shared-wordpress` |
+| whoami | `shared-whoami` |
+| redmine | `shared-redmine` |
+| jellyfin | `shared-jellyfin` |
+| grafana | `shared-grafana` |
+| phpMyAdmin | `shared-phpmyadmin` |
+| mysql-a | `shared-mysql-a` |
+| mysql-b | `shared-mysql-b` |
+| mariadb | `shared-mariadb` |
+| keycloak | `sso-keycloak` |
 
-## URLs và credentials
+`shared/docker-compose.yml` is the source of truth here; the phpMyAdmin database container is `shared-mariadb`.
 
-| App | URL |
-|-----|-----|
-| Keycloak | `http://auth.sso.local:8080` (admin/admin) |
+## URLs
+
+| Service | URL |
+|---------|-----|
+| Keycloak | `http://auth.sso.local:8080` |
+| OpenIG management | `http://openig.sso.local` |
 | WordPress | `http://wp-a.sso.local` |
 | WhoAmI | `http://whoami-a.sso.local` |
-| Redmine | `http://redmine-b.sso.local:9080` |
-| Jellyfin | `http://jellyfin-b.sso.local:9080` |
-| Grafana | `http://grafana-c.sso.local:18080` |
-| phpMyAdmin | `http://phpmyadmin-c.sso.local:18080` |
+| Redmine | `http://redmine-b.sso.local` |
+| Jellyfin | `http://jellyfin-b.sso.local` |
+| Grafana | `http://grafana-c.sso.local` |
+| phpMyAdmin | `http://phpmyadmin-c.sso.local` |
 
 Keycloak test users: `alice`/`alice123`, `bob`/`bob123`
 
-App credentials (injected by OpenIG via Vault):
-- WordPress: `alice_wp`, `bob_wp`
-- Redmine: login `alice@lab.local`, `bob@lab.local`
-- Jellyfin: `alice`/`AliceJelly2026`, `bob`/`BobJelly2026` (**set thủ công, không trong bootstrap**)
-- Grafana: auto-provisioned từ `preferred_username`
-- phpMyAdmin: `alice` confirmed working via Vault -> MariaDB; `bob` vẫn là infra gap vì live Stack C MariaDB chưa provision user này
+## Vault AppRoles
+
+All AppRoles are bootstrapped by `shared/vault/init/vault-bootstrap.sh` and write role files to `/vault/file/openig-appN-role-id` and `/vault/file/openig-appN-secret-id`.
+
+| App | AppRole | Policy | Secret path scope | Notes |
+|-----|---------|--------|-------------------|-------|
+| WordPress | `openig-app1` | `openig-app1-policy` | `secret/data/wp-creds/*` | Active Vault credential lookup |
+| WhoAmI | `openig-app2` | `openig-app2-policy` | `secret/data/dummy/*` | Placeholder scope; current route does not fetch Vault credentials |
+| Redmine | `openig-app3` | `openig-app3-policy` | `secret/data/redmine-creds/*` | Active Vault credential lookup |
+| Jellyfin | `openig-app4` | `openig-app4-policy` | `secret/data/jellyfin-creds/*` | Active Vault credential lookup |
+| Grafana | `openig-app5` | `openig-app5-policy` | `secret/data/grafana-creds/*` | Policy exists; current route uses header injection, not Vault credentials |
+| phpMyAdmin | `openig-app6` | `openig-app6-policy` | `secret/data/phpmyadmin/*` | Active Vault credential lookup |
+
+AppRole hardening in the lab:
+
+- `token_ttl=1h`
+- `token_max_ttl=4h`
+- `secret_id_ttl=72h`
+
+## Redis ACL
+
+`shared/redis/acl.conf` disables the default user and gives each app one minimal ACL user.
+
+| App | Redis user | Key prefix | Allowed commands |
+|-----|------------|------------|------------------|
+| WordPress | `openig-app1` | `~app1:*` | `SET`, `GET`, `DEL`, `EXISTS`, `PING` |
+| WhoAmI | `openig-app2` | `~app2:*` | `SET`, `GET`, `DEL`, `EXISTS`, `PING` |
+| Redmine | `openig-app3` | `~app3:*` | `SET`, `GET`, `DEL`, `EXISTS`, `PING` |
+| Jellyfin | `openig-app4` | `~app4:*` | `SET`, `GET`, `DEL`, `EXISTS`, `PING` |
+| Grafana | `openig-app5` | `~app5:*` | `SET`, `GET`, `DEL`, `EXISTS`, `PING` |
+| phpMyAdmin | `openig-app6` | `~app6:*` | `SET`, `GET`, `DEL`, `EXISTS`, `PING` |
+
+Rules:
+
+- Redis auth is `AUTH <username> <password>`, not password-only `AUTH`
+- No app may read or write another app's keys
+- Redis key namespaces must stay app-scoped for both blacklist and token-reference data
+
+## Production gaps
+
+These are known lab limitations, not production-ready controls:
+
+- Traffic between nginx, OpenIG, Vault, Redis, Keycloak, and backends is still HTTP-only; production requires TLS or mTLS and `requireHttps: true`
+- Redis token-reference and blacklist payloads are not wrapped with Vault Transit; production should use Transit or equivalent envelope encryption
+- The lab uses flat Docker bridge networks; production should segment browser, app, and admin/control-plane traffic
+- Vault is single-node file storage with manual bootstrap and manual AppRole `secret_id` regeneration; production needs HA and rotation workflow
+- Local Docker volumes do not imply OS-level disk encryption; production needs encrypted storage and backup handling

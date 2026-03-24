@@ -11,6 +11,12 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 @.claude/rules/gotchas.md
 @.claude/rules/restart.md
 
+## Architecture snapshot
+
+| Runtime | Public access | Shared components | App isolation |
+|---------|---------------|-------------------|---------------|
+| `shared/` | Hostname routing on port 80 | `shared-nginx`, `shared-openig-1/2`, `shared-redis`, `shared-vault` | `SessionApp1..6`, `IG_SSO_APP1..APP6`, per-app Redis ACL, per-app Vault AppRole |
+
 ## Roadmap
 
 ### Đã hoàn thành
@@ -52,7 +58,7 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] FIX-14+15: Unsafe method reauth 409 + WordPress adapter fail-closed (Stack A)
 - [x] Entrypoint cp -r stale config fix — rm -rf before cp (all 3 stacks)
 - [x] **Legacy App Team Checklist**: `docs/deliverables/legacy-app-team-checklist.md` — file tối thượng, 3-reviewer QA (Critic+Gemini+Codex)
-- [x] **Code review + security review round 2**: 25 fixes (3 rounds, 6 subagent + 2 Codex). Cookie IG_SSO_C, atomic globals.compute(), RESP parsing, admin PRODUCTION, nginx hardening, dead code cleanup, Vault policy fix, etc.
+- [x] **Code review + security review round 2**: 25 fixes (3 rounds, 6 subagent + 2 Codex). Gateway cookie hardening, atomic `globals.compute()`, RESP parsing, admin PRODUCTION, nginx hardening, dead code cleanup, Vault policy fix, etc.
 - [x] **Pre-packaging comprehensive audit**: 6 agents, 8 docs at `docs/audit/2026-03-16-pre-packaging-audit/`. Findings: 0/24 Groovy replaceable by built-in, 78% duplication (7 patterns), JWKS race (CRITICAL). ScriptableHandler `args` confirmed YES.
 - [x] Post-Stack C docs: OpenIG built-in filter selection guide — covered by audit Task 1A/1B docs
 - [x] Workaround: admin "Logout all sessions" — session timeout 30min + access token 5min (max 5min delay)
@@ -68,7 +74,7 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] Keycloak token-size trim: removed `realm_access` and `resource_access` from `access_token` for `openig-client`, `openig-client-b`, `openig-client-c-app5`, and `openig-client-c-app6` (persistent runtime/admin API change)
 - [x] Stack C recovery: Vault unsealed, AppRole refreshed, `secret/phpmyadmin/alice` realigned to live MariaDB password `AlicePass123`, Grafana + phpMyAdmin login/logout reconfirmed (`6cc3fc9` + 2026-03-19 log evidence)
 - [x] Phase 1: restore `JwtSession` production pattern — rename heap `JwtSession` -> `Session`, switch 4 OpenIG clients to `ES256`, disable `refresh_token` (`0454796`)
-- [x] Phase 2: Redis Token Reference Pattern — `TokenReferenceFilter.groovy`, dynamic oauth2 session key discovery, `IG_SSO_C` shrunk to `849` chars (`9b2d109`, `47cbab9`)
+- [x] Phase 2: Redis Token Reference Pattern — `TokenReferenceFilter.groovy`, dynamic oauth2 session key discovery, browser-bound session cookies reduced to production-safe size (`9b2d109`, `47cbab9`)
 - [x] BackchannelLogoutHandler ES256/EC fix — accept `ES256` alg + EC key reconstruction + `SHA256withECDSA` (`646a45a`, `d2eb8e9`)
 - [x] Full validation login+logout all 3 stacks on `fix/jwtsession-production-pattern` — PASS (2026-03-19)
 - [x] L-1 + L-3: Redis port externalized from hardcoded `6379` and Groovy log prefixes standardized across stacks (`8f17e7b`)
@@ -76,7 +82,12 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] L-4 + L-6: `SloHandlerJellyfin.groovy` now proceeds without `id_token` and Jellyfin `deviceId` derives from stable `sub` hash (`e4485f1`)
 - [x] Code-M3: Stack B `VaultCredentialFilter.groovy` consolidated into a single parameterized script; Redmine/Jellyfin copies deleted (`e22a855`)
 - [x] Regression fix: `TokenReferenceFilter.groovy` now binds per-app `tokenRefKey` (`token_ref_id_app1` .. `token_ref_id_app6`) to prevent cross-app same-cookie contamination (`8e9f729`)
-- [x] Shared infra runtime now serves the consolidated lab on `feat/shared-infra`: `shared-openig-1/2` mount `shared/openig_home`, `cd shared && docker compose config` passes, and orphaned `stack-c-openig-c1-1` / `stack-c-openig-c2-1` were stopped
+- [x] Shared infra consolidation: single `shared-nginx`, `shared-openig-1/2`, `shared-redis`, and `shared-vault` now serve all 6 apps from `shared/` on port 80 via hostname routing
+- [x] Shared infra validation: all 6 apps are SSO/SLO PASS on the shared runtime
+- [x] Per-app Redis ACL isolation: `openig-app1..6` with minimal command set and `appN:*` key prefixes
+- [x] Per-app Vault AppRole isolation: `openig-app1..6` with path-scoped policies and per-app `role_id` / `secret_id` files
+- [x] Security fixes: `AUD-001`, `AUD-004`, `AUD-008` hardcoded secrets removed; `AUD-005` fail-closed offload implemented; Vault admin token TTL set with periodic renewal
+- [x] Full security audit: OpenIG / Vault / Redis communication audit completed
 - [x] Shared infra SSO-after-SLO fix: `TokenReferenceFilter.groovy` preserves pending OAuth2 state while removing stale real-token entries via `hasPendingState` (`5fb549d`); verified after restart `2026-03-24T02:29:40Z` with no `invalid_token`, `no authorization in progress`, or `Missing Redis` on `shared-openig-2` during user SSO/SLO testing
 
 ### Phase tiếp theo

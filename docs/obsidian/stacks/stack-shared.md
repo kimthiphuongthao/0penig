@@ -84,7 +84,51 @@ Still open by design:
 > [!tip] Implementation guardrail
 > Preserve zero blast radius by keeping Redis ACL, Vault AppRole, and per-route session isolation aligned per app from the first shared-stack commit.
 
+## 2026-03-24 Documentation sync update
+
+Context: shared-infra runtime is the active deployment, but the main rules and deliverables still described the old three-stack model. This task aligned the active documentation with the source of truth in `shared/docker-compose.yml`, `shared/nginx/nginx.conf`, `shared/openig_home/config/routes/`, `shared/vault/init/vault-bootstrap.sh`, and `shared/redis/acl.conf`.
+
+## What Was Done
+
+- Rewrote [[OpenIG]] architecture rules to describe the active `shared/` runtime instead of Stack A/B/C as the deployment model.
+- Replaced the old multi-section restart runbook with the single shared-infra restart sequence using `shared-vault`, `shared-openig-1`, and `shared-openig-2`.
+- Updated `CLAUDE.md` roadmap with completed shared-infra consolidation, per-app Redis ACL, per-app [[Vault]] AppRole isolation, and completed security-audit items.
+- Rewrote the legacy app manager checklist so app teams only see the information they must provide, not gateway-internal stack details.
+- Replaced the standard gateway pattern deliverable with the shared-infra baseline: per-app route-local cookies, per-app Redis ACL, per-app AppRoles, and production transport gaps.
+- Updated the definitive auth reference with shared-runtime session and isolation notes.
+
+> [!success] Shared-doc baseline aligned
+> The active rules and primary deliverables now describe `shared/` as the deployment model, with hostname routing on port 80 and app-level isolation controls.
+
+## Decisions
+
+- Keep `shared/docker-compose.yml` as the naming source of truth, including the actual MariaDB container name `shared-mariadb`.
+- Document app isolation as the active boundary: `SessionApp1..6`, `IG_SSO_APP1..APP6`, `openig-app1..6`, and `app1:*..app6:*`.
+- Leave unrelated pre-existing deliverables untouched if they were not part of the requested edit set, but record them when the final stale-reference sweep still flags them.
+
+> [!warning] Remaining stale references
+> The final grep sweep still finds legacy port and cookie references in `docs/deliverables/standalone-legacy-app-integration-guide.md` and `docs/deliverables/audit-auth-patterns.md`. Those files were outside the requested edit list for this task.
+
+## Current State
+
+- Primary shared-infra docs are updated and internally consistent with the `shared/` runtime files.
+- The requested stale-reference grep is clean for the edited rules, `CLAUDE.md`, and the targeted deliverables.
+- Additional stale references remain in two non-targeted deliverables and should be handled in a follow-up docs sweep.
+
+## Next Steps
+
+- Decide whether to fold `standalone-legacy-app-integration-guide.md` into the shared-infra doc set or archive it as historical.
+- Update `audit-auth-patterns.md` if it is still intended to be an active deliverable instead of a historical audit snapshot.
+- Keep future doc changes anchored to the `shared/` runtime files first, then propagate outward to secondary deliverables.
+
 ## Files Changed
 
-- `.omc/plans/shared-infra.md`
+- `.claude/rules/architecture.md`
+- `.claude/rules/restart.md`
+- `.claude/rules/gotchas.md`
+- `.claude/rules/conventions.md`
+- `CLAUDE.md`
+- `docs/deliverables/legacy-app-team-checklist.md`
+- `docs/deliverables/standard-gateway-pattern.md`
+- `docs/deliverables/legacy-auth-patterns-definitive.md`
 - `docs/obsidian/stacks/stack-shared.md`
