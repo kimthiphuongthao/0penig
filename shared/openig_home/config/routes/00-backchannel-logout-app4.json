@@ -13,7 +13,7 @@
         "redisHost": "shared-redis",
         "jwksUri": "http://host.docker.internal:8080/realms/sso-realm/protocol/openid-connect/certs",
         "issuer": "http://auth.sso.local:8080/realms/sso-realm",
-        "ttlSeconds": "${env['REDIS_BLACKLIST_TTL'] != null ? env['REDIS_BLACKLIST_TTL'] : '28800'}",
+        "ttlSeconds": "${env['REDIS_BLACKLIST_TTL_APP4'] != null ? env['REDIS_BLACKLIST_TTL_APP4'] : '28800'}",
         "redisUser": "openig-app4",
         "redisPasswordEnvVar": "REDIS_PASSWORD_APP4",
         "redisKeyPrefix": "app4"

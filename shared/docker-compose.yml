@@ -4,25 +4,25 @@ x-openig-env: &openig-env
   KEYCLOAK_BROWSER_URL: "${KEYCLOAK_BROWSER_URL:-http://auth.sso.local:8080}"
   KEYCLOAK_INTERNAL_URL: "${KEYCLOAK_INTERNAL_URL:-http://host.docker.internal:8080}"
   OIDC_CLIENT_ID: "${OIDC_CLIENT_ID:-openig-client}"
-  OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET:-changeme_oidc_client_secret}"
+  OIDC_CLIENT_SECRET: "${OIDC_CLIENT_SECRET:?ERROR: OIDC_CLIENT_SECRET is required}"
   OIDC_CLIENT_ID_B: "${OIDC_CLIENT_ID_B:-openig-client-b}"
-  OIDC_CLIENT_SECRET_B: "${OIDC_CLIENT_SECRET_B:-changeme_oidc_client_secret_b}"
+  OIDC_CLIENT_SECRET_B: "${OIDC_CLIENT_SECRET_B:?ERROR: OIDC_CLIENT_SECRET_B is required}"
   OIDC_CLIENT_ID_APP4: "${OIDC_CLIENT_ID_APP4:-openig-client-b-app4}"
-  OIDC_CLIENT_SECRET_APP4: "${OIDC_CLIENT_SECRET_APP4:-changeme_oidc_client_secret_app4}"
+  OIDC_CLIENT_SECRET_APP4: "${OIDC_CLIENT_SECRET_APP4:?ERROR: OIDC_CLIENT_SECRET_APP4 is required}"
   OIDC_CLIENT_ID_APP5: "${OIDC_CLIENT_ID_APP5:-openig-client-c-app5}"
-  OIDC_CLIENT_SECRET_APP5: "${OIDC_CLIENT_SECRET_APP5:-changeme_oidc_client_secret_app5}"
+  OIDC_CLIENT_SECRET_APP5: "${OIDC_CLIENT_SECRET_APP5:?ERROR: OIDC_CLIENT_SECRET_APP5 is required}"
   OIDC_CLIENT_ID_APP6: "${OIDC_CLIENT_ID_APP6:-openig-client-c-app6}"
-  OIDC_CLIENT_SECRET_APP6: "${OIDC_CLIENT_SECRET_APP6:-changeme_oidc_client_secret_app6}"
-  JWT_SHARED_SECRET: "${JWT_SHARED_SECRET:-changeme_jwt_shared_secret}"
-  KEYSTORE_PASSWORD: "${KEYSTORE_PASSWORD:-changeme_keystore_password}"
+  OIDC_CLIENT_SECRET_APP6: "${OIDC_CLIENT_SECRET_APP6:?ERROR: OIDC_CLIENT_SECRET_APP6 is required}"
+  JWT_SHARED_SECRET: "${JWT_SHARED_SECRET:?ERROR: JWT_SHARED_SECRET is required}"
+  KEYSTORE_PASSWORD: "${KEYSTORE_PASSWORD:?ERROR: KEYSTORE_PASSWORD is required}"
   REDIS_HOST: shared-redis
   REDIS_PORT: "${REDIS_PORT:-6379}"
-  REDIS_PASSWORD_APP1: "${REDIS_PASSWORD_APP1:-changeme_app1}"
-  REDIS_PASSWORD_APP2: "${REDIS_PASSWORD_APP2:-changeme_app2}"
-  REDIS_PASSWORD_APP3: "${REDIS_PASSWORD_APP3:-changeme_app3}"
-  REDIS_PASSWORD_APP4: "${REDIS_PASSWORD_APP4:-changeme_app4}"
-  REDIS_PASSWORD_APP5: "${REDIS_PASSWORD_APP5:-changeme_app5}"
-  REDIS_PASSWORD_APP6: "${REDIS_PASSWORD_APP6:-changeme_app6}"
+  REDIS_PASSWORD_APP1: "${REDIS_PASSWORD_APP1:?ERROR: REDIS_PASSWORD_APP1 is required}"
+  REDIS_PASSWORD_APP2: "${REDIS_PASSWORD_APP2:?ERROR: REDIS_PASSWORD_APP2 is required}"
+  REDIS_PASSWORD_APP3: "${REDIS_PASSWORD_APP3:?ERROR: REDIS_PASSWORD_APP3 is required}"
+  REDIS_PASSWORD_APP4: "${REDIS_PASSWORD_APP4:?ERROR: REDIS_PASSWORD_APP4 is required}"
+  REDIS_PASSWORD_APP5: "${REDIS_PASSWORD_APP5:?ERROR: REDIS_PASSWORD_APP5 is required}"
+  REDIS_PASSWORD_APP6: "${REDIS_PASSWORD_APP6:?ERROR: REDIS_PASSWORD_APP6 is required}"
   VAULT_ADDR: "http://shared-vault:8200"
   VAULT_ROLE_ID_FILE_APP1: /vault/file/openig-app1-role-id
   VAULT_SECRET_ID_FILE_APP1: /vault/file/openig-app1-secret-id
@@ -149,12 +149,12 @@ services:
       - ./docker/redis/redis-entrypoint.sh:/redis-entrypoint.sh:ro
       - redis_data:/data
     environment:
-      REDIS_PASSWORD_APP1: "${REDIS_PASSWORD_APP1:-changeme_app1}"
-      REDIS_PASSWORD_APP2: "${REDIS_PASSWORD_APP2:-changeme_app2}"
-      REDIS_PASSWORD_APP3: "${REDIS_PASSWORD_APP3:-changeme_app3}"
-      REDIS_PASSWORD_APP4: "${REDIS_PASSWORD_APP4:-changeme_app4}"
-      REDIS_PASSWORD_APP5: "${REDIS_PASSWORD_APP5:-changeme_app5}"
-      REDIS_PASSWORD_APP6: "${REDIS_PASSWORD_APP6:-changeme_app6}"
+      REDIS_PASSWORD_APP1: "${REDIS_PASSWORD_APP1:?ERROR: REDIS_PASSWORD_APP1 is required}"
+      REDIS_PASSWORD_APP2: "${REDIS_PASSWORD_APP2:?ERROR: REDIS_PASSWORD_APP2 is required}"
+      REDIS_PASSWORD_APP3: "${REDIS_PASSWORD_APP3:?ERROR: REDIS_PASSWORD_APP3 is required}"
+      REDIS_PASSWORD_APP4: "${REDIS_PASSWORD_APP4:?ERROR: REDIS_PASSWORD_APP4 is required}"
+      REDIS_PASSWORD_APP5: "${REDIS_PASSWORD_APP5:?ERROR: REDIS_PASSWORD_APP5 is required}"
+      REDIS_PASSWORD_APP6: "${REDIS_PASSWORD_APP6:?ERROR: REDIS_PASSWORD_APP6 is required}"
     networks:
       - backend
     restart: unless-stopped
@@ -185,7 +185,7 @@ services:
       WORDPRESS_DB_HOST: shared-mysql-a
       WORDPRESS_DB_NAME: wordpress
       WORDPRESS_DB_USER: wordpress
-      WORDPRESS_DB_PASSWORD: "${WORDPRESS_DB_PASSWORD:-wordpress_pass}"
+      WORDPRESS_DB_PASSWORD: "${WORDPRESS_DB_PASSWORD:?ERROR: WORDPRESS_DB_PASSWORD is required}"
       WORDPRESS_TABLE_PREFIX: wp_
     volumes:
       - wordpress_data:/var/www/html
@@ -201,7 +201,7 @@ services:
     image: mysql:8
     container_name: shared-mysql-a
     environment:
-      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD_A:-changeme_mysql_root_password_a}"
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD_A:?ERROR: MYSQL_ROOT_PASSWORD_A is required}"
     volumes:
       - mysql_data_a:/var/lib/mysql
       - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
@@ -229,8 +229,8 @@ services:
       REDMINE_DB_MYSQL: shared-mysql-b
       REDMINE_DB_DATABASE: redmine
       REDMINE_DB_USERNAME: redmine
-      REDMINE_DB_PASSWORD: "${REDMINE_DB_PASSWORD:-changeme_redmine_db_password}"
-      REDMINE_SECRET_KEY_BASE: "${REDMINE_SECRET_KEY_BASE:-changeme_redmine_secret_key_base}"
+      REDMINE_DB_PASSWORD: "${REDMINE_DB_PASSWORD:?ERROR: REDMINE_DB_PASSWORD is required}"
+      REDMINE_SECRET_KEY_BASE: "${REDMINE_SECRET_KEY_BASE:?ERROR: REDMINE_SECRET_KEY_BASE is required}"
     depends_on:
       shared-mysql-b:
         condition: service_healthy
@@ -244,10 +244,10 @@ services:
     image: mysql:8
     container_name: shared-mysql-b
     environment:
-      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD_B:-changeme_mysql_root_password_b}"
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD_B:?ERROR: MYSQL_ROOT_PASSWORD_B is required}"
       MYSQL_DATABASE: redmine
       MYSQL_USER: redmine
-      MYSQL_PASSWORD: "${REDMINE_DB_PASSWORD:-changeme_redmine_db_password}"
+      MYSQL_PASSWORD: "${REDMINE_DB_PASSWORD:?ERROR: REDMINE_DB_PASSWORD is required}"
     volumes:
       - mysql_data_b:/var/lib/mysql
     networks:
@@ -306,10 +306,10 @@ services:
     image: mariadb:11
     container_name: shared-mariadb
     environment:
-      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD_C:-changeme_mysql_root_password_c}"
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD_C:?ERROR: MYSQL_ROOT_PASSWORD_C is required}"
       MYSQL_DATABASE: appdb
       MYSQL_USER: alice
-      MYSQL_PASSWORD: "${MYSQL_PASSWORD_C:-AlicePass123}"
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD_C:?ERROR: MYSQL_PASSWORD_C is required}"
     volumes:
       - mariadb_data:/var/lib/mysql
     networks:

@@ -5,18 +5,17 @@ export VAULT_ADDR=http://127.0.0.1:8200
 KEYS_FILE=/vault/keys/.vault-keys
 BOOTSTRAP_FLAG=/vault/data/.bootstrap-done
 
-WP_ALICE_PASSWORD='SDCNDniqeJaYQq3gDcexAa1@'
-WP_BOB_PASSWORD='aLOgjDTxlOTWwjEy5QFTBb2#'
-REDMINE_ALICE_PASSWORD='Nvt2vrmNrbjcG4aF9XhBj0aMAa7!'
-REDMINE_BOB_PASSWORD='5RUgSmgwA70jttqhkL4TketBb8@'
-PHPMYADMIN_ALICE_PASSWORD='AlicePass123'
-PHPMYADMIN_BOB_PASSWORD='OYHupH3pbskR6sY5vcKr6X0Dd4'
+WP_ALICE_PASSWORD=${WP_ALICE_PASSWORD:?'ERROR: WP_ALICE_PASSWORD is required'}
+WP_BOB_PASSWORD=${WP_BOB_PASSWORD:?'ERROR: WP_BOB_PASSWORD is required'}
+REDMINE_ALICE_PASSWORD=${REDMINE_ALICE_PASSWORD:?'ERROR: REDMINE_ALICE_PASSWORD is required'}
+REDMINE_BOB_PASSWORD=${REDMINE_BOB_PASSWORD:?'ERROR: REDMINE_BOB_PASSWORD is required'}
+PHPMYADMIN_ALICE_PASSWORD=${PHPMYADMIN_ALICE_PASSWORD:?'ERROR: PHPMYADMIN_ALICE_PASSWORD is required'}
+PHPMYADMIN_BOB_PASSWORD=${PHPMYADMIN_BOB_PASSWORD:?'ERROR: PHPMYADMIN_BOB_PASSWORD is required'}
 
-# Stack B's current bootstrap defines jellyfin-creds policy scope but does not
-# seed actual Jellyfin credentials. Use deterministic lab defaults here until
-# the shared app validation step confirms the final app-side passwords.
-JELLYFIN_ALICE_PASSWORD='alice123'
-JELLYFIN_BOB_PASSWORD='bob123'
+# Injected passwords must stay alphanumeric-only because OpenIG posts them
+# without URL-encoding during form injection.
+JELLYFIN_ALICE_PASSWORD=${JELLYFIN_ALICE_PASSWORD:?'ERROR: JELLYFIN_ALICE_PASSWORD is required'}
+JELLYFIN_BOB_PASSWORD=${JELLYFIN_BOB_PASSWORD:?'ERROR: JELLYFIN_BOB_PASSWORD is required'}
 
 wait_for_vault() {
   local code

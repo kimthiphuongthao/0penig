@@ -13,7 +13,7 @@
         "redisHost": "shared-redis",
         "jwksUri": "${env['KEYCLOAK_INTERNAL_URL']}/realms/sso-realm/protocol/openid-connect/certs",
         "issuer": "${env['KEYCLOAK_BROWSER_URL']}/realms/sso-realm",
-        "ttlSeconds": "${env['REDIS_BLACKLIST_TTL'] != null ? env['REDIS_BLACKLIST_TTL'] : '28800'}",
+        "ttlSeconds": "${env['REDIS_BLACKLIST_TTL_APP6'] != null ? env['REDIS_BLACKLIST_TTL_APP6'] : '28800'}",
         "redisUser": "openig-app6",
         "redisPasswordEnvVar": "REDIS_PASSWORD_APP6",
         "redisKeyPrefix": "app6"
