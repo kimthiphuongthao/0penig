@@ -265,9 +265,9 @@ shared/
 ### Step 3: Migrate Stack A (WordPress + WhoAmI) + Validate
 **Goal:** Bring Stack A apps into the shared infrastructure, update Keycloak, and validate SSO/SLO.
 
-**Status (2026-03-24):** PARTIAL. Shared infra starts cleanly for Stack A and routes load on `shared-openig-2`, but explicit per-app Stack A SSO/SLO confirmation is still pending.
+**Status (2026-03-24):** PARTIAL. Shared infra starts cleanly for Stack A, routes load on `shared-openig-2`, and Redis CLI checks now confirm prefixed keys plus blocked cross-app writes. Explicit per-app Stack A SSO/SLO confirmation is still pending.
 
-> 2026-03-24 partial test: hasPendingState fix verified on shared-openig-2 (1 app, no errors). Full per-app SSO/SLO matrix still pending.
+> 2026-03-24 partial test: hasPendingState fix verified on shared-openig-2 (1 app, no errors). Redis CLI also confirmed `appN:` key prefixes, `default` user disabled, and cross-app `SET` blocked for per-app users. Remaining Redis ACL finding: `KEYS *` / `SCAN` can still enumerate other apps' key names because ACLs still grant `+@all`; user decision pending on tightening the command set or accepting the limitation.
 
 **Sub-tasks:**
 
@@ -315,8 +315,9 @@ shared/
 - [ ] WhoAmI SSO login works
 - [ ] WordPress SLO logout works (backchannel fires, blacklist written)
 - [ ] Cross-app SLO works (logout from WordPress logs out WhoAmI)
-- [ ] Redis keys are prefixed (`app1:*`, `app2:*`)
-- [ ] Redis ACL blocks cross-app key access
+- [x] Redis keys are prefixed (`app1:*`, `app2:*`)
+- [x] Redis ACL blocks cross-app writes
+- [ ] Redis key-name enumeration is isolated across apps (`KEYS` / `SCAN`) (pending user decision)
 - [ ] Old Stack A still functional on port 80 if needed for rollback (stop shared nginx first)
 
 ---
