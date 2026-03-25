@@ -12,6 +12,7 @@ String configuredClientEndpoint = binding.hasVariable('clientEndpoint') ? (clien
 configuredClientEndpoint = configuredClientEndpoint?.trim()
 String configuredRedisHost = binding.hasVariable('redisHost') ? (redisHost as String) : null
 configuredRedisHost = configuredRedisHost?.trim()
+def configuredRedisPort = binding.hasVariable('redisPort') ? (redisPort as String) : '6379'
 int configuredRedisTtl = binding.hasVariable('redisTtl') ? (redisTtl as Number).intValue() : 1800
 String configuredRedisPassword = System.getenv('REDIS_PASSWORD') ?: ''
 String configuredRedisUser = binding.hasVariable('redisUser') ? (redisUser as String)?.trim() : null
@@ -75,7 +76,7 @@ def buildAuthCommand = {
 def withRedisSocket = { Closure action ->
     String authCommand = buildAuthCommand()
     new Socket().withCloseable { socket ->
-        socket.connect(new InetSocketAddress(configuredRedisHost, 6379), 200)
+        socket.connect(new InetSocketAddress(configuredRedisHost, configuredRedisPort.toInteger()), 200)
         socket.setSoTimeout(500)
         if (authCommand != null) {
             socket.outputStream.write(authCommand.getBytes('UTF-8'))
