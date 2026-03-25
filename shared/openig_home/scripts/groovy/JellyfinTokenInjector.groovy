@@ -96,7 +96,7 @@ try {
 
         deviceId = buildDeviceId(requireUserSub())
 
-        HttpURLConnection authConnection = (HttpURLConnection) new URL('http://jellyfin:8096/Users/AuthenticateByName').openConnection()
+        HttpURLConnection authConnection = (HttpURLConnection) new URL('http://shared-jellyfin:8096/Users/AuthenticateByName').openConnection()
         authConnection.requestMethod = 'POST'
         authConnection.doOutput = true
         authConnection.setRequestProperty('Content-Type', 'application/json')

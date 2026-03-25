@@ -72,6 +72,23 @@
       }
     },
     {
+      "name": "SpaBlacklistGuardApp5",
+      "type": "ScriptableFilter",
+      "config": {
+        "type": "application/x-groovy",
+        "file": "SpaBlacklistGuardFilter.groovy",
+        "args": {
+          "sessionCacheKey": "oidc_sid_app5",
+          "redisHost": "shared-redis",
+          "redisPort": "${env['REDIS_PORT'] != null ? env['REDIS_PORT'] : '6379'}",
+          "redisAuth": "${env['REDIS_PASSWORD_APP5'] != null ? env['REDIS_PASSWORD_APP5'] : ''}",
+          "redisUser": "openig-app5",
+          "redisPasswordEnvVar": "REDIS_PASSWORD_APP5",
+          "redisKeyPrefix": "app5"
+        }
+      }
+    },
+    {
       "name": "TokenReferenceFilterApp5",
       "type": "ScriptableFilter",
       "config": {
@@ -153,6 +170,7 @@
     "type": "Chain",
     "config": {
       "filters": [
+        "SpaBlacklistGuardApp5",
         "TokenReferenceFilterApp5",
         "SpaAuthGuardApp5",
         "OidcFilterApp5",

@@ -68,6 +68,20 @@ def withRedisSocket = { Closure action ->
     }
 }
 
+def resolveTokenRefRedisKeyPrefix = { String tokenRefKeyName ->
+    if (!tokenRefKeyName) {
+        return configuredRedisKeyPrefix
+    }
+    if (tokenRefKeyName == configuredTokenRefKey || tokenRefKeyName == 'token_ref_id') {
+        return configuredRedisKeyPrefix
+    }
+    String keyPrefixMarker = 'token_ref_id_'
+    if (tokenRefKeyName.startsWith(keyPrefixMarker)) {
+        return tokenRefKeyName.substring(keyPrefixMarker.length())
+    }
+    configuredRedisKeyPrefix
+}
+
 def publicUrl = System.getenv('OPENIG_PUBLIC_URL') ?: 'http://openiga.sso.local'
 def hostHeader = request.headers.getFirst('Host') as String
 def hostWithoutPort = hostHeader?.split(':')?.getAt(0)
@@ -100,7 +114,8 @@ if (configuredRedisHost) {
             .each { tokenRefKeyName ->
                 String tokenRefIdValue = session[tokenRefKeyName] as String
                 if (tokenRefIdValue?.trim()) {
-                    String keyToDelete = (configuredRedisKeyPrefix ? configuredRedisKeyPrefix + ':' : '') + 'token_ref:' + tokenRefIdValue
+                    String redisKeyPrefixForTokenRef = resolveTokenRefRedisKeyPrefix(tokenRefKeyName)
+                    String keyToDelete = (redisKeyPrefixForTokenRef ? redisKeyPrefixForTokenRef + ':' : '') + 'token_ref:' + tokenRefIdValue
                     int kSize = keyToDelete.getBytes('UTF-8').length
                     String delCmd = '*2\r\n$3\r\nDEL\r\n$' + kSize + '\r\n' + keyToDelete + '\r\n'
                     try {

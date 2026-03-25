@@ -12,7 +12,7 @@ cp "$TEMPLATE" "$OUTPUT"
 
 for app in 1 2 3 4 5 6; do
   var="REDIS_PASSWORD_APP${app}"
-  eval value=\${$var:-}
+  value=$(printenv "$var" || true)
   if [ -z "$value" ]; then
     echo "FATAL: required env var $var is not set. Aborting." >&2
     exit 1

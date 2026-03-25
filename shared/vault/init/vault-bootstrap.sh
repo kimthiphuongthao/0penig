@@ -138,7 +138,15 @@ seed_secrets() {
     login=alice \
     email=alice@lab.local \
     password="${REDMINE_ALICE_PASSWORD}" >/dev/null
+  vault kv put secret/redmine-creds/alice@lab.local \
+    login=alice \
+    email=alice@lab.local \
+    password="${REDMINE_ALICE_PASSWORD}" >/dev/null
   vault kv put secret/redmine-creds/bob \
+    login=bob \
+    email=bob@lab.local \
+    password="${REDMINE_BOB_PASSWORD}" >/dev/null
+  vault kv put secret/redmine-creds/bob@lab.local \
     login=bob \
     email=bob@lab.local \
     password="${REDMINE_BOB_PASSWORD}" >/dev/null
@@ -147,7 +155,15 @@ seed_secrets() {
     username=alice \
     email=alice@lab.local \
     password="${JELLYFIN_ALICE_PASSWORD}" >/dev/null
+  vault kv put secret/jellyfin-creds/alice@lab.local \
+    username=alice \
+    email=alice@lab.local \
+    password="${JELLYFIN_ALICE_PASSWORD}" >/dev/null
   vault kv put secret/jellyfin-creds/bob \
+    username=bob \
+    email=bob@lab.local \
+    password="${JELLYFIN_BOB_PASSWORD}" >/dev/null
+  vault kv put secret/jellyfin-creds/bob@lab.local \
     username=bob \
     email=bob@lab.local \
     password="${JELLYFIN_BOB_PASSWORD}" >/dev/null

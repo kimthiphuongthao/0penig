@@ -216,7 +216,7 @@ if (browserHasLoggedInCookie && sameUser) {
     //  a) Avoid DNS resolution issues in some OpenIG versions
     //  b) Control redirect behavior (we want 302, not to follow it)
     try {
-        def loginUrl = new URL("http://wordpress/wp-login.php")
+        def loginUrl = new URL("http://shared-wordpress/wp-login.php")
         def conn = (HttpURLConnection) loginUrl.openConnection()
         conn.requestMethod = 'POST'
         conn.doOutput = true

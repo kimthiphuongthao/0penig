@@ -109,6 +109,20 @@ def withRedisSocket = { Closure action ->
     }
 }
 
+def resolveTokenRefRedisKeyPrefix = { String tokenRefKeyName ->
+    if (!tokenRefKeyName) {
+        return configuredRedisKeyPrefix
+    }
+    if (tokenRefKeyName == configuredTokenRefKey || tokenRefKeyName == 'token_ref_id') {
+        return configuredRedisKeyPrefix
+    }
+    String keyPrefixMarker = 'token_ref_id_'
+    if (tokenRefKeyName.startsWith(keyPrefixMarker)) {
+        return tokenRefKeyName.substring(keyPrefixMarker.length())
+    }
+    configuredRedisKeyPrefix
+}
+
 def CANONICAL_ORIGIN = System.getenv('CANONICAL_ORIGIN_APP4') ?: 'http://jellyfin-b.sso.local:9080'
 
 def publicUrl = System.getenv('OPENIG_PUBLIC_URL') ?: 'http://openigb.sso.local:9080'
@@ -151,7 +165,7 @@ try {
         }
 
         if (jellyfinDeviceId?.trim()) {
-            HttpURLConnection logoutConnection = (HttpURLConnection) new URL('http://jellyfin:8096/Sessions/Logout').openConnection()
+            HttpURLConnection logoutConnection = (HttpURLConnection) new URL('http://shared-jellyfin:8096/Sessions/Logout').openConnection()
             logoutConnection.requestMethod = 'POST'
             logoutConnection.doOutput = true
             logoutConnection.setRequestProperty('Authorization', buildAuthorization(jellyfinDeviceId, jellyfinToken) as String)
@@ -179,7 +193,8 @@ try {
                 .each { tokenRefKeyName ->
                     String tokenRefIdValue = session[tokenRefKeyName] as String
                     if (tokenRefIdValue?.trim()) {
-                        String keyToDelete = (configuredRedisKeyPrefix ? configuredRedisKeyPrefix + ':' : '') + 'token_ref:' + tokenRefIdValue
+                        String redisKeyPrefixForTokenRef = resolveTokenRefRedisKeyPrefix(tokenRefKeyName)
+                        String keyToDelete = (redisKeyPrefixForTokenRef ? redisKeyPrefixForTokenRef + ':' : '') + 'token_ref:' + tokenRefIdValue
                         int kSize = keyToDelete.getBytes('UTF-8').length
                         String delCmd = '*2\r\n$3\r\nDEL\r\n$' + kSize + '\r\n' + keyToDelete + '\r\n'
                         try {
