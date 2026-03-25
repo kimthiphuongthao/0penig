@@ -11,8 +11,8 @@
           "openig-client-b-app4"
         ],
         "redisHost": "shared-redis",
-        "jwksUri": "http://host.docker.internal:8080/realms/sso-realm/protocol/openid-connect/certs",
-        "issuer": "http://auth.sso.local:8080/realms/sso-realm",
+        "jwksUri": "${env['KEYCLOAK_INTERNAL_URL']}/realms/sso-realm/protocol/openid-connect/certs",
+        "issuer": "${env['KEYCLOAK_BROWSER_URL']}/realms/sso-realm",
         "ttlSeconds": "${env['REDIS_BLACKLIST_TTL_APP4'] != null ? env['REDIS_BLACKLIST_TTL_APP4'] : '28800'}",
         "redisUser": "openig-app4",
         "redisPasswordEnvVar": "REDIS_PASSWORD_APP4",
