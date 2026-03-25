@@ -61,6 +61,7 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] **Code review + security review round 2**: 25 fixes (3 rounds, 6 subagent + 2 Codex). Gateway cookie hardening, atomic `globals.compute()`, RESP parsing, admin PRODUCTION, nginx hardening, dead code cleanup, Vault policy fix, etc.
 - [x] **Pre-packaging comprehensive audit**: 6 agents, 8 docs at `docs/audit/2026-03-16-pre-packaging-audit/`. Findings: 0/24 Groovy replaceable by built-in, 78% duplication (7 patterns), JWKS race (CRITICAL). ScriptableHandler `args` confirmed YES.
 - [x] Post-Stack C docs: OpenIG built-in filter selection guide — covered by audit Task 1A/1B docs
+- [x] OpenIG built-in gap analysis: verified 0/14 Groovy scripts replaceable by built-ins; 12 capability gaps documented (`docs/deliverables/openig-builtin-gap-analysis.md`, 2026-03-25)
 - [x] Workaround: admin "Logout all sessions" — session timeout 30min + access token 5min (max 5min delay)
 - [x] Pattern Consolidation Step 3: BackchannelLogoutHandler 3→1, `globals.compute()` JWKS cache fix (C-1), TTL seconds fix (H-6), args binding (`4d8f065`)
 - [x] Pattern Consolidation Step 4: SloHandler 5→2, try-catch fix (H-1), phpMyAdmin inline failureHandler update (`3b8a6d8`)
