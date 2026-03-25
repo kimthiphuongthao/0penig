@@ -10,6 +10,14 @@ def logError = { message, error ->
     }
 }
 
+def requireEnv = { String envVarName ->
+    String envValue = System.getenv(envVarName)?.trim()
+    if (!envValue) {
+        throw new IllegalStateException("JellyfinResponseRewriter requires env var ${envVarName}")
+    }
+    envValue
+}
+
 def escapeForJs = { value ->
     ((value ?: '') as String)
         .replace('\\', '\\\\')
@@ -21,13 +29,12 @@ def escapeForJs = { value ->
 }
 
 try {
+    def serverAddress = requireEnv('CANONICAL_ORIGIN_APP4')
     def accessToken = session['jellyfin_token'] as String
     def userId = session['jellyfin_user_id'] as String
     def deviceId = session['jellyfin_device_id'] as String
     def serverId = (System.getenv('JELLYFIN_SERVER_ID') ?: '8a4467ecf1d4422583f472d90cb8c78f') as String
     def requestUri = request?.uri?.toString() ?: ''
-    def hostHeader = request.headers.getFirst('Host') as String
-    def serverAddress = 'http://' + (hostHeader ?: 'jellyfin-b.sso.local:9080')
 
     return next.handle(context, request).then({ response ->
         try {
@@ -103,6 +110,9 @@ try {
             return response
         }
     })
+} catch (IllegalStateException e) {
+    logError('[JellyfinResponseRewriter] Missing required configuration, denying request (fail-closed)', e)
+    return newResultPromise(new Response(Status.INTERNAL_SERVER_ERROR))
 } catch (Exception e) {
     logError('[JellyfinResponseRewriter] Failed before handling request', e)
     return next.handle(context, request)

@@ -4,13 +4,20 @@ import org.forgerock.http.protocol.Status
 import java.io.InputStream
 import java.io.OutputStream
 import java.net.HttpURLConnection
+import java.net.URI
 import java.net.URL
 import java.net.URLEncoder
 
 def logPrefix = '[RedmineCredentialInjector] '
-def CANONICAL_ORIGIN = System.getenv('CANONICAL_ORIGIN_APP3') ?: 'http://redmine-b.sso.local:9080'
-def CANONICAL_HOST = 'redmine-b.sso.local'
 def REDMINE_LOGIN_URL = 'http://shared-redmine:3000/login'
+
+def requireEnv = { String envVarName ->
+    String envValue = System.getenv(envVarName)?.trim()
+    if (!envValue) {
+        throw new IllegalStateException("RedmineCredentialInjector requires env var ${envVarName}")
+    }
+    envValue
+}
 
 def splitCookieHeader = { String cookieHeader ->
     def cookies = []
@@ -66,7 +73,7 @@ def mergeCookieHeader = { String existingCookieHeader, Collection cookiePairs ->
     return mergedByName.values().join('; ')
 }
 
-def rewriteSetCookieHeader = { String setCookieHeader ->
+def rewriteSetCookieHeader = { String setCookieHeader, String canonicalHost ->
     if (setCookieHeader == null || setCookieHeader.trim().isEmpty()) {
         return setCookieHeader
     }
@@ -89,7 +96,7 @@ def rewriteSetCookieHeader = { String setCookieHeader ->
 
         def lower = segment.toLowerCase()
         if (lower.startsWith('domain=')) {
-            rewritten.add('Domain=' + CANONICAL_HOST)
+            rewritten.add('Domain=' + canonicalHost)
             hasDomain = true
         } else if (lower.startsWith('samesite=')) {
             rewritten.add('SameSite=Lax')
@@ -100,7 +107,7 @@ def rewriteSetCookieHeader = { String setCookieHeader ->
     }
 
     if (!hasDomain) {
-        rewritten.add('Domain=' + CANONICAL_HOST)
+        rewritten.add('Domain=' + canonicalHost)
     }
     if (!hasSameSite) {
         rewritten.add('SameSite=Lax')
@@ -109,8 +116,8 @@ def rewriteSetCookieHeader = { String setCookieHeader ->
     return rewritten.join('; ')
 }
 
-def expireCookieHeader = { String cookieName ->
-    return cookieName + '=; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; Domain=' + CANONICAL_HOST + '; SameSite=Lax'
+def expireCookieHeader = { String cookieName, String canonicalHost ->
+    return cookieName + '=; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/; Domain=' + canonicalHost + '; SameSite=Lax'
 }
 
 def readResponseBody = { HttpURLConnection connection ->
@@ -177,6 +184,12 @@ def extractCookiePair = { String setCookieHeader ->
 }
 
 try {
+    def canonicalOrigin = requireEnv('CANONICAL_ORIGIN_APP3')
+    def canonicalHost = new URI(canonicalOrigin).host?.trim()
+    if (!canonicalHost) {
+        throw new IllegalStateException('RedmineCredentialInjector requires CANONICAL_ORIGIN_APP3 to include a valid host')
+    }
+
     def redmineCredentials = attributes.redmine_credentials
     String login = redmineCredentials != null ? (redmineCredentials['login'] as String) : null
     String password = redmineCredentials != null ? (redmineCredentials['password'] as String) : null
@@ -368,7 +381,7 @@ try {
             if (eqIndex > 0) {
                 cookieNamesForSession.add(cookiePair.substring(0, eqIndex).trim())
             }
-            pendingBrowserSetCookies.add(rewriteSetCookieHeader(cookieHeader))
+            pendingBrowserSetCookies.add(rewriteSetCookieHeader(cookieHeader, canonicalHost))
         }
 
         if (cookiePairs.isEmpty() || !cookiePairs.any { it.startsWith('_redmine_session=') }) {
@@ -413,7 +426,7 @@ try {
             def retryPath = request.uri.path ?: '/'
             def retryQuery = request.uri.query ? '?' + request.uri.query : ''
             def retryResponse = new Response(response.status)
-            retryResponse.headers['Location'] = CANONICAL_ORIGIN + retryPath + retryQuery
+            retryResponse.headers['Location'] = canonicalOrigin + retryPath + retryQuery
 
             def cookieNamesToClear = []
             if (sessionRedmineCookieNames != null && !sessionRedmineCookieNames.trim().isEmpty()) {
@@ -433,7 +446,7 @@ try {
             }
 
             for (def cookieName : cookieNamesToClear.unique()) {
-                retryResponse.headers.add('Set-Cookie', expireCookieHeader(cookieName))
+                retryResponse.headers.add('Set-Cookie', expireCookieHeader(cookieName, canonicalHost))
             }
             return retryResponse
         }
@@ -443,6 +456,12 @@ try {
         }
         return response
     })
+} catch (IllegalStateException e) {
+    logger.error(logPrefix + 'Invalid configuration, denying request (fail-closed)', e)
+    def response = new Response(Status.INTERNAL_SERVER_ERROR)
+    response.entity.setString('<html><body><h2>Redmine SSO configuration is invalid.</h2></body></html>')
+    response.headers.put('Content-Type', ['text/html'])
+    return response
 } catch (Exception e) {
     logger.error(logPrefix + 'Failed', e)
     def response = new Response(Status.BAD_GATEWAY)
