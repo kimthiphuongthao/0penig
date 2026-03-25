@@ -11,6 +11,7 @@ String configuredCanonicalOrigin = binding.hasVariable('canonicalOrigin') ? (can
 String configuredPostLogoutPath = binding.hasVariable('postLogoutPath') ? (postLogoutPath as String) : '/'
 String configuredTokenRefKey = binding.hasVariable('tokenRefKey') ? (tokenRefKey as String)?.trim() : 'token_ref_id'
 String configuredRedisHost = binding.hasVariable('redisHost') ? (redisHost as String)?.trim() : null
+def configuredRedisPort = binding.hasVariable('redisPort') ? (redisPort as String) : '6379'
 String configuredRedisUser = binding.hasVariable('redisUser') ? (redisUser as String)?.trim() : null
 String configuredRedisPasswordEnvVar = binding.hasVariable('redisPasswordEnvVar') ? (redisPasswordEnvVar as String)?.trim() : 'REDIS_PASSWORD'
 String configuredRedisKeyPrefix = binding.hasVariable('redisKeyPrefix') ? (redisKeyPrefix as String)?.trim() : ''
@@ -54,7 +55,7 @@ def buildAuthCommand = {
 def withRedisSocket = { Closure action ->
     String authCommand = buildAuthCommand()
     new Socket().withCloseable { socket ->
-        socket.connect(new InetSocketAddress(configuredRedisHost, 6379), 200)
+        socket.connect(new InetSocketAddress(configuredRedisHost, configuredRedisPort.toInteger()), 200)
         socket.setSoTimeout(500)
         if (authCommand != null) {
             socket.outputStream.write(authCommand.getBytes('UTF-8'))
