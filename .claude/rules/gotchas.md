@@ -21,6 +21,7 @@
 | Redis ACL is minimal by design | Unsupported Redis commands will fail at runtime | Use `AUTH <user> <password>` and only `SET`, `GET`, `DEL`, `EXISTS`, `PING` on `appN:*` keys |
 | Global `IG_SSO` heap still exists in `config.json` | Debuggers may think the shared runtime still uses one cookie | Active shared-infra routes override it with `SessionApp1..6`; browser cookies are `IG_SSO_APP1..APP6` |
 | Lab transport is still HTTP-only | The current lab is not transport-secure | Production requires TLS between components, Vault Transit for Redis payload protection, and network segmentation |
+| `SloHandler.groovy` and `SloHandlerJellyfin.groovy` have legacy hostname fallbacks | If `OPENIG_PUBLIC_URL` or `CANONICAL_ORIGIN_APP4` env vars are missing, logout redirect URIs silently use wrong hostnames: `openiga.sso.local` (old Stack A) and `jellyfin-b.sso.local:9080` (old Stack B port) | AUD-009 OPEN LOW — always set `OPENIG_PUBLIC_URL` and `CANONICAL_ORIGIN_APP4` in docker-compose env; fix pending in `SloHandler.groovy` line 86 and `SloHandlerJellyfin.groovy` line 127 |
 
 ## Decision log
 
