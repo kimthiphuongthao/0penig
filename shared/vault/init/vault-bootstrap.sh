@@ -225,6 +225,8 @@ apply_hardening() {
   done
 }
 
+bootstrapped_now=false
+
 wait_for_vault
 init_if_needed
 unseal_if_needed
@@ -240,7 +242,7 @@ done
 
 if [ ! -f "$BOOTSTRAP_FLAG" ]; then
   seed_secrets
-  touch "$BOOTSTRAP_FLAG"
+  bootstrapped_now=true
   echo "Bootstrap complete."
 else
   echo "Already bootstrapped."
@@ -249,3 +251,7 @@ fi
 ensure_admin_token
 apply_hardening
 echo "Vault hardening applied."
+
+if [ "$bootstrapped_now" = true ]; then
+  touch "$BOOTSTRAP_FLAG"
+fi

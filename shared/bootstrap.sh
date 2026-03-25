@@ -63,6 +63,7 @@ regenerate_secret_ids() {
 
   ADMIN_TOKEN=$(cat "$admin_token_file")
 
+  umask 077
   for app in app1 app2 app3 app4 app5 app6; do
     docker exec \
       -e VAULT_ADDR=http://127.0.0.1:8200 \
@@ -70,6 +71,7 @@ regenerate_secret_ids() {
       shared-vault \
       vault write -f -field=secret_id "auth/approle/role/openig-${app}/secret-id" \
       > "vault/file/openig-${app}-secret-id"
+    chmod 600 "vault/file/openig-${app}-secret-id"
   done
 }
 
