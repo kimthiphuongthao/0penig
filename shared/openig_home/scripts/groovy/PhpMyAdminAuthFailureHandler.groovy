@@ -2,11 +2,24 @@ import org.forgerock.http.protocol.Response
 import org.forgerock.http.protocol.Status
 import static org.forgerock.util.promise.Promises.newResultPromise
 
+import java.net.URI
 import java.net.URLEncoder
 
 String clientEndpoint = binding.hasVariable('clientEndpoint') ? String.valueOf(binding.variables['clientEndpoint']) : '/openid/app6'
 String clientId = binding.hasVariable('clientId') ? String.valueOf(binding.variables['clientId']) : 'openig-client-c-app6'
-String canonicalOrigin = binding.hasVariable('canonicalOrigin') ? String.valueOf(binding.variables['canonicalOrigin']) : 'http://phpmyadmin-c.sso.local:18080'
+String canonicalOriginEnvVar = binding.hasVariable('canonicalOriginEnvVar') ? String.valueOf(binding.variables['canonicalOriginEnvVar'])?.trim() : null
+String canonicalOrigin = null
+if (canonicalOriginEnvVar) {
+    canonicalOrigin = System.getenv(canonicalOriginEnvVar)?.trim()
+    if (!canonicalOrigin) {
+        throw new IllegalStateException("PhpMyAdminAuthFailureHandler requires env var ${canonicalOriginEnvVar}")
+    }
+} else if (binding.hasVariable('canonicalOrigin')) {
+    canonicalOrigin = String.valueOf(binding.variables['canonicalOrigin'])?.trim()
+}
+if (!canonicalOrigin) {
+    throw new IllegalStateException('PhpMyAdminAuthFailureHandler requires canonicalOrigin or canonicalOriginEnvVar')
+}
 String postLogoutPath = binding.hasVariable('postLogoutPath') ? String.valueOf(binding.variables['postLogoutPath']) : '/'
 String redirectUrl = binding.hasVariable('redirectUrl') ? String.valueOf(binding.variables['redirectUrl']) : canonicalOrigin + '/'
 
@@ -123,10 +136,14 @@ if (!logoutRequest) {
     return newResultPromise(response)
 }
 
-def publicUrl = System.getenv('OPENIG_PUBLIC_URL') ?: 'http://openiga.sso.local'
+def publicUrl = System.getenv('OPENIG_PUBLIC_URL')?.trim()
+if (!publicUrl) {
+    throw new IllegalStateException('PhpMyAdminAuthFailureHandler requires env var OPENIG_PUBLIC_URL')
+}
 def hostHeader = request.headers.getFirst('Host') as String
 def hostWithoutPort = hostHeader?.split(':')?.getAt(0)
-def defaultPort = publicUrl.contains(':9080') ? '9080' : publicUrl.contains(':18080') ? '18080' : '80'
+def publicUri = new URI(publicUrl)
+def defaultPort = publicUri.port > 0 ? String.valueOf(publicUri.port) : ('https'.equalsIgnoreCase(publicUri.scheme) ? '443' : '80')
 def hostWithPort = hostHeader?.contains(':') ? hostHeader : (hostWithoutPort ? hostWithoutPort + ':' + defaultPort : null)
 
 def oauth2Keys = []

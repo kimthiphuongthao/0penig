@@ -12,15 +12,6 @@ configuredClientEndpoint = configuredClientEndpoint?.trim()
 String sessionCacheKey = binding.hasVariable('sessionCacheKey') ? (sessionCacheKey as String)?.trim() : null
 String origin = null
 String configuredCanonicalOriginEnvVar = binding.hasVariable('canonicalOriginEnvVar') ? (canonicalOriginEnvVar as String)?.trim() : null
-if (configuredCanonicalOriginEnvVar) {
-    def envVal = System.getenv(configuredCanonicalOriginEnvVar)
-    if (envVal) {
-        origin = envVal
-    }
-}
-if (!origin && binding.hasVariable('canonicalOrigin')) {
-    origin = (canonicalOrigin as String)?.trim()
-}
 String configuredRedisPort = binding.hasVariable('redisPort') ? String.valueOf(redisPort) : (System.getenv('REDIS_PORT') ?: '6379')
 configuredRedisPort = configuredRedisPort?.trim()
 String configuredRedisHost = binding.hasVariable('redisHost') ? (redisHost as String)?.trim() : (System.getenv('REDIS_HOST') ?: 'shared-redis')
@@ -31,6 +22,14 @@ String configuredRedisKeyPrefix = binding.hasVariable('redisKeyPrefix') ? (redis
 if (configuredRedisPasswordEnvVar && configuredRedisPasswordEnvVar != 'REDIS_PASSWORD') {
     String overridePassword = System.getenv(configuredRedisPasswordEnvVar)
     if (overridePassword) { configuredRedisPassword = overridePassword }
+}
+
+def requireEnv = { String envVarName ->
+    String envValue = System.getenv(envVarName)?.trim()
+    if (!envValue) {
+        throw new IllegalStateException("SessionBlacklistFilter requires env var ${envVarName}")
+    }
+    envValue
 }
 
 def decodeSidFromToken = { String jwt ->
@@ -78,6 +77,12 @@ def buildAuthCommand = {
 }
 
 try {
+    if (configuredCanonicalOriginEnvVar) {
+        origin = requireEnv(configuredCanonicalOriginEnvVar)
+    } else if (!origin && binding.hasVariable('canonicalOrigin')) {
+        origin = (canonicalOrigin as String)?.trim()
+    }
+
     if (!configuredClientEndpoint) {
         throw new IllegalStateException('SessionBlacklistFilter requires clientEndpoint arg')
     }
@@ -90,7 +95,7 @@ try {
 
     String sid = session[sessionCacheKey] as String
     if (!sid?.trim()) {
-        String publicUrl = System.getenv('OPENIG_PUBLIC_URL') ?: 'http://openiga.sso.local:80'
+        String publicUrl = requireEnv('OPENIG_PUBLIC_URL')
         String hostHeader = request.headers.getFirst('Host') as String
         String hostWithoutPort = hostHeader?.split(':')?.getAt(0)
         String hostWithPort = hostHeader?.contains(':') ? hostHeader : (hostWithoutPort ? hostWithoutPort + ':80' : null)
