@@ -56,6 +56,10 @@ def splitCookieHeader = { String cookieHeader ->
 }
 
 try {
+    request.headers.remove('Authorization')
+    request.headers.remove('X-Emby-Authorization')
+    request.headers.remove('X-MediaBrowser-Token')
+
     def jellyfinCredentials = attributes.jellyfin_credentials
     String username = jellyfinCredentials != null ? (jellyfinCredentials['username'] as String) : null
     String password = jellyfinCredentials != null ? (jellyfinCredentials['password'] as String) : null
@@ -91,6 +95,9 @@ try {
         String acceptHeader = request.headers.getFirst('Accept') as String
         boolean isHtmlRequest = acceptHeader?.contains('text/html')
         if (!isHtmlRequest) {
+            request.headers.remove('Authorization')
+            request.headers.remove('X-Emby-Authorization')
+            request.headers.remove('X-MediaBrowser-Token')
             return next.handle(context, request)
         }
 
