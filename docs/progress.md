@@ -22,6 +22,37 @@
 
 ---
 
+## Tuần 23/03/2026 - 27/03/2026
+
+### Kế hoạch
+- Khôi phục và kiểm thử production session pattern trên toàn bộ stack
+- Tiếp tục đối chiếu audit hệ thống đích với mô hình Distributed Gateway, cập nhật Gap analysis
+- Rà soát và chuẩn hóa tài liệu reference solution theo từng login mechanism
+- Cập nhật Quick Start Guide và slide báo cáo
+
+### Kết quả
+- [x] Khôi phục và kiểm thử production session pattern trên toàn bộ stack: hoàn tất chuyển sang shared-infra runtime, xác nhận SSO/SLO end-to-end cho toàn bộ 6 ứng dụng trên cùng cụm OpenIG/Vault/Redis dùng chung; đồng thời xử lý lỗi SSO sau SLO do mixed OAuth2 state/token restore và chốt baseline session/cookie isolation cho mô hình production.
+- [x] Tiếp tục đối chiếu audit hệ thống đích với mô hình Distributed Gateway, cập nhật Gap analysis: hoàn tất OpenIG built-in gap analysis, lập production-readiness audit ngày 25/03 và cập nhật vòng hiệu chỉnh để chốt danh sách findings mở, mức độ ưu tiên và các blind spots cần xử lý trước đóng gói.
+- [ ] Rà soát và chuẩn hóa tài liệu reference solution theo từng login mechanism: đã đồng bộ phần lớn deliverables, rules và integration guide sang kiến trúc shared-infra, bổ sung hướng dẫn bootstrap và cập nhật các tài liệu audit liên quan; tuy nhiên bộ reference solution theo từng mechanism vẫn chưa hoàn tất để sẵn sàng bàn giao.
+- [ ] Cập nhật Quick Start Guide và slide báo cáo: đã có nền tảng đóng gói ban đầu với script bootstrap idempotent cho shared runtime, nhưng Quick Start Guide hoàn chỉnh và slide báo cáo vẫn là hạng mục tồn đọng cho tuần kế tiếp.
+
+---
+
+## Tuần 30/03/2026 - 03/04/2026
+
+### Kế hoạch
+**Kỹ thuật**
+- Ưu tiên triển khai các findings còn mở từ production-readiness audit 2026-03-25, trước hết là BUG-002 (nginx callback retry), AUD-003 (JWKS null-cache), AUD-009 và blind spot BS-001 về Redis plaintext token payload.
+- Chốt fix plan cho toàn bộ findings OPEN/PARTIAL, hoàn tất các hardening có thể đóng ngay trên shared runtime và chạy nốt các vòng security/code review còn deferred để khóa baseline readiness.
+
+**Đóng gói & triển khai**
+- Hoàn thiện packaging shared-infra theo hướng single-command deploy, chuẩn hóa `shared/bootstrap.sh`, cấu trúc bundle bàn giao và bộ biến cấu hình tối thiểu cho đơn vị triển khai.
+- Đánh giá và chốt phương án đóng gói cuối cùng cho lab handover, ưu tiên Docker Compose bundle và giữ OVA như phương án trình diễn nếu cần.
+
+**Tài liệu & báo cáo**
+- Hoàn thiện Quick Start Guide, tài liệu vận hành/chuyển giao và cập nhật reference solution theo trạng thái audit mới nhất, bám 5 login mechanisms của bộ giải pháp.
+- Soạn slide báo cáo và tài liệu tổng quan cho stakeholder, nhấn mạnh kiến trúc Distributed Gateway, mức sẵn sàng production, các gap còn lại và khuyến nghị triển khai.
+
 ## Tuần 09/03/2026 - 13/03/2026
 
 ### Kế hoạch
@@ -90,5 +121,44 @@
 - [x] 2026-03-20: hoàn thành L-1/L-3 (`8f17e7b`), L-2 (`d2a0411`), L-4/L-6 (`e4485f1`), và Code-M3 Stack B `VaultCredentialFilter.groovy` consolidation (`e22a855`)
 - [x] 2026-03-20: fix regression `BUG-TOKENREFKEY` (`8e9f729`) bằng per-app `tokenRefKey` (`token_ref_id_app1` .. `token_ref_id_app6`) để chặn cross-app same-cookie contamination
 - [x] 2026-03-20: end-of-session audit synced backlog, gap report, deliverables, rules, Obsidian stack/debug notes, progress, and `.memory` before compact
+
+---
+
+## Tuần 23/03/2026 - 27/03/2026
+
+### Kế hoạch
+**Kỹ thuật:**
+- [ ] Khôi phục và kiểm thử production session pattern trên toàn bộ stack
+- [ ] Tiếp tục đối chiếu audit hệ thống đích với mô hình Distributed Gateway, cập nhật Gap analysis
+- [ ] Rà soát và chuẩn hóa tài liệu reference solution theo từng login mechanism
+
+**Tài liệu & báo cáo:**
+- [ ] Cập nhật Quick Start Guide và slide báo cáo
+
+### Kết quả
+- [x] Hoàn tất chuyển đổi sang kiến trúc shared-infra: một cụm gateway duy nhất (nginx + OpenIG HA + Redis + Vault) phục vụ toàn bộ 6 ứng dụng qua hostname routing — xác nhận SSO/SLO 6/6 PASS
+- [x] Tăng cường bảo mật tầng runtime: per-app Redis ACL isolation, per-app Vault AppRole isolation, xử lý các security findings từ audit nội bộ (AUD-001, AUD-004, AUD-005, AUD-008)
+- [x] Hoàn thiện production readiness audit: 30+ findings qua 5 vòng review, phân loại mức độ ưu tiên, tổng hợp thành master audit doc
+- [x] Hoàn thiện phân tích khoảng cách OpenIG built-in vs custom Groovy: 0/14 script có thể thay thế bằng built-in, tài liệu hóa 12 capability gaps
+- [x] Bổ sung packaging artifact: bootstrap.sh — khởi động Vault và tái tạo AppRole idempotent bằng một lệnh
+- [ ] Cập nhật Quick Start Guide và slide báo cáo — chưa hoàn thiện, chuyển sang tuần tiếp
+
+---
+
+## Tuần 30/03/2026 - 03/04/2026
+
+### Kế hoạch
+**Kỹ thuật:**
+- [ ] Xử lý các findings còn mở từ production readiness audit (ưu tiên BUG và security findings)
+- [ ] Hoàn thiện bằng chứng kiểm chứng HA, failover và kiểm soát truy cập tối thiểu
+
+**Đóng gói & triển khai:**
+- [ ] Thiết kế và thử nghiệm Docker Compose bundle: single-command deploy
+- [ ] Viết Quick Start Guide cho đơn vị nhận package
+
+**Tài liệu & báo cáo:**
+- [ ] Hoàn thiện slide báo cáo phương án giải pháp SSO/SLO
+- [ ] Cập nhật tài liệu reference solution với kết quả audit và gap analysis
+- [ ] Viết tài liệu tổng quan giải pháp cho stakeholder/lãnh đạo
 
 ---
