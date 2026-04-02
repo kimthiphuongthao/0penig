@@ -14,6 +14,9 @@
 - App team không cần biết hoặc vận hành mô hình cũ `stack-a`, `stack-b`, `stack-c`
 - Gateway team xử lý toàn bộ SSO, SLO, session gateway, logout propagation và secret backend
 
+The active lab runtime is shared/: one nginx, two OpenIG nodes (shared-openig-1/2), one Redis, and one Vault serving all 6 apps on port 80 via hostname routing.
+Each app is isolated with a route-local JwtSession heap (SessionApp1..6), a host-only browser cookie (IG_SSO_APP1..APP6), a per-app Redis ACL user (openig-app1..6), and a per-app Vault AppRole (openig-app1..6).
+
 Điều quan trọng nhất cho app team:
 
 - Bạn cung cấp thông tin kỹ thuật chính xác về login, logout, cookie, và deployment constraints
@@ -43,7 +46,7 @@ Chọn một cơ chế chính:
 - [ ] HTTP Basic Auth
 - [ ] Header-based / trusted proxy
 - [ ] Token / API login
-- [ ] LDAP
+- [ ] LDAP (future pattern — requires app-specific assessment; not part of the validated 6-app baseline)
 - [ ] Khác
 
 ### 2.3 Chi tiết login mà gateway team cần
@@ -54,7 +57,7 @@ Chọn một cơ chế chính:
 | HTTP Basic Auth | App có dùng browser Basic popup hay mode cấu hình riêng, username format, password format, app có cần bật chế độ `auth_type=http` hoặc tương đương không |
 | Header-based | Tên header app tin tưởng, app có mode `auth proxy` / `trusted header` sẵn không, app có cần thêm role/group headers không |
 | Token / API login | Token endpoint, HTTP method, request body format, response fields, refresh/revoke endpoint nếu có, token đang được lưu ở đâu phía client |
-| LDAP | Cách app bind vào LDAP, team nào đang sở hữu LDAP config, logout limitation nếu có |
+| LDAP (future pattern — requires app-specific assessment; not part of the validated 6-app baseline) | Cách app bind vào LDAP, team nào đang sở hữu LDAP config, logout limitation nếu có |
 
 ### 2.4 Credential format và Vault requirement
 
@@ -138,7 +141,7 @@ App team **có thể vẫn cần**:
 
 - [ ] App name, environment, business owner, technical POC
 - [ ] Final hostname trên shared infra
-- [ ] Login mechanism type: Form / Basic / Header / Token / LDAP
+- [ ] Login mechanism type: Form / Basic / Header / Token / LDAP (future pattern — requires app-specific assessment; not part of the validated 6-app baseline)
 - [ ] Login endpoint hoặc trusted header hoặc token endpoint details
 - [ ] Credential format app yêu cầu
 - [ ] Có cần Vault-stored credentials không
@@ -173,6 +176,9 @@ Nếu muốn handoff bằng bảng, dùng mẫu sau:
 Tài liệu này mô tả **pattern đã được validate trong lab**. Production cần thêm các control sau:
 
 - TLS giữa các thành phần gateway, đặc biệt là Vault và Redis
+- Browser-facing HTTPS is required in production; all session cookies must include the Secure flag
+- OpenIG must be configured with requireHttps: true in production
+- In the current lab, transport remains HTTP-only (lab exception); this must be remediated before production use
 - Vault Transit cho Redis token / blacklist encryption
 - OS-level disk encryption hoặc biện pháp tương đương cho volumes và backup
 - AppRole `secret_id` rotation workflow rõ ràng
