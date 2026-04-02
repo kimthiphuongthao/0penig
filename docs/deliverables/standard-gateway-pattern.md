@@ -277,3 +277,113 @@ The current shared-runtime baseline includes the following implementation correc
 - `AUD-003`: `BackchannelLogoutHandler.groovy` now keeps a null-safe JWKS cache and applies a `60s` failure backoff after JWKS fetch failure to avoid hammering Keycloak.
 - `DOC-007`: `TokenReferenceFilter.groovy` fail-closed behavior applies only on the callback path, not on every authenticated request, to avoid false `500` responses on legitimate traffic.
 - `AUD-009`: `SloHandler.groovy` and `SloHandlerJellyfin.groovy` no longer use legacy hostname fallbacks and now fail closed with `500` if `OPENIG_PUBLIC_URL` or `CANONICAL_ORIGIN_APP4` are missing.
+
+## Production deployment on Kubernetes
+
+For production deployments on Kubernetes, use Vault's Kubernetes authentication method instead of AppRole. This aligns with HashiCorp best practices for trusted third-party authentication.
+
+> **Production note:** The current lab AppRole pattern is not production-ready for long-lived Kubernetes workloads. Once the 72h secret_id expires, VaultCredentialFilter.groovy can no longer obtain a fresh Vault token after its cached Vault token ages out, breaking all Vault-backed downstream login flows until an operator rotates the AppRole material.
+
+**References:**
+- HashiCorp Vault Docs: [Kubernetes Auth Method](https://developer.hashicorp.com/vault/docs/auth/kubernetes)
+- HashiCorp Vault API: [Kubernetes Auth API](https://developer.hashicorp.com/vault/api-docs/auth/kubernetes)
+- HashiCorp Tutorial: [AppRole Best Practices](https://developer.hashicorp.com/vault/tutorials/auth-methods/approle-best-practices)
+
+### Authentication method comparison
+
+| Aspect | Lab (Docker Compose) | Production (Kubernetes) |
+|--------|---------------------|-------------------------|
+| Auth method | AppRole (`role_id` + `secret_id`) | Kubernetes auth (ServiceAccount JWT) [^1] |
+| Credential delivery | Manual (files mounted from `/vault/file/`) | Automatic (K8s auto-mounts SA token) [^1] |
+| Credential rotation | Manual (admin regenerates `secret_id` every 72h) | ServiceAccount token lifetime is cluster/pod-configured (no fixed 1h default). Do not document it as a universal value. OpenIG must renew or re-run auth/kubernetes/login when the Vault token expires. |
+| Vault config | `POST /auth/approle/login` | `POST /auth/kubernetes/login` [^2] |
+| OpenIG code change | None | Update `VaultCredentialFilter.groovy` to use K8s auth endpoint |
+
+[^1]: HashiCorp Vault Docs: [Kubernetes Auth Method](https://developer.hashicorp.com/vault/docs/auth/kubernetes)
+[^2]: HashiCorp Vault API: [Kubernetes Auth API](https://developer.hashicorp.com/vault/api-docs/auth/kubernetes)
+[^3]: HashiCorp Tutorial: [AppRole Best Practices](https://developer.hashicorp.com/vault/tutorials/auth-methods/approle-best-practices)
+
+> **HashiCorp recommendation:** *"If another platform method of authentication is available via a trusted third-party authenticator, the best practice is to use that instead of AppRole."* [^3]
+
+### Vault configuration for Kubernetes
+
+Configuration commands from HashiCorp official documentation [^1][^2]:
+
+```bash
+# Enable Kubernetes auth method
+vault auth enable kubernetes
+
+# Configure Vault to communicate with Kubernetes API
+# When Vault runs inside K8s, it auto-discovers these values
+vault write auth/kubernetes/config \
+    kubernetes_host=https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT
+
+# Create per-app roles (replace AppRole pattern)
+vault write auth/kubernetes/role/openig-app1 \
+    bound_service_account_names=openig-sa \
+    bound_service_account_namespaces=sso \
+    policies=openig-app1-policy \
+    ttl=1h
+```
+
+### Kubernetes requirements
+
+Requirements from HashiCorp official documentation [^1]:
+
+| Component | Configuration |
+|-----------|---------------|
+| ServiceAccount | Create `openig-sa` in `sso` namespace for OpenIG pods |
+| ClusterRoleBinding | Grant `system:auth-delegator` to Vault's ServiceAccount for TokenReview API |
+| Network | Vault must reach Kubernetes API server (`$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT`) |
+| OpenIG pod spec | Mount ServiceAccount token (auto-mounted at `/var/run/secrets/kubernetes.io/serviceaccount/token`) |
+
+### OpenIG code changes
+
+**Implementation note:** The following code is a proposed adaptation based on Vault's Kubernetes Auth API specification [^2]. This code has NOT been tested in this lab (which uses Docker Compose). Test in a Kubernetes staging environment before production deployment.
+
+Update `VaultCredentialFilter.groovy` to use Kubernetes auth endpoint:
+
+```groovy
+// Current (AppRole) - Lab implementation:
+String payload = JsonOutput.toJson([role_id: roleId, secret_id: secretId])
+connection = new URL("${vaultAddr}/v1/auth/approle/login").openConnection()
+
+// Production (Kubernetes) - Proposed implementation:
+String saToken = new File('/var/run/secrets/kubernetes.io/serviceaccount/token').text.trim()
+String payload = JsonOutput.toJson([jwt: saToken, role: 'openig-app1'])
+connection = new URL("${vaultAddr}/v1/auth/kubernetes/login").openConnection()
+```
+
+### Recommended production pattern
+
+Prefer Vault Agent Sidecar or Vault Agent Injector with Kubernetes auth for long-lived OpenIG pods. The agent performs Kubernetes auth, renews or re-authenticates Vault tokens, and refreshes rendered secrets without AppRole secret_id files. OpenIG reads rendered files or a local agent endpoint and does not own the Vault token lifecycle.
+
+If OpenIG authenticates to Vault directly (without Vault Agent), it MUST:
+- use a projected ServiceAccount token with audience: vault if the Vault role enforces audience validation
+- read the ServiceAccount JWT from disk on each auth/kubernetes/login call; do not cache the Kubernetes JWT
+- renew the Vault token or re-run auth/kubernetes/login when the cached Vault token expires
+
+### Security best practices for production
+
+Values from HashiCorp official documentation examples [^1][^2]:
+
+| Setting | Recommended value | Purpose |
+|---------|------------------|---------|
+| Token TTL | `1h` | Short-lived tokens reduce blast radius (from docs example) |
+| Bound service accounts | Required | Prevent token reuse across workloads [^1] |
+| Bound namespaces | Required | Namespace isolation for multi-tenant clusters [^1] |
+| Audience claim | `vault` | Prevent JWT reuse for other purposes [^1] |
+| CIDR binding | Optional | Restrict authentication source IP [^1] |
+
+### Migration checklist
+
+**Note:** This checklist is derived from HashiCorp documentation [^1][^2][^3] and has not been validated in this lab.
+
+- [ ] Deploy Vault in Kubernetes cluster (recommended for local SA token rotation)
+- [ ] Enable Kubernetes auth method and configure K8s API connection
+- [ ] Create ServiceAccount `openig-sa` in target namespace
+- [ ] Create ClusterRoleBinding for Vault to access TokenReview API
+- [ ] Create per-app Kubernetes roles (one per app, replacing AppRole)
+- [ ] Update OpenIG `VaultCredentialFilter.groovy` to use `/auth/kubernetes/login`
+- [ ] Test authentication flow with non-production app first
+- [ ] Migrate apps one-by-one, keeping AppRole as fallback during transition

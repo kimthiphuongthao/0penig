@@ -277,3 +277,113 @@ Baseline shared-runtime hiện tại bao gồm các điều chỉnh triển khai
 - `AUD-003`: `BackchannelLogoutHandler.groovy` hiện giữ JWKS cache null-safe và áp dụng failure backoff `60s` sau khi JWKS fetch thất bại để tránh hammering Keycloak.
 - `DOC-007`: Hành vi fail-closed của `TokenReferenceFilter.groovy` chỉ áp dụng trên callback path, không áp dụng trên mọi request đã xác thực, để tránh phản hồi `500` sai trên lưu lượng hợp lệ.
 - `AUD-009`: `SloHandler.groovy` và `SloHandlerJellyfin.groovy` không còn dùng legacy hostname fallback và hiện fail closed với `500` nếu thiếu `OPENIG_PUBLIC_URL` hoặc `CANONICAL_ORIGIN_APP4`.
+
+## Triển khai production trên Kubernetes
+
+Đối với triển khai production trên Kubernetes, sử dụng phương thức Kubernetes authentication của Vault thay vì AppRole. Điều này phù hợp với best practices của HashiCorp về trusted third-party authentication.
+
+> **Ghi chú production:** Mẫu AppRole của lab hiện tại không production-ready cho các Kubernetes workload chạy dài hạn. Khi `secret_id` 72h hết hạn, `VaultCredentialFilter.groovy` không còn có thể lấy một Vault token mới sau khi cached Vault token của nó hết hạn, làm hỏng tất cả các Vault-backed downstream login flows cho đến khi operator xoay vòng AppRole material.
+
+**Tài liệu tham khảo:**
+- HashiCorp Vault Docs: [Kubernetes Auth Method](https://developer.hashicorp.com/vault/docs/auth/kubernetes)
+- HashiCorp Vault API: [Kubernetes Auth API](https://developer.hashicorp.com/vault/api-docs/auth/kubernetes)
+- HashiCorp Tutorial: [AppRole Best Practices](https://developer.hashicorp.com/vault/tutorials/auth-methods/approle-best-practices)
+
+### So sánh phương thức authentication
+
+| Aspect | Lab (Docker Compose) | Production (Kubernetes) |
+|--------|---------------------|-------------------------|
+| Phương thức auth | AppRole (`role_id` + `secret_id`) | Kubernetes auth (ServiceAccount JWT) [^1] |
+| Phân phối credential | Thủ công (file mount từ `/vault/file/`) | Tự động (K8s tự mount SA token) [^1] |
+| Rotation credential | Thủ công (admin regenerate `secret_id` mỗi 72h) | Thời hạn ServiceAccount token được cấu hình theo cluster/pod (không có mặc định cố định 1h). Không tài liệu hóa giá trị này như một universal value. OpenIG phải renew hoặc chạy lại auth/kubernetes/login khi Vault token hết hạn. |
+| Vault config | `POST /auth/approle/login` | `POST /auth/kubernetes/login` [^2] |
+| Thay đổi code OpenIG | Không | Cập nhật `VaultCredentialFilter.groovy` dùng endpoint K8s auth |
+
+[^1]: HashiCorp Vault Docs: [Kubernetes Auth Method](https://developer.hashicorp.com/vault/docs/auth/kubernetes)
+[^2]: HashiCorp Vault API: [Kubernetes Auth API](https://developer.hashicorp.com/vault/api-docs/auth/kubernetes)
+[^3]: HashiCorp Tutorial: [AppRole Best Practices](https://developer.hashicorp.com/vault/tutorials/auth-methods/approle-best-practices)
+
+> **Khuyến nghị HashiCorp:** *"If another platform method of authentication is available via a trusted third-party authenticator, the best practice is to use that instead of AppRole."* [^3]
+
+### Cấu hình Vault cho Kubernetes
+
+Commands cấu hình từ HashiCorp official documentation [^1][^2]:
+
+```bash
+# Enable Kubernetes auth method
+vault auth enable kubernetes
+
+# Cấu hình Vault giao tiếp với Kubernetes API
+# Khi Vault chạy trong K8s, nó tự động discovery các giá trị này
+vault write auth/kubernetes/config \
+    kubernetes_host=https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT
+
+# Tạo per-app roles (thay thế AppRole pattern)
+vault write auth/kubernetes/role/openig-app1 \
+    bound_service_account_names=openig-sa \
+    bound_service_account_namespaces=sso \
+    policies=openig-app1-policy \
+    ttl=1h
+```
+
+### Yêu cầu Kubernetes
+
+Yêu cầu từ HashiCorp official documentation [^1]:
+
+| Component | Cấu hình |
+|-----------|----------|
+| ServiceAccount | Tạo `openig-sa` trong namespace `sso` cho OpenIG pods |
+| ClusterRoleBinding | Grant `system:auth-delegator` cho ServiceAccount của Vault để gọi TokenReview API |
+| Network | Vault phải reach được Kubernetes API server (`$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT`) |
+| OpenIG pod spec | Mount ServiceAccount token (tự động mount tại `/var/run/secrets/kubernetes.io/serviceaccount/token`) |
+
+### Thay đổi code OpenIG
+
+**Ghi chú triển khai:** Code sau là đề xuất dựa trên Vault Kubernetes Auth API specification [^2]. Code này **CHƯA được test** trong lab này (vì lab dùng Docker Compose). Test trong Kubernetes staging environment trước khi deploy production.
+
+Cập nhật `VaultCredentialFilter.groovy` để dùng Kubernetes auth endpoint:
+
+```groovy
+// Hiện tại (AppRole) - Lab implementation:
+String payload = JsonOutput.toJson([role_id: roleId, secret_id: secretId])
+connection = new URL("${vaultAddr}/v1/auth/approle/login").openConnection()
+
+// Production (Kubernetes) - Proposed implementation:
+String saToken = new File('/var/run/secrets/kubernetes.io/serviceaccount/token').text.trim()
+String payload = JsonOutput.toJson([jwt: saToken, role: 'openig-app1'])
+connection = new URL("${vaultAddr}/v1/auth/kubernetes/login").openConnection()
+```
+
+### Mẫu production được khuyến nghị
+
+Ưu tiên Vault Agent Sidecar hoặc Vault Agent Injector với Kubernetes auth cho các OpenIG pod chạy dài hạn. Agent thực hiện Kubernetes auth, renew hoặc re-authenticate Vault token, và refresh rendered secrets mà không cần file AppRole `secret_id`. OpenIG đọc rendered files hoặc một local agent endpoint và không tự sở hữu vòng đời Vault token.
+
+Nếu OpenIG tự xác thực trực tiếp với Vault (không dùng Vault Agent), nó MUST:
+- dùng projected ServiceAccount token với `audience: vault` nếu Vault role cưỡng chế audience validation
+- đọc ServiceAccount JWT từ disk ở mỗi lần gọi `auth/kubernetes/login`; không cache Kubernetes JWT
+- renew Vault token hoặc chạy lại `auth/kubernetes/login` khi cached Vault token hết hạn
+
+### Best practices bảo mật cho production
+
+Giá trị từ HashiCorp official documentation examples [^1][^2]:
+
+| Setting | Giá trị khuyến nghị | Mục đích |
+|---------|--------------------|----------|
+| Token TTL | `1h` | Token short-lived giảm blast radius (từ docs example) |
+| Bound service accounts | Bắt buộc | Prevent token reuse xuyên workloads [^1] |
+| Bound namespaces | Bắt buộc | Namespace isolation cho multi-tenant clusters [^1] |
+| Audience claim | `vault` | Prevent JWT reuse cho mục đích khác [^1] |
+| CIDR binding | Tùy chọn | Giới hạn source IP authentication [^1] |
+
+### Checklist migration
+
+**Lưu ý:** Checklist này được derived từ HashiCorp documentation [^1][^2][^3] và **chưa được validate** trong lab này.
+
+- [ ] Deploy Vault trong Kubernetes cluster (khuyến nghị cho local SA token rotation)
+- [ ] Enable Kubernetes auth method và cấu hình kết nối K8s API
+- [ ] Tạo ServiceAccount `openig-sa` trong namespace mục tiêu
+- [ ] Tạo ClusterRoleBinding cho Vault để access TokenReview API
+- [ ] Tạo per-app Kubernetes roles (một role per app, thay thế AppRole)
+- [ ] Cập nhật `VaultCredentialFilter.groovy` của OpenIG để dùng `/auth/kubernetes/login`
+- [ ] Test authentication flow với app non-production trước
+- [ ] Migrate apps từng cái một, giữ AppRole làm fallback trong quá trình transition
