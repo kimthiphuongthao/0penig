@@ -1,7 +1,7 @@
 ---
 # Standard OpenIG SSO/SLO Gateway Pattern
-**Version:** 1.3
-**Date:** 2026-03-24
+**Version:** 1.4
+**Date:** 2026-04-02
 **Derived from:** Shared-infra validation across WordPress, WhoAmI, Redmine, Jellyfin, Grafana, and phpMyAdmin
 **Scope:** OpenIG 6 + Keycloak + Vault + Redis
 
@@ -67,6 +67,17 @@ Each app in the shared runtime MUST have:
 - A unique Redis namespace and Redis user
 - A unique Vault AppRole when Vault is used
 
+Active shared-runtime routing and isolation matrix:
+
+| App | Hostname | clientEndpoint | Keycloak client | Session heap | Cookie name |
+|-----|----------|----------------|-----------------|--------------|-------------|
+| WordPress | `http://wp-a.sso.local` | `/openid/app1` | `openig-client` | `SessionApp1` | `IG_SSO_APP1` |
+| WhoAmI | `http://whoami-a.sso.local` | `/openid/app2` | `openig-client` | `SessionApp2` | `IG_SSO_APP2` |
+| Redmine | `http://redmine-b.sso.local` | `/openid/app3` | `openig-client-b` | `SessionApp3` | `IG_SSO_APP3` |
+| Jellyfin | `http://jellyfin-b.sso.local` | `/openid/app4` | `openig-client-b-app4` | `SessionApp4` | `IG_SSO_APP4` |
+| Grafana | `http://grafana-c.sso.local` | `/openid/app5` | `openig-client-c-app5` | `SessionApp5` | `IG_SSO_APP5` |
+| phpMyAdmin | `http://phpmyadmin-c.sso.local` | `/openid/app6` | `openig-client-c-app6` | `SessionApp6` | `IG_SSO_APP6` |
+
 The fallback global `Session` heap in `shared/openig_home/config/config.json` is not the active session model for app routes. Shared-infra routes override it explicitly.
 
 ### 2. Redis revocation and token-reference contract
@@ -84,6 +95,17 @@ Rules:
 - OpenIG MUST authenticate with `AUTH <username> <password>`
 - Redis ACL users MUST remain limited to `SET`, `GET`, `DEL`, `EXISTS`, `PING`
 - Redis keys MUST remain app-scoped (`app1:*..app6:*`)
+
+Current per-app Redis ACL mapping:
+
+| App | Redis user | Key prefix | Allowed commands |
+|-----|------------|------------|------------------|
+| WordPress | `openig-app1` | `~app1:*` | `SET`, `GET`, `DEL`, `EXISTS`, `PING` |
+| WhoAmI | `openig-app2` | `~app2:*` | `SET`, `GET`, `DEL`, `EXISTS`, `PING` |
+| Redmine | `openig-app3` | `~app3:*` | `SET`, `GET`, `DEL`, `EXISTS`, `PING` |
+| Jellyfin | `openig-app4` | `~app4:*` | `SET`, `GET`, `DEL`, `EXISTS`, `PING` |
+| Grafana | `openig-app5` | `~app5:*` | `SET`, `GET`, `DEL`, `EXISTS`, `PING` |
+| phpMyAdmin | `openig-app6` | `~app6:*` | `SET`, `GET`, `DEL`, `EXISTS`, `PING` |
 
 `TokenReferenceFilter.groovy` rules:
 
@@ -108,6 +130,17 @@ Rules:
 - Each app gets its own AppRole: `openig-app1..6`
 - Each AppRole is scoped to its own secret path only
 - AppRole files are distinct per app: `/vault/file/openig-appN-role-id`, `/vault/file/openig-appN-secret-id`
+
+Current per-app Vault AppRole mapping:
+
+| App | AppRole | Policy | Secret path scope |
+|-----|---------|--------|-------------------|
+| WordPress | `openig-app1` | `openig-app1-policy` | `secret/data/wp-creds/*` |
+| WhoAmI | `openig-app2` | `openig-app2-policy` | `secret/data/dummy/*` |
+| Redmine | `openig-app3` | `openig-app3-policy` | `secret/data/redmine-creds/*` |
+| Jellyfin | `openig-app4` | `openig-app4-policy` | `secret/data/jellyfin-creds/*` |
+| Grafana | `openig-app5` | `openig-app5-policy` | `secret/data/grafana-creds/*` |
+| phpMyAdmin | `openig-app6` | `openig-app6-policy` | `secret/data/phpmyadmin/*` |
 
 Operational note:
 
@@ -235,3 +268,12 @@ Args-binding rule for OpenIG 6.0.1:
 - Route `args` keys become top-level Groovy binding variables
 - Use `binding.hasVariable('name')`
 - Do not rely on `args.name` or `(args as Map).name`
+
+## Implementation corrections (2026-03-31)
+
+The current shared-runtime baseline includes the following implementation corrections validated after the initial v1.3 document snapshot:
+
+- `BUG-002`: nginx has `proxy_next_upstream` disabled on all six callback paths (`/openid/app1/callback` through `/openid/app6/callback`) to prevent duplicate OIDC code exchange during upstream retry.
+- `AUD-003`: `BackchannelLogoutHandler.groovy` now keeps a null-safe JWKS cache and applies a `60s` failure backoff after JWKS fetch failure to avoid hammering Keycloak.
+- `DOC-007`: `TokenReferenceFilter.groovy` fail-closed behavior applies only on the callback path, not on every authenticated request, to avoid false `500` responses on legitimate traffic.
+- `AUD-009`: `SloHandler.groovy` and `SloHandlerJellyfin.groovy` no longer use legacy hostname fallbacks and now fail closed with `500` if `OPENIG_PUBLIC_URL` or `CANONICAL_ORIGIN_APP4` are missing.
