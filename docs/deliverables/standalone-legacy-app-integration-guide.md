@@ -2,11 +2,11 @@
 
 > Update 2026-03-17: Pattern Consolidation Steps 1-6 are complete. Step 5 normalized Stack A/B `CANONICAL_ORIGIN_APP*`, removed the old Redmine direct-host bypass, aligned Stack C nginx proxy buffers, and deleted dead code. STEP-02 rotated Stack C OIDC secrets; STEP-03 moved compose secrets into gitignored `.env` files and pinned OpenIG to `6.0.1`.
 
-Tài liệu này dành cho team ứng dụng legacy cần tích hợp vào kiến trúc SSO hiện tại. Nội dung bám sát cấu hình đang chạy ở 3 stack (`stack-a`, `stack-b`, `stack-c`), tập trung vào các điểm thường gây lỗi khi triển khai thực tế.
+Tài liệu này dành cho team ứng dụng legacy cần tích hợp vào kiến trúc SSO hiện tại. Runtime đang chạy là `shared/`: một `shared-nginx`, hai node OpenIG (`shared-openig-1`, `shared-openig-2`), một `shared-redis`, và một `shared-vault` phục vụ cả 6 app qua hostname routing trên port 80. Các thư mục `stack-a/`, `stack-b/`, và `stack-c/` chỉ còn là rollback reference, không phải active deployment.
 
 ## 1) Tổng quan kiến trúc
 
-### 1.1 Mô hình tổng thể (3 stack, dùng chung Keycloak)
+### 1.1 Mô hình tổng thể (shared/ runtime, dùng chung Keycloak)
 
 ```text
                                       +-----------------------------+
@@ -37,41 +37,42 @@ Tài liệu này dành cho team ứng dụng legacy cần tích hợp vào kiế
 +--------------------------------------------------------------------------+
 
 Back-channel logout flow:
-Keycloak -> POST http://host.docker.internal/openid/app1/backchannel_logout        (Stack A)
-Keycloak -> POST http://host.docker.internal/openid/app4/backchannel_logout   (Stack B — Jellyfin)
-Keycloak -> POST http://host.docker.internal/openid/app3/backchannel_logout   (Stack B — Redmine)
-Keycloak -> POST http://host.docker.internal/openid/app5/backchannel_logout  (Stack C — Grafana)
-Keycloak -> POST http://host.docker.internal/openid/app6/backchannel_logout  (Stack C — phpMyAdmin)
-Mỗi stack tự ghi blacklist SID vào Redis của chính stack đó.
+Keycloak -> POST http://host.docker.internal/openid/app1/backchannel_logout   (App1 — WordPress)
+Keycloak -> POST http://host.docker.internal/openid/app3/backchannel_logout   (App3 — Redmine)
+Keycloak -> POST http://host.docker.internal/openid/app4/backchannel_logout   (App4 — Jellyfin)
+Keycloak -> POST http://host.docker.internal/openid/app5/backchannel_logout   (App5 — Grafana)
+Keycloak -> POST http://host.docker.internal/openid/app6/backchannel_logout   (App6 — phpMyAdmin)
+Tất cả app ghi blacklist SID vào `shared-redis` theo namespace `appN:blacklist:*`; không có Redis tách riêng theo stack.
 ```
 
 ### 1.2 Thành phần chính
 
-- `OpenIG`: reverse proxy + OIDC gateway + filter chain + credential injection.
-- `Keycloak`: IdP dùng chung cho cả 3 stack.
-- `Vault`: lưu credential legacy app theo user (KV v2).
-- `Redis`: blacklist SID để enforce Single Logout kiểu back-channel.
+- `OpenIG`: reverse proxy + OIDC gateway + filter chain + credential injection trên hai node `shared-openig-1/2` sau `shared-nginx`.
+- `Keycloak`: IdP dùng chung cho cả 6 app trong `shared/`.
+- `Vault`: `shared-vault`, cô lập theo AppRole `openig-app1..6`.
+- `Redis`: `shared-redis`, cô lập theo Redis ACL user `openig-app1..6` và prefix `appN:*`, dùng cho token reference và SLO blacklist.
+
+### 1.3 Shared-runtime controls
+
+- `StripGatewaySessionCookies.groovy` strip gateway cookies trước khi proxy request tới backend.
+- `CANONICAL_ORIGIN_APP1..6` là base duy nhất để dựng redirect/logout URL; không dùng raw inbound `Host`.
+- Per-app token reference key (`token_ref_id_appN`) phải unique giữa các app.
 
 ## 2) URL convention (subdomain app + callback `/openid/{app}`)
 
 ### 2.1 Quy ước public URL hiện tại
 
-- Stack A:
-  - Canonical OpenIG URL: `http://openig.sso.local`
-  - App1 (WordPress): `http://wp-a.sso.local/`
-  - App2 (whoami): `http://whoami-a.sso.local/`
-- Stack B:
-  - Canonical OpenIG URL: `http://openig.sso.local`
-  - App3 (Jellyfin): `http://jellyfin-b.sso.local/`
-  - App4 (Redmine): `http://redmine-b.sso.local/`
-- Stack C:
-  - Canonical OpenIG URL: `http://openig.sso.local`
-  - App5 (Grafana): `http://grafana-c.sso.local/`
-  - App6 (phpMyAdmin): `http://phpmyadmin-c.sso.local/`
+- OpenIG management URL: `http://openig.sso.local`
+- App1 (WordPress): `http://wp-a.sso.local/`
+- App2 (WhoAmI): `http://whoami-a.sso.local/`
+- App3 (Redmine): `http://redmine-b.sso.local/`
+- App4 (Jellyfin): `http://jellyfin-b.sso.local/`
+- App5 (Grafana): `http://grafana-c.sso.local/`
+- App6 (phpMyAdmin): `http://phpmyadmin-c.sso.local/`
 
-`OPENIG_PUBLIC_URL` vẫn là canonical URL của từng stack, nhưng browser hiện truy cập app qua subdomain riêng. Đây là lý do một số script không thể chỉ dựa vào duy nhất `OPENIG_PUBLIC_URL` để lookup session key.
+Browser traffic đi qua `shared-nginx:80` và được hostname-route tới `shared-openig-1/2`. `shared/` là runtime đang chạy; `stack-a/`, `stack-b/`, và `stack-c/` chỉ dùng làm rollback reference.
 
-Sau Step 5, tất cả OpenIG nodes ở cả 3 stacks đều có `CANONICAL_ORIGIN_APPx` env var tương ứng. Đây là source-of-truth cho logout redirect và fail-closed redirect; không dùng inbound `Host` làm canonical origin.
+`http://openig.sso.local` vẫn là URL quản trị/canonical của gateway, nhưng redirect/logout phải dựng từ `CANONICAL_ORIGIN_APP1..6` theo từng app; không dùng inbound `Host` làm canonical origin.
 
 ### 2.2 Quy ước route điều kiện Host + path
 
@@ -92,20 +93,20 @@ Trong môi trường lab hiện tại, các app chính đi theo mô hình subdom
 ### 3.1 WordPress (App1)
 
 - Browser truy cập WordPress qua `http://wp-a.sso.local/`.
-- `OPENIG_PUBLIC_URL` của Stack A vẫn là `http://openig.sso.local`; hai giá trị này khác nhau.
+- `http://openig.sso.local` là management URL chung của gateway; hai giá trị này khác nhau.
 - Vì host browser và canonical OpenIG URL không trùng nhau, các filter xử lý session/SLO phải dùng lookup host-aware thay vì hard-code một session key duy nhất.
 
-### 3.2 Jellyfin (App3) và Redmine (App4)
+### 3.2 Redmine (App3) và Jellyfin (App4)
 
-- Jellyfin public URL: `http://jellyfin-b.sso.local/`.
 - Redmine public URL: `http://redmine-b.sso.local/`.
+- Jellyfin public URL: `http://jellyfin-b.sso.local/`.
 - Cả hai app hiện được expose ở root `/` trên subdomain riêng; không dùng prefix `/app3` hoặc `/app4` cho luồng browser chính.
 
 ### 3.3 Grafana (App5) và phpMyAdmin (App6)
 
 - Grafana public URL: `http://grafana-c.sso.local/`.
 - phpMyAdmin public URL: `http://phpmyadmin-c.sso.local/`.
-- Cả hai app chạy ở root `/` trên subdomain riêng trong Stack C.
+- Cả hai app chạy ở root `/` trên subdomain riêng trong shared runtime.
 
 ### 3.4 Khi nào cần base-path/sub-path config?
 
@@ -207,50 +208,41 @@ proxy_request_buffering off;
 proxy_next_upstream off;
 ```
 
-## 5) Session key format (QUAN TRỌNG)
+## 5) Redis-backed OIDC state key format (QUAN TRỌNG)
 
-Format đúng:
+Format đúng cho OIDC state key:
 
 ```text
 oauth2:{FULL_PUBLIC_ORIGIN}/clientEndpoint
 ```
 
-Trong đó `FULL_PUBLIC_ORIGIN` có thể là `http://host:port` hoặc `http://host`, tùy đúng giá trị OpenIG đã dùng khi tạo phiên OIDC.
+Trong đó `FULL_PUBLIC_ORIGIN` có thể là `http://host:port` hoặc `http://host`, tùy đúng origin mà OpenIG đã dùng khi tạo phiên OIDC.
 
-Không dùng path-only kiểu `oauth2:/openid/appX` cho app mới.
+Trong shared runtime, `TokenReferenceFilter.groovy` offload payload `oauth2:*` nặng vào `shared-redis`. Browser cookie của route-local `JwtSession` chỉ giữ token reference key nhỏ theo app (`token_ref_id_app1`..`token_ref_id_app6`); không có lớp `JSESSIONID` server-side fallback.
 
-Ví dụ đúng trong Stack A:
+Mỗi `token_ref_id_appN` phải unique theo app và chỉ được resolve sang OIDC state của đúng app đó.
 
-- App1 theo host browser có thể là `oauth2:http://wp-a.sso.local:80/openid/app1` hoặc `oauth2:http://wp-a.sso.local/openid/app1`.
-- App1 canonical fallback là `oauth2:http://openig.sso.local/openid/app1`.
-- App2 canonical fallback là `oauth2:http://openig.sso.local/openid/app2`.
+Ví dụ đúng:
 
-Ví dụ đúng trong Stack B:
+- App1: `oauth2:http://wp-a.sso.local/openid/app1`
+- App2: `oauth2:http://whoami-a.sso.local/openid/app2`
+- App3 (Redmine): `oauth2:http://redmine-b.sso.local/openid/app3`
+- App4 (Jellyfin): `oauth2:http://jellyfin-b.sso.local/openid/app4`
+- App5: `oauth2:http://grafana-c.sso.local/openid/app5`
+- App6: `oauth2:http://phpmyadmin-c.sso.local/openid/app6`
 
-- Jellyfin (App4): `oauth2:http://jellyfin-b.sso.local/openid/app4`
-- Redmine (App3): `oauth2:http://redmine-b.sso.local/openid/app3`
-- Canonical fallback của Stack B là `oauth2:http://openig.sso.local/openid/app4` cho Jellyfin và `oauth2:http://openig.sso.local/openid/app3` cho Redmine.
-
-Ví dụ đúng trong Stack C:
-
-- Grafana (App5): `oauth2:http://grafana-c.sso.local/openid/app5` hoặc `oauth2:http://grafana-c.sso.local/openid/app5`.
-- phpMyAdmin (App6): `oauth2:http://phpmyadmin-c.sso.local/openid/app6` hoặc `oauth2:http://phpmyadmin-c.sso.local/openid/app6`.
-- Canonical fallback Stack C: `oauth2:http://openig.sso.local/openid/app5` (hoặc app6).
-
-Ví dụ sai (dễ gây mất `id_token`):
+Ví dụ sai (dễ gây mất `id_token` hoặc lệch app namespace):
 
 - `oauth2:/openid/app1`
 - `oauth2:/openid/app4`
 
-Lý do: OpenIG lưu token theo key gắn with public URL đầy đủ (bao gồm scheme + host + port + clientEndpoint). Sai key => script không đọc được `id_token` => logout/blacklist SID hỏng.
+Lý do: path-only key không còn đủ ngữ cảnh để resolve đúng Redis-backed OIDC state và xử lý logout/blacklist an toàn.
 
-Lưu ý hiện trạng:
+Lưu ý hiện trạng shared runtime:
 
-- Stack A `SessionBlacklistFilter` không lookup theo 1 key duy nhất. Filter này đang dùng 3-key host-aware lookup cho App1 theo thứ tự: `hostWithPort`, `hostWithoutPort`, rồi fallback về `OPENIG_PUBLIC_URL`.
-- Lý do: browser truy cập WordPress bằng `wp-a.sso.local`, nhưng `OPENIG_PUBLIC_URL` lại là `openig.sso.local`.
-- Stack B `SloHandlerJellyfin` và `SessionBlacklistFilterApp4` cũng dùng 3-key host-aware lookup tương tự; Redmine giữ lookup riêng cho `/openid/app3`.
-- Stack C `SloHandlerGrafana` và `SloHandlerPhpMyAdmin` dùng 3-key host-aware lookup với fallback về `OPENIG_PUBLIC_URL` (`http://openig.sso.local`).
-- Không dùng path-only kiểu `oauth2:/openid/appX` cho app mới; kiểu này rất dễ làm mất `id_token` khi xử lý SLO.
+- `SessionApp1..6` phát hành host-only cookies `IG_SSO_APP1`..`IG_SSO_APP6`.
+- `TokenReferenceFilter.groovy` dùng `token_ref_id_appN` để resolve OIDC state `oauth2:*` trong `shared-redis`.
+- Lookup luôn phải giữ đúng bộ ba app-local: `clientEndpoint`, `IG_SSO_APPN`, và `token_ref_id_appN`.
 
 ## 6) Filter chain chuẩn
 
@@ -335,7 +327,7 @@ OpenIG load route theo thứ tự tên file/route có prefix số, nên dùng co
 3. `01-...` route app chính
 4. `02-...` route app tiếp theo
 
-Trong stack hiện tại:
+Trong các thư mục rollback/reference hiện có:
 
 - Stack A: `00-backchannel-logout-app1.json` -> `00-wp-logout.json` -> `01-wordpress.json` -> `02-app2.json`
 - Stack B: `00-backchannel-logout-app3.json` (Redmine) -> `00-backchannel-logout-app4.json` (Jellyfin) -> `00-jellyfin-logout.json` -> `00-redmine-logout.json` -> `01-jellyfin.json` -> `02-redmine.json`
@@ -390,78 +382,54 @@ Grafana dùng proxy authentication — không cần Vault credential injection:
 3. `HeaderFilter` (`GrafanaUserHeader`) inject `X-WEBAUTH-USER: {preferred_username}` từ `attributes.openid['user_info']['preferred_username']` vào mọi request.
 4. Grafana auto-provision user từ header nếu chưa tồn tại (`GF_AUTH_PROXY_AUTO_SIGN_UP=true`).
 
-## 9) Cross-stack SLO bằng Redis Blacklist (quan trọng nhất)
+## 9) Cross-app SLO bằng shared Redis blacklist (quan trọng nhất)
 
 ### 9.1 `BackchannelLogoutHandler`
 
 - Nhận `POST` từ Keycloak tại `/openid/{app}/backchannel_logout`.
 - Parse body `application/x-www-form-urlencoded`, lấy `logout_token`.
 - Decode JWT payload (base64url), extract `sid` (fallback `sub`).
-- Ghi Redis key:
+- Ghi Redis key theo namespace app:
 
 ```text
-SET blacklist:{sid} 1 EX 1800
+SET appN:blacklist:{sid} 1 EX 1800
 ```
 
+- `shared-redis` là Redis duy nhất cho cả 6 app. Mỗi route/app dùng Redis ACL user riêng (`openig-appN`) chỉ được thao tác trên prefix của app mình.
 - Việc giao tiếp Redis làm thủ công bằng raw RESP protocol qua `Socket`.
 
-### 9.2 `SessionBlacklistFilter`
+### 9.2 `SessionBlacklistFilter.groovy`
 
-- Mỗi request app đi qua filter sẽ:
-  1. Resolve SID từ session cache (`oidc_sid` / `oidc_sid_app2` / `oidc_sid_app3` / `oidc_sid_app4` / `oidc_sid_app5` / `oidc_sid_app6`).
-  2. Nếu chưa có cache, đọc `id_token` từ session key `oauth2:{FULL_PUBLIC_ORIGIN}/clientEndpoint`.
-  3. Decode JWT lấy `sid` và cache lại.
-  4. `GET blacklist:{sid}` trên Redis.
-- Stack A App1 và Stack B App4 (Jellyfin) đang dùng 3-key host-aware lookup:
-  1. `oauth2:http://{HostWithPort}/openid/appX`
-  2. `oauth2:http://{HostWithoutPort}/openid/appX`
-  3. `oauth2:{OPENIG_PUBLIC_URL}/openid/appX`
-  Đây là bắt buộc vì host browser (`wp-a.sso.local`, `jellyfin-b.sso.local`) khác với `OPENIG_PUBLIC_URL`.
+- Mỗi authenticated request đi qua filter sẽ:
+  1. Resolve `token_ref_id_appN` từ route-local `JwtSession`.
+  2. Dùng token reference đó để đọc Redis-backed OIDC state của đúng app và lấy `sid` (hoặc dùng cache nếu đã có).
+  3. `GET appN:blacklist:{sid}` trên `shared-redis`.
+- `SessionBlacklistFilter.groovy` kiểm tra Redis ở mọi authenticated request.
 - Nếu bị blacklist:
   - `session.clear()`
-  - Redirect về public URL hiện tại bằng `Host` header.
-  - KHÔNG dùng `request.uri.toString()`, vì trong flow upstream nó có thể trả về internal URI kiểu `http://wordpress/...` hoặc `http://redmine:3000/...` mà browser không truy cập được.
+  - Redirect bằng `CANONICAL_ORIGIN_APPN`.
+  - KHÔNG dựng URL từ raw inbound `Host` hoặc `request.uri.toString()`, vì trong flow upstream chúng có thể trỏ sang internal URI hoặc host không canonical.
 
-### 9.3 Tại sao cross-stack hoạt động dù Redis tách riêng?
+### 9.3 Tại sao vẫn cô lập được dù dùng chung Redis?
 
-- Stack A dùng `redis-a`, Stack B dùng `redis-b`, Stack C dùng `redis-c`.
-- Keycloak gửi back-channel tới tất cả client có `backchannel.logout.url` trong realm.
-- Mỗi stack tự nhận lệnh logout và tự ghi SID vào Redis local của stack đó.
+- Không còn `redis-a`/`redis-b`/`redis-c`; active runtime chỉ có `shared-redis`.
+- Isolation đến từ Redis ACL user theo app (`openig-app1`..`openig-app6`) và key prefix `app1:*`..`app6:*`.
+- Namespace blacklist dùng dạng `appN:blacklist:*`; token reference/OIDC state cũng phải ở trong prefix app tương ứng.
 
 ## 10) Nginx sticky session
 
-Stack A (`nginx/nginx.conf`) đang dùng `ip_hash`:
+`shared/nginx/nginx.conf` đang dùng `ip_hash`:
 
 ```nginx
 upstream openig_pool {
     ip_hash;
-    server openig-1:8080;
-    server openig-2:8080;
+    server shared-openig-1:8080;
+    server shared-openig-2:8080;
+    keepalive 32;
 }
 ```
 
-Stack B (`nginx/nginx.conf`) hiện cũng dùng `ip_hash`:
-
-```nginx
-upstream openig_b_pool {
-    ip_hash;
-    server openig-b1:8080 max_fails=3 fail_timeout=10s;
-    server openig-b2:8080 max_fails=3 fail_timeout=10s;
-}
-```
-
-Stack B đã bỏ `hash $cookie_JSESSIONID consistent` vì OpenIG JwtSession không tạo affinity ổn định dựa trên `JSESSIONID` ở giai đoạn đầu OAuth2 flow.
-
-Stack C (`nginx/nginx.conf`) đang dùng `ip_hash`:
-
-```nginx
-upstream openig_c_pool {
-    ip_hash;
-    server openig-c1:8080 max_fails=3 fail_timeout=30s;
-    server openig-c2:8080 max_fails=3 fail_timeout=30s;
-    keepalive 16;
-}
-```
+Không dùng `hash $cookie_JSESSIONID consistent`: shared runtime không có lớp `JSESSIONID` server-side fallback, và per-app cookies `IG_SSO_APP1`..`IG_SSO_APP6` không được dùng làm affinity primitive.
 
 Lý do thực tế để ưu tiên `ip_hash` thay vì `hash $cookie_JSESSIONID` trong mô hình này:
 
@@ -484,19 +452,19 @@ Lý do:
 - Nếu Nginx retry sang node khác, SID blacklist có thể ghi lệch node hoặc gây hành vi khó debug.
 - Cấu hình này hiện đang áp dụng cho `wp-a.sso.local`, `jellyfin-b.sso.local`, `redmine-b.sso.local`, `grafana-c.sso.local`, và `phpmyadmin-c.sso.local`.
 
-## 11) Dual-layer session
+## 11) Route-local JwtSession + token reference
 
-Hệ thống dùng 2 lớp session:
+Gateway dùng route-local `JwtSession` heaps `SessionApp1`..`SessionApp6` với host-only browser cookies `IG_SSO_APP1`..`IG_SSO_APP6`.
 
-1. `JwtSession` cookie (per-app: `IG_SSO_APP1`..`IG_SSO_APP6`, route-local `SessionApp1`..`SessionApp6`): giữ state pre-auth.
-2. `JSESSIONID` server-side: giữ OAuth tokens sau auth.
+`TokenReferenceFilter.groovy` offload heavyweight OIDC state `oauth2:*` vào `shared-redis` và chỉ giữ token reference key nhỏ theo app (`token_ref_id_app1`..`token_ref_id_app6`) trong cookie browser.
 
-Vì sao cần `JSESSIONID`:
+Không có lớp `JSESSIONID` server-side fallback trong shared runtime.
 
-- Bộ token (`access_token`, `id_token`, `refresh_token`) trong lab xấp xỉ ~4.8KB.
-- Vượt ngưỡng cookie phổ biến 4KB nếu nhồi trực tiếp vào client cookie.
+Ghi chú:
 
-Ghi chú: Shared-infra dùng per-app `cookieName: "IG_SSO_APP1"`..`"IG_SSO_APP6"` (route-local `SessionApp1..6`) để tránh cross-app cookie collision. Mỗi app dùng `sharedSecret` riêng trong route heap để đảm bảo independence.
+- Route-local cookies không set `cookieDomain`, nên không va chạm cross-app.
+- Mỗi app dùng `sharedSecret` riêng trong route heap để giữ isolation.
+- Vì cookie chỉ giữ token reference key nhỏ, browser không phải mang toàn bộ bộ token OIDC.
 
 > **LAB-EXCEPTION (C-2/S-1):** `JwtSession` cookies (`IG_SSO_APP1`..`IG_SSO_APP6`) vẫn đi qua plain HTTP trong lab này. Chỉ chấp nhận điều đó cho môi trường lab HTTP-only. Trước production, phải hoàn thành Checklist bước 13 (nginx TLS termination + trust CA cho OpenIG), rồi bật HTTPS cho OIDC/session path và phát hành `JwtSession` cookie với cờ `Secure`.
 
