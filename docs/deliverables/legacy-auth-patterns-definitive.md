@@ -20,6 +20,8 @@ Sau khi đối chứng cả 3 research sources, đây là các **authentication 
 | Token-based | ✅ | ✅ | ✅ | **CONFIRMED** |
 | LDAP | ✅ | ✅ | ✅ | **CONFIRMED** |
 
+Note: LDAP is a future pattern only. The validated 6-app shared-infra baseline covers Form, HTTP Basic, Header-based, and Token-based authentication. LDAP integration requires app-specific assessment before implementation.
+
 ### Logout Mechanisms - Verified Consensus
 | Mechanism | Claude | Codex | Gemini | Verdict |
 |-----------|--------|-------|--------|---------|
@@ -36,6 +38,19 @@ Sau khi đối chứng cả 3 research sources, đây là các **authentication 
 | Session Fixation | ✅ | ✅ | ✅ | **HIGH - CONFIRMED** |
 | Logout Sync Gap | ✅ | ✅ | ✅ | **HIGH - CONFIRMED** |
 | Token Leakage | ✅ | ✅ | ✅ | **CRITICAL - CONFIRMED** |
+
+## Current Shared-Infra Baseline
+
+| App | Hostname | clientEndpoint | Keycloak client | Session heap | Cookie name |
+|-----|----------|----------------|-----------------|--------------|-------------|
+| WordPress | `http://wp-a.sso.local` | `/openid/app1` | `openig-client` | `SessionApp1` | `IG_SSO_APP1` |
+| WhoAmI | `http://whoami-a.sso.local` | `/openid/app2` | `openig-client` | `SessionApp2` | `IG_SSO_APP2` |
+| Redmine | `http://redmine-b.sso.local` | `/openid/app3` | `openig-client-b` | `SessionApp3` | `IG_SSO_APP3` |
+| Jellyfin | `http://jellyfin-b.sso.local` | `/openid/app4` | `openig-client-b-app4` | `SessionApp4` | `IG_SSO_APP4` |
+| Grafana | `http://grafana-c.sso.local` | `/openid/app5` | `openig-client-c-app5` | `SessionApp5` | `IG_SSO_APP5` |
+| phpMyAdmin | `http://phpmyadmin-c.sso.local` | `/openid/app6` | `openig-client-c-app6` | `SessionApp6` | `IG_SSO_APP6` |
+
+The current shared-infra baseline isolates each app with a unique `clientEndpoint`, a unique per-app `tokenRefKey` (`token_ref_id_app1..6`), host-only browser cookies `IG_SSO_APP1..APP6`, per-app Redis ACL users `openig-app1..6`, per-app Vault AppRoles `openig-app1..6`, and pinned redirect/logout bases via `CANONICAL_ORIGIN_APP1..6`. `StripGatewaySessionCookies.groovy` removes gateway-owned session cookies before proxying to backends.
 
 ---
 
@@ -136,7 +151,7 @@ Browser           Gateway/Proxy                Legacy App
 
 **RFC Reference:** RFC 6750 (OAuth 2.0 Bearer), RFC 7009 (Token Revocation)
 
-**SSO Integration:** Gateway map OIDC token → app token, store trong session, auto-refresh
+The current baseline uses TokenReferenceFilter.groovy to offload heavyweight oauth2:* OIDC state into Redis. The browser cookie holds only a small per-app token reference key (token_ref_id_appN). The earlier refresh-token auto-renewal model is not part of the current validated baseline.
 
 ---
 
@@ -150,6 +165,8 @@ Browser           Gateway/Proxy                Legacy App
 | **Khi nào dùng** | Enterprise apps có LDAP integration native |
 | **Pros** | Tận dụng directory hiện hữu, central account management |
 | **Cons** | Tight coupling LDAP schema, network dependency, SLO hạn chế |
+
+Note: LDAP is a future pattern only. The validated 6-app shared-infra baseline covers Form, HTTP Basic, Header-based, and Token-based authentication. LDAP integration requires app-specific assessment before implementation.
 
 **RFC Reference:** RFC 4513 (LDAP Authentication)
 
@@ -334,17 +351,18 @@ Runtime note: pin OpenIG images to `openidentityplatform/openig:6.0.1`. Do not u
 
 OpenIG compatibility note: when `OAuth2ClientFilter` consumes an OIDC `clientSecret`, generate a strong random alphanumeric-only value. Avoid Base64 secrets containing `+`, `/`, or `=` because OpenIG 6 sends `client_secret` without URL-encoding in the token request body.
 
-Validated session note: when routes use browser-bound `JwtSession`, place `TokenReferenceFilter.groovy` immediately after `OAuth2ClientFilter` so the heavy `oauth2:*` entry is offloaded to Redis and the browser cookie keeps only a per-app token reference key (`token_ref_id_appN`) plus small identity markers. In the shared runtime, that pattern sits on top of route-local cookies `IG_SSO_APP1..APP6`. OIDC data-model note: `target = ${attributes.openid}` is request-scoped output written by `OAuth2ClientFilter.fillTarget()`; it does not mirror data into session. Persisted `session[oauth2Key]` state is written separately by `OAuth2Utils.saveSession()`, so lookups such as `session[oauth2Key].atr.id_token` must use the persisted blob, while live `user_info` belongs under `attributes.openid`.
+Validated session note: when routes use browser-bound `JwtSession`, place `TokenReferenceFilter.groovy` immediately after `OAuth2ClientFilter` so the heavy `oauth2:*` entry is offloaded to Redis and the browser cookie keeps only a per-app token reference key (`token_ref_id_appN`) plus small identity markers. In the shared runtime, that pattern sits on top of route-local cookies `IG_SSO_APP1..APP6`. OIDC data-model note: `target = ${attributes.openid}` is request-scoped output written by `OAuth2ClientFilter.fillTarget()`; it does not mirror data into session. Persisted `session[oauth2Key]` state is written separately by `OAuth2Utils.saveSession()`, so lookups such as `session[oauth2Key].atr.id_token` must use the persisted blob, while live `user_info` belongs under `attributes.openid`. Required route arg: tokenRefKey must be set to a unique per-app value (e.g. token_ref_id_app1). Do not share tokenRefKey across apps.
 
 ### Available Templates (shared runtime)
 
 | Template | File | Args | Purpose |
 |----------|------|------|---------|
-| TokenReferenceFilter | TokenReferenceFilter.groovy | clientEndpoint, redisHost, redisTtl | Offload heavy `oauth2:*` session state to Redis so `JwtSession` stays under the browser cookie budget |
+| TokenReferenceFilter | TokenReferenceFilter.groovy | clientEndpoint, redisHost, redisTtl, tokenRefKey | Offload heavy `oauth2:*` session state to Redis so `JwtSession` stays under the browser cookie budget. Required route arg: tokenRefKey must be set to a unique per-app value (e.g. token_ref_id_app1). Do not share tokenRefKey across apps. |
 | SessionBlacklistFilter | SessionBlacklistFilter.groovy | clientEndpoint, sessionCacheKey, canonicalOrigin | Check Redis blacklist on every request; redirect to re-auth if blacklisted |
 | BackchannelLogoutHandler | BackchannelLogoutHandler.groovy | audiences (List), redisHost, jwksUri, issuer | Receive Keycloak backchannel logout POST; validate `RS256` / `ES256` JWTs against JWKS; write sid to Redis blacklist |
-| SloHandler | SloHandler.groovy | clientEndpoint, clientId, canonicalOrigin, postLogoutPath | Intercept logout request; redirect to Keycloak end_session with id_token_hint |
-| SloHandlerJellyfin | SloHandlerJellyfin.groovy | (hardcoded — Jellyfin-specific) | Same as SloHandler + calls Jellyfin /Sessions/Logout API before redirect |
+| SloHandler | SloHandler.groovy | clientEndpoint, clientId, canonicalOrigin, postLogoutPath, tokenRefKey | Intercept logout request; redirect to Keycloak end_session with id_token_hint. Required route arg: tokenRefKey must be set to a unique per-app value (e.g. token_ref_id_app1). Do not share tokenRefKey across apps. |
+| SloHandlerJellyfin | SloHandlerJellyfin.groovy | clientEndpoint, tokenRefKey, Redis settings | SloHandlerJellyfin.groovy is parameterized via route args (clientEndpoint, tokenRefKey, Redis settings) — no hardcoded values. Same as SloHandler + calls Jellyfin /Sessions/Logout API before redirect. Required route arg: tokenRefKey must be set to a unique per-app value (e.g. token_ref_id_app1). Do not share tokenRefKey across apps. |
+| VaultCredentialFilter | VaultCredentialFilter.groovy | appDisplayName, secretPathPrefix, lookupUserInfoField, credentialAttributeName, appRoleName | Fetch downstream credentials from Vault with route args |
 
 ### Template Selection Decision Tree
 
@@ -366,6 +384,13 @@ Example route JSON:
 
 Access in Groovy: binding.hasVariable('clientEndpoint') ? (clientEndpoint as String) : '/openid/default'
 WARNING: Do NOT use args.clientEndpoint or (args as Map).clientEndpoint — these do NOT work in the OpenIG 6.0.x runtime used here.
+
+### Implementation Corrections (2026-03-31)
+
+- `BUG-002`: nginx `proxy_next_upstream` disabled on all 6 callback paths to prevent duplicate OIDC code exchange
+- `AUD-003`: `BackchannelLogoutHandler` JWKS null-cache fix + 60s failure backoff
+- `DOC-007`: `TokenReferenceFilter` fail-closed applies only on callback path, not all authenticated requests
+- `AUD-009`: `SloHandler`/`SloHandlerJellyfin` fail-closed if `OPENIG_PUBLIC_URL` or `CANONICAL_ORIGIN_APP4` env vars are missing
 
 ---
 
