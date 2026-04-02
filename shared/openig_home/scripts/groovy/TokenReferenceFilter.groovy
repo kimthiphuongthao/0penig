@@ -234,9 +234,10 @@ try {
     String normalizedRequestQuery = requestQuery?.toLowerCase(Locale.ROOT) ?: ''
     String tokenRefId = session[tokenRefKey] as String
     boolean isOauthCallback = requestPath?.contains(configuredClientEndpoint + '/callback')
+    boolean isCallbackPath = requestPath?.contains('/callback')
     boolean isLogoutRequest = normalizedRequestPath.contains('logout') || normalizedRequestQuery.contains('logout')
     boolean isBackchannelRequest = normalizedRequestPath.contains('backchannel_logout')
-    boolean shouldFailClosedForMissingOauth2Keys = !isLogoutRequest && !isBackchannelRequest && (isOauthCallback || tokenRefId?.trim())
+    boolean shouldFailClosedForMissingOauth2Keys = isCallbackPath && !isLogoutRequest && !isBackchannelRequest && (isOauthCallback || tokenRefId?.trim())
     if (!isOauthCallback && tokenRefId?.trim() && collectOauth2SessionEntries().isEmpty()) {
         String redisPayload = getFromRedis(tokenRefId)
         if (!redisPayload) {
