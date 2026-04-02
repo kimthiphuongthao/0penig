@@ -36,6 +36,7 @@ String configuredIssuer = binding.hasVariable('issuer') ? (issuer as String) : n
 int redisBlacklistTtlSeconds = binding.hasVariable('ttlSeconds') ? (ttlSeconds as int) : 28800
 final long CLOCK_SKEW_SECONDS = 60
 final long JWKS_CACHE_TTL_SECONDS = 3600
+final long JWKS_FETCH_FAILURE_BACKOFF_SECONDS = 60
 
 private static boolean validateClaims(Map payload, def expectedAudience) {
     def aud = payload.aud
@@ -133,18 +134,74 @@ def fetchJwksKeys = { String jwksUri ->
     }
 }
 
-// --- Helper: Load JWKS keys through global cache ---
-def loadJwksKeys = {
-    def cacheEntry = globals.compute('jwks_cache') { k, existing ->
-        long now = System.currentTimeMillis() / 1000
-        if (existing != null && (now - (existing.cachedAt as long)) < JWKS_CACHE_TTL_SECONDS) {
-            logger.info('[BackchannelLogoutHandler] Using cached JWKS')
-            return existing
-        }
-        def newKeys = fetchJwksKeys(configuredJwksUri)
-        [keys: newKeys, cachedAt: now]
+def hasUsableJwksKeys = { Object jwksKeys ->
+    (jwksKeys instanceof Map) && !((Map) jwksKeys).isEmpty()
+}
+
+def getLastJwksFetchFailedAt = {
+    globals.compute('jwks_fetch_failed_at') { k, existing -> existing } as Long
+}
+
+def markJwksFetchFailedAt = { long failedAt ->
+    globals.compute('jwks_fetch_failed_at') { k, existing -> failedAt }
+}
+
+def clearJwksFetchFailedAt = {
+    globals.compute('jwks_fetch_failed_at') { k, existing -> null }
+}
+
+def hasRecentJwksFetchFailure = {
+    Long lastFailedAt = getLastJwksFetchFailedAt()
+    if (lastFailedAt == null) {
+        return false
     }
-    cacheEntry?.keys as Map
+    long now = System.currentTimeMillis() / 1000
+    (now - lastFailedAt) < JWKS_FETCH_FAILURE_BACKOFF_SECONDS
+}
+
+// --- Helper: Load JWKS keys through global cache ---
+def loadJwksKeys = { boolean forceRefresh ->
+    long now = System.currentTimeMillis() / 1000
+    def cacheEntry = globals.compute('jwks_cache') { k, existing -> existing }
+    boolean hasUsableCache = hasUsableJwksKeys(cacheEntry?.keys)
+    boolean hasFreshCache = !forceRefresh &&
+        hasUsableCache &&
+        cacheEntry?.cachedAt != null &&
+        (now - (cacheEntry.cachedAt as long)) < JWKS_CACHE_TTL_SECONDS
+
+    if (hasFreshCache) {
+        logger.info('[BackchannelLogoutHandler] Using cached JWKS')
+        return cacheEntry.keys as Map
+    }
+
+    Long lastFailedAt = getLastJwksFetchFailedAt()
+    if (lastFailedAt != null && (now - lastFailedAt) < JWKS_FETCH_FAILURE_BACKOFF_SECONDS) {
+        long secondsSinceFailure = now - lastFailedAt
+        if (hasUsableCache) {
+            logger.warn('[BackchannelLogoutHandler] Skipping JWKS refetch due to recent failure {} seconds ago; using stale cache', secondsSinceFailure)
+            return cacheEntry.keys as Map
+        }
+        logger.error('[BackchannelLogoutHandler] Skipping JWKS refetch due to recent failure {} seconds ago and no cached keys are available', secondsSinceFailure)
+        return null
+    }
+
+    def newKeys = fetchJwksKeys(configuredJwksUri)
+    if (hasUsableJwksKeys(newKeys)) {
+        clearJwksFetchFailedAt()
+        globals.compute('jwks_cache') { k, existing ->
+            [keys: newKeys, cachedAt: now]
+        }
+        return newKeys as Map
+    }
+
+    markJwksFetchFailedAt(now)
+    if (hasUsableCache) {
+        logger.warn('[BackchannelLogoutHandler] JWKS refresh failed; keeping stale cached keys')
+        return cacheEntry.keys as Map
+    }
+
+    logger.error('[BackchannelLogoutHandler] JWKS refresh failed and no cached keys are available')
+    return null
 }
 
 // --- Helper: Get public key from JWKS by kid ---
@@ -381,8 +438,8 @@ try {
     }
     logger.info('[BackchannelLogoutHandler] Algorithm validation: OK (alg={})', alg)
 
-    // 4. Fetch JWKS from Keycloak through atomic global cache
-    Map jwksKeys = loadJwksKeys()
+    // 4. Fetch JWKS from Keycloak through global cache with stale-key fallback
+    Map jwksKeys = loadJwksKeys(false)
     if (!jwksKeys) {
         logger.error('[BackchannelLogoutHandler] Failed to fetch JWKS')
         return newResultPromise(new Response(Status.INTERNAL_SERVER_ERROR))
@@ -392,14 +449,17 @@ try {
     def publicKey = getPublicKeyFromJwks(jwksKeys, kid)
     if (!publicKey) {
         logger.warn('[BackchannelLogoutHandler] kid={} not in cached JWKS, forcing refetch', kid)
-        globals.compute('jwks_cache') { k, v -> null }
-        jwksKeys = loadJwksKeys()
+        jwksKeys = loadJwksKeys(true)
         if (!jwksKeys) {
             logger.error('[BackchannelLogoutHandler] Failed to refetch JWKS')
             return newResultPromise(new Response(Status.INTERNAL_SERVER_ERROR))
         }
         publicKey = getPublicKeyFromJwks(jwksKeys, kid)
         if (!publicKey) {
+            if (hasRecentJwksFetchFailure()) {
+                logger.error('[BackchannelLogoutHandler] kid={} not found while JWKS refresh is in failure backoff', kid)
+                return newResultPromise(new Response(Status.INTERNAL_SERVER_ERROR))
+            }
             logger.error('[BackchannelLogoutHandler] kid={} not found even after JWKS refetch', kid)
             return newResultPromise(new Response(Status.BAD_REQUEST))
         }

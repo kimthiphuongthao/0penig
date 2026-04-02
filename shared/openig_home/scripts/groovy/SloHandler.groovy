@@ -83,7 +83,11 @@ def resolveTokenRefRedisKeyPrefix = { String tokenRefKeyName ->
     configuredRedisKeyPrefix
 }
 
-def publicUrl = System.getenv('OPENIG_PUBLIC_URL') ?: 'http://openiga.sso.local'
+String publicUrl = System.getenv('OPENIG_PUBLIC_URL')?.trim()
+if (!publicUrl) {
+    logger.error('[SloHandler] OPENIG_PUBLIC_URL is missing; refusing legacy hostname fallback')
+    throw new IllegalStateException('OPENIG_PUBLIC_URL is required')
+}
 def hostHeader = request.headers.getFirst('Host') as String
 def hostWithoutPort = hostHeader?.split(':')?.getAt(0)
 def defaultPort = publicUrl.contains(':9080') ? '9080' : publicUrl.contains(':18080') ? '18080' : '80'

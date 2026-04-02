@@ -228,8 +228,15 @@ try {
         throw new IllegalStateException('TokenReferenceFilter requires redisHost arg')
     }
 
+    String requestPath = request.uri.path as String
+    String requestQuery = request.uri.query as String
+    String normalizedRequestPath = requestPath?.toLowerCase(Locale.ROOT) ?: ''
+    String normalizedRequestQuery = requestQuery?.toLowerCase(Locale.ROOT) ?: ''
     String tokenRefId = session[tokenRefKey] as String
-    boolean isOauthCallback = request.uri.path?.contains(configuredClientEndpoint + '/callback')
+    boolean isOauthCallback = requestPath?.contains(configuredClientEndpoint + '/callback')
+    boolean isLogoutRequest = normalizedRequestPath.contains('logout') || normalizedRequestQuery.contains('logout')
+    boolean isBackchannelRequest = normalizedRequestPath.contains('backchannel_logout')
+    boolean shouldFailClosedForMissingOauth2Keys = !isLogoutRequest && !isBackchannelRequest && (isOauthCallback || tokenRefId?.trim())
     if (!isOauthCallback && tokenRefId?.trim() && collectOauth2SessionEntries().isEmpty()) {
         String redisPayload = getFromRedis(tokenRefId)
         if (!redisPayload) {
@@ -250,6 +257,10 @@ try {
     return next.handle(context, request).then({ response ->
         def oauth2EntriesForResponse = collectOauth2SessionEntries()
         if (oauth2EntriesForResponse.isEmpty()) {
+            if (shouldFailClosedForMissingOauth2Keys) {
+                logger.error('[TokenReferenceFilter] CRITICAL: No oauth2 session keys found after authentication - cookie overflow risk')
+                return new Response(Status.BAD_GATEWAY)
+            }
             logger.warn('[TokenReferenceFilter] No oauth2 session value found during response phase endpoint={}', configuredClientEndpoint)
             return response
         }

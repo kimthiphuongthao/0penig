@@ -124,7 +124,7 @@ def resolveTokenRefRedisKeyPrefix = { String tokenRefKeyName ->
     configuredRedisKeyPrefix
 }
 
-def CANONICAL_ORIGIN = System.getenv('CANONICAL_ORIGIN_APP4') ?: 'http://jellyfin-b.sso.local:9080'
+def CANONICAL_ORIGIN = System.getenv('CANONICAL_ORIGIN_APP4') ?: 'http://jellyfin-b.sso.local'
 
 def publicUrl = System.getenv('OPENIG_PUBLIC_URL') ?: 'http://openigb.sso.local:9080'
 def hostHeader = request.headers.getFirst('Host') as String
