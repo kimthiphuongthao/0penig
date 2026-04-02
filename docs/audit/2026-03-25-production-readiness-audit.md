@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-The shared-infra lab is functionally coherent and the per-app isolation model is largely in place, but it still has production-blocking gaps in transport security, cookie hardening, OAuth2 callback retry safety, and JWKS/cache handling. The current state is suitable for documented lab use, not for production promotion, and the highest-priority items are concentrated in nginx callback handling, `JwtSession` hardening limits, and unresolved infrastructure controls that require TLS or server-side session redesign.
+The shared-infra lab is functionally coherent and the per-app isolation model is largely in place, but it still has production-blocking gaps in transport security, cookie hardening, mutable app image tags, and several infrastructure controls. The 2026-04-02 gateway fixes closed the callback replay, JWKS null-cache, callback-path fail-closed, and shared-infra legacy fallback issues. The current state is suitable for documented lab use, not for production promotion, and the highest-priority items are now concentrated in TLS enablement, `JwtSession` hardening limits, and unresolved infrastructure controls that require server-side session redesign or broader production plumbing.
 
 **Overall verdict:** NOT production-ready — known lab exceptions documented. See Open Items.
 
@@ -16,9 +16,9 @@ The shared-infra lab is functionally coherent and the per-app isolation model is
 | Severity | Count | Fixed this session | Open | Deferred/WONT_FIX |
 |---|---|---|---|---|
 | CRITICAL | 2 | 0 | 1 | 1 |
-| HIGH | 8 | 0 | 3 | 5 |
-| MEDIUM | 16 | 1 | 8 | 7 |
-| LOW | 10 | 1 | 5 | 4 |
+| HIGH | 8 | 2 | 1 | 5 |
+| MEDIUM | 16 | 2 | 7 | 7 |
+| LOW | 10 | 3 | 3 | 4 |
 
 Note: the required `Deferred/WONT_FIX` bucket also includes `CONFIRMED_OK` findings because the source rounds include positive confirmations with no separate summary column.
 
@@ -39,25 +39,25 @@ Note: the required `Deferred/WONT_FIX` bucket also includes `CONFIRMED_OK` findi
 |---|---|---|---|---|---|
 | AUD-001 | CRITICAL | Vault bootstrap / secrets | OPEN | Remove seeded passwords from `vault-bootstrap.sh`; `db77728` only redacted one Obsidian note | Section 1 / AUD-001 |
 | AUD-002 | HIGH | Backchannel logout / app2 | DEFERRED | Add app2 backchannel route or keep the current explicit lab-only exclusion | Section 1 / AUD-002 |
-| AUD-003 | HIGH | Backchannel logout / JWKS cache | OPEN | Cache only successful JWKS fetches and use a short failure backoff | Section 1 / AUD-003 |
+| AUD-003 | HIGH | Backchannel logout / JWKS cache | FIXED (38ad45d) | No open action; `BackchannelLogoutHandler` now caches only successful JWKS fetches and uses a 60s failure backoff | Section 1 / AUD-003 |
 | AUD-004 | HIGH | Docker Compose / secret defaults | OPEN | Remove remaining startup fallbacks and close the issue left partially improved by `e7a223f` | Section 1 / AUD-004 |
 | AUD-005 | MEDIUM | TokenReferenceFilter / Redis offload | FIXED (d7b4f3b, 05341f9) | No open action; preserve fail-closed behavior and configured Redis port wiring | Section 1 / AUD-005 |
 | AUD-006 | MEDIUM | nginx / X-Forwarded-Proto | DEFERRED | Revisit only when TLS termination is introduced | Section 1 / AUD-006 |
 | AUD-007 | MEDIUM | Docker Compose / healthchecks | OPEN | Add healthchecks for nginx, Redis, Vault, and app containers or document exclusions | Section 1 / AUD-007 |
 | AUD-008 | LOW | Backchannel routes / TTL env wiring | FIXED (e7a223f) | No open action; keep per-app `REDIS_BLACKLIST_TTL_APP*` route wiring intact | Section 1 / AUD-008 |
-| AUD-009 | LOW | Groovy scripts / legacy fallbacks | OPEN LOW (partially fixed) | Fix remaining fallbacks: `SloHandler.groovy` line 86 (`openiga.sso.local` hardcoded), `SloHandlerJellyfin.groovy` line 127 (`:9080` in `CANONICAL_ORIGIN_APP4` fallback) | Section 1 / AUD-009 |
+| AUD-009 | LOW | Groovy scripts / legacy fallbacks | FIXED (38ad45d) | No open action; `SloHandler.groovy` now fails closed if `OPENIG_PUBLIC_URL` is missing and `SloHandlerJellyfin.groovy` no longer falls back to `:9080` | Section 1 / AUD-009 |
 | DOC-001 | CRITICAL | JwtSession / HA | DEFERRED | Replace `JwtSession` with a server-side store or serialize per-session requests. Note: `ip_hash` mitigates cross-node race only; intra-node concurrent write race persists (confirmed by Critic Round 4). | Section 3.1 / DOC-001 |
 | DOC-002 | HIGH | OAuth2ClientFilter / HTTPS | DEFERRED | Enable TLS and set `requireHttps: true` on all 6 routes | Section 3.1 / DOC-002 |
 | DOC-003 | MEDIUM | JwtSession / JWE algorithm | DEFERRED | Track upstream RSA-OAEP support; exploitability blocked by verify-before-decrypt pattern (SRC-004). Severity downgraded from HIGH by Critic (Round 4). | Section 3.1 / DOC-003 |
 | DOC-004 | MEDIUM | Groovy globals / HA cache | DEFERRED | Document per-node cache behavior in `gotchas.md`. TTL relationship already satisfied (3600s < 14400s max_ttl). Severity downgraded from HIGH by Critic (Round 4). | Section 3.1 / DOC-004 |
 | DOC-005 | MEDIUM | ScriptableFilter / blocking I/O | DEFERRED | Refactor blocking Vault and login calls to async OpenIG client usage for production | Section 3.1 / DOC-005 |
 | DOC-006 | MEDIUM | SpaBlacklistGuardFilter / Redis args | OPEN | Remove `redisAuth` arg and standardize on `redisPasswordEnvVar`. Fix scope: `SpaBlacklistGuardFilter.groovy` line 12 (remove `redisAuth` code path) + `10-grafana.json` line 84 (remove `redisAuth` arg). Scope corrected by Critic (Round 4): `11-phpmyadmin.json` has no `SpaBlacklistGuardFilter`, no change needed there. | Section 3.1 / DOC-006 |
-| DOC-007 | MEDIUM | TokenReferenceFilter / cookie overflow guard | OPEN | Raise an error or fail closed when OAuth2 session key discovery fails | Section 3.1 / DOC-007 |
+| DOC-007 | MEDIUM | TokenReferenceFilter / cookie overflow guard | FIXED (38ad45d, eb19994) | No open action; `TokenReferenceFilter` now fails closed only on callback path when OAuth2 session keys are unexpectedly empty | Section 3.1 / DOC-007 |
 | DOC-008 | MEDIUM | JwtSession / cookie flags | OPEN | Append `HttpOnly` now and `Secure` once TLS is enabled | Section 3.1 / DOC-008 |
 | DOC-009 | LOW | Docker entrypoint / sharedSecret validation | OPEN | Add startup validation for minimum `JWT_SHARED_SECRET` length | Section 3.1 / DOC-009 |
 | DOC-010 | LOW | nginx / HSTS and CSP | DEFERRED | Add CSP now and enable HSTS only after TLS | Section 3.1 / DOC-010 |
 | BUG-001 | HIGH | JwtSession / race confirmation | DEFERRED | Same production remedy as `DOC-001`: move off client-cookie session state. Note: `ip_hash` mitigates cross-node race only; intra-node concurrent write race persists (confirmed by Critic Round 4). | Section 3.2 / BUG-001 |
-| BUG-002 | HIGH | nginx / OAuth2 callback retry | OPEN | Disable `proxy_next_upstream` on `/openid/app*/callback` | Section 3.2 / BUG-002 |
+| BUG-002 | HIGH | nginx / OAuth2 callback retry | FIXED (38ad45d) | No open action; `/openid/app*/callback` now has `proxy_next_upstream off` on all 6 app vhosts | Section 3.2 / BUG-002 |
 | BUG-003 | MEDIUM | BackchannelLogoutHandler / JWKS herd | DEFERRED | Use a shared heap singleton or central cache for JWKS | Section 3.2 / BUG-003 |
 | BUG-004 | MEDIUM | VaultCredentialFilter / globals.compute race | CONFIRMED_OK | No action required; keep the atomic `globals.compute()` pattern | Section 3.2 / BUG-004 |
 | BUG-005 | LOW | JwtSession / 3072-char warning | CONFIRMED_OK | No action required; monitor only if callback warning volume increases | Section 3.2 / BUG-005 |
@@ -69,7 +69,7 @@ Note: the required `Deferred/WONT_FIX` bucket also includes `CONFIRMED_OK` findi
 | COM-006 | LOW | Routes directory / `.omc` state | OPEN | Move `.omc/` outside `config/routes/` or exclude it from runtime inputs | Section 3.3 / COM-006 |
 | SRC-001 | HIGH | JwtCookieSession / eager RSA decrypt | DEFERRED | Profile CPU under load and revisit session design if overhead is material | Section 3.4 / SRC-001 |
 | SRC-002 | MEDIUM | JwtCookieSession / no HttpOnly | OPEN | Apply the same fix as `DOC-008` with response post-processing | Section 3.4 / SRC-002 |
-| SRC-003 | LOW | BackchannelLogoutHandler / non-atomic JWKS refetch | OPEN | Replace clear-plus-refetch with a single atomic `globals.compute()`. Severity downgraded from MEDIUM by Critic (Round 4): `ConcurrentHashMap.compute()` serializes concurrent callers, double-fetch is rare and harmless. | Section 3.4 / SRC-003 |
+| SRC-003 | LOW | BackchannelLogoutHandler / non-atomic JWKS refetch | FIXED (38ad45d) | No open action; the `kid` refresh path no longer clears `jwks_cache` before forcing a refetch | Section 3.4 / SRC-003 |
 | SRC-004 | LOW | JwtCookieSession / encrypt-then-sign | CONFIRMED_OK | No action required; keep documented as a positive control | Section 3.4 / SRC-004 |
 | SRC-005 | LOW | ScriptableFilter / per-invocation bindings | CONFIRMED_OK | No action required; keep documented as a confirmed threading property | Section 3.4 / SRC-005 |
 | BS-001 | MEDIUM | Redis / plaintext token payload | OPEN | TokenReferenceFilter.groovy stores full oauth2 session blob (access_token, id_token) as plaintext JSON in Redis. Per-app ACL (openig-app1..6) mitigates cross-app access. Production requires Vault Transit envelope encryption. Blind spot found by Critic (Round 4). | Section 4 / BS-001 |
@@ -82,13 +82,13 @@ Full findings in [`docs/obsidian/debugging/2026-03-24-shared-infra-comprehensive
 |---|---|---|---|
 | AUD-001 | CRITICAL | OPEN | Partial cleanup only: `db77728` redacted plaintext credentials from an Obsidian note, but `shared/vault/init/vault-bootstrap.sh` still carries seeded downstream passwords. |
 | AUD-002 | HIGH | DEFERRED | `3071a51` removed the nginx `/openid/app2/backchannel_logout` endpoint; app2 / WhoAmI remains intentionally skipped by user decision as a demo app. |
-| AUD-003 | HIGH | OPEN | `BackchannelLogoutHandler.groovy` null-cache behavior remains unresolved. |
+| AUD-003 | HIGH | FIXED (`38ad45d`) | `BackchannelLogoutHandler.groovy` now keeps the JWKS cache null-safe and backs off repeated fetch failures for 60 seconds. |
 | AUD-004 | HIGH | OPEN | `e7a223f` removed the original inline `changeme_*` secret defaults and tightened compose secrets, but the audit item is left open pending full closure of the startup-default risk. |
 | AUD-005 | MEDIUM | FIXED (`d7b4f3b`, `05341f9`) | Redis offload now fails closed and no longer hardcodes Redis port `6379`. |
 | AUD-006 | MEDIUM | DEFERRED | Still intentionally deferred until TLS exists. |
 | AUD-007 | MEDIUM | OPEN | Missing healthchecks remain for nginx, Redis, Vault, and most app containers. |
 | AUD-008 | LOW | FIXED (`e7a223f`) | Verified in current routes: backchannel handlers now use `REDIS_BLACKLIST_TTL_APP1..6`; there are no live `REDIS_BLACKLIST_TTL` route references. |
-| AUD-009 | LOW | OPEN LOW (partially fixed) | Commits `6aefd00` and `d9a121e` removed `:9080`/`:18080` and `openiga`/`openigb` fallbacks from `SessionBlacklistFilter`, `PhpMyAdminAuthFailureHandler`, `JellyfinResponseRewriter`, `RedmineCredentialInjector`. However two scripts were missed: (1) `SloHandler.groovy` line 86: `System.getenv("OPENIG_PUBLIC_URL") ?: "http://openiga.sso.local"` - legacy `openiga` hostname wrong for shared-infra; (2) `SloHandlerJellyfin.groovy` line 127: `System.getenv("CANONICAL_ORIGIN_APP4") ?: "http://jellyfin-b.sso.local:9080"` - `:9080` is old Stack B port. These fallbacks are only used when env vars are missing but would silently produce wrong logout redirect URIs. Found by Critic (Round 4). |
+| AUD-009 | LOW | FIXED (`38ad45d`) | Commits `6aefd00` and `d9a121e` removed the earlier legacy fallbacks, and `38ad45d` closed the remaining gaps: `SloHandler.groovy` now fails closed if `OPENIG_PUBLIC_URL` is missing, and `SloHandlerJellyfin.groovy` no longer falls back to the legacy `:9080` origin. |
 
 ## Section 2: Built-in Gap Analysis (Round 2)
 
@@ -156,6 +156,7 @@ Round 3 consolidates the official-doc, source, and external validation findings 
 - **Gap:** session.keySet() failure path = silent correctness bypass.
 - **Evidence:** JwtCookieSession.java lines 292-303 (4096 limit); TokenReferenceFilter.groovy lines 250-255
 - **Recommendation:** When collectOauth2SessionEntries() returns empty in response hook, emit ERROR log rather than WARN, or fail closed with 502 to prevent cookie overflow.
+- **Status update (2026-04-02):** FIXED in `38ad45d`; regression narrowed in `eb19994` so fail-closed applies only on the OAuth2 callback path.
 
 **DOC-008** [Severity: MEDIUM]
 - **Finding:** JwtCookieSession.java buildJwtCookie() (lines 332-338) constructs Cookie with only Path=/, Name, Domain, Value, Expires — no HttpOnly, no Secure. Not configurable via JwtSession heap config.
@@ -193,6 +194,7 @@ Round 3 consolidates the official-doc, source, and external validation findings 
 - **Gap:** Real risk. Backchannel logout routes correctly have proxy_next_upstream off (nginx.conf lines 35, 100, 158). BUT main app routes use proxy_next_upstream error timeout http_502 http_503 http_504 with proxy_next_upstream_tries 2 (lines 56-57). OAuth2 callback path /openid/appN/callback is in general location / block which has retry enabled.
 - **Evidence:** shared/nginx/nginx.conf lines 55-58 (retry on main location); lines 35-38 (backchannel correctly off); oauth2-proxy community issue pattern https://github.com/oauth2-proxy/oauth2-proxy/issues/817
 - **Recommendation:** Add specific location ~ ^/openid/app[0-9]+/callback$ block per vhost with proxy_next_upstream off. Same pattern already applied to backchannel logout endpoints.
+- **Status update (2026-04-02):** FIXED in `38ad45d`; all 6 shared app vhosts now have callback-specific retry guards.
 
 **BUG-003** [Severity: MEDIUM]
 - **Finding:** Each BackchannelLogoutHandler instance has its own globals (ConcurrentHashMap, AbstractScriptableHeapObject.java line 174). Five backchannel routes = five separate JWKS caches. All expire at same time (3600s TTL) → burst of 5 simultaneous JWKS fetches from Keycloak.
@@ -281,6 +283,7 @@ Round 3 consolidates the official-doc, source, and external validation findings 
 - **Gap:** Low. Double-fetch only on unknown kid (rare, during Keycloak key rotation).
 - **Evidence:** AbstractScriptableHeapObject.java line 174; BackchannelLogoutHandler.groovy lines 393-406
 - **Recommendation:** Replace two-step with single atomic globals.compute('jwks_cache') { k, v -> [keys: fetchJwksKeys(...), cachedAt: now] }.
+- **Status update (2026-04-02):** FIXED in `38ad45d`; the forced refresh path now reuses the existing cache state instead of clearing `jwks_cache` before refetch.
 
 **SRC-004** [Severity: LOW]
 - **Finding:** JwtCookieSession.java line 184: signature verification happens BEFORE decryption (jwt.decrypt() at line 193). This is the correct "Encrypt-then-Sign" order for EncryptedThenSignedJwt. Forgery attempts fail at signature check before decryption step, preventing Bleichenbacher-style oracle attacks via crafted ciphertext.
@@ -310,21 +313,30 @@ Round 3 consolidates the official-doc, source, and external validation findings 
 | M-4a | MEDIUM | SessionBlacklistFilter + PhpMyAdminAuthFailureHandler: removed legacy openiga/:18080 fallbacks, fail-closed | 6aefd00 |
 | M-4b | MEDIUM | JellyfinResponseRewriter + RedmineCredentialInjector: removed :9080 legacy fallbacks, fail-closed | d9a121e |
 | AUD-009 partial | LOW | Legacy fallback cleanup landed across multiple Groovy scripts, but two shared-infra-mismatched logout fallbacks remain open | 6aefd00, d9a121e |
+| BUG-002 | HIGH | nginx: disabled upstream retry on OAuth2 callback paths across 6 app vhosts | 38ad45d |
+| AUD-003 | HIGH | BackchannelLogoutHandler: null-safe JWKS cache + 60s failure backoff | 38ad45d |
+| DOC-007 | MEDIUM | TokenReferenceFilter: fail-closed on empty oauth2 keys, narrowed to callback path only after regression fix | 38ad45d, eb19994 |
+| AUD-009 | LOW | SloHandler fail-closed if `OPENIG_PUBLIC_URL` is missing; SloHandlerJellyfin removed the legacy `:9080` fallback | 38ad45d |
+| SRC-003 | LOW | BackchannelLogoutHandler: forced `kid` refresh no longer clears `jwks_cache` before refetch | 38ad45d |
 
 ## Section 6: Open Items (Priority Order)
 
+### Resolved on 2026-04-02
+
+- BUG-002 (HIGH): nginx OAuth2 callback retry protection landed on all 6 app vhosts (`38ad45d`)
+- AUD-003 (HIGH): `BackchannelLogoutHandler` JWKS null-cache bug fixed with 60s failure backoff (`38ad45d`)
+- SRC-003 (LOW): forced `kid` refresh no longer clears `jwks_cache` before refetch (`38ad45d`)
+- DOC-007 (MEDIUM): `TokenReferenceFilter` fail-closed landed, then narrowed to callback path only (`38ad45d`, `eb19994`)
+- AUD-009 (LOW): shared-infra SLO handler legacy fallback cleanup completed (`38ad45d`)
+
 ### Must fix before production (CRITICAL/HIGH):
 
-1. BUG-002 (HIGH): nginx proxy_next_upstream replays OAuth2 callback → Add location ~ ^/openid/app[0-9]+/callback$ with proxy_next_upstream off per vhost
-2. DOC-008 + SRC-002 (MEDIUM → HIGH in production): No HttpOnly on session cookies → Post-processing HeaderFilter to append ; HttpOnly
-3. AUD-003 (HIGH): JWKS null caching in BackchannelLogoutHandler → Cache only successful fetches; short backoff TTL for failures
-4. SRC-003 (LOW): Non-atomic JWKS clear+refetch → Single atomic globals.compute() call
-5. DOC-006 (MEDIUM): SpaBlacklistGuardFilter redisAuth dual-path → Remove `redisAuth` code path from `SpaBlacklistGuardFilter.groovy` and `10-grafana.json`; standardize on `redisPasswordEnvVar`
-6. COM-004 (MEDIUM): SPA guard filters fail open → Change outer catch to fail closed in both `SpaAuthGuardFilter.groovy` and `SpaBlacklistGuardFilter.groovy`
-7. AUD-007 (MEDIUM): Missing healthchecks for nginx, Redis, Vault, app containers
-8. DOC-007 (MEDIUM): TokenRef silent fail-through on keySet failure → ERROR log + cookie-size guard
-9. COM-003 / M-5 (MEDIUM): Mutable image tags → Pin versions (already in MEMORY.md next steps)
-10. DOC-009 (LOW): sharedSecret length validation → startup assertion in docker-entrypoint.sh
+1. DOC-008 + SRC-002 (MEDIUM → HIGH in production): No HttpOnly on session cookies → Post-processing HeaderFilter to append ; HttpOnly
+2. DOC-006 (MEDIUM): SpaBlacklistGuardFilter redisAuth dual-path → Remove `redisAuth` code path from `SpaBlacklistGuardFilter.groovy` and `10-grafana.json`; standardize on `redisPasswordEnvVar`
+3. COM-004 (MEDIUM): SPA guard filters fail open → Change outer catch to fail closed in both `SpaAuthGuardFilter.groovy` and `SpaBlacklistGuardFilter.groovy`
+4. AUD-007 (MEDIUM): Missing healthchecks for nginx, Redis, Vault, app containers
+5. COM-003 / M-5 (MEDIUM): Mutable image tags → Pin versions (already in MEMORY.md next steps)
+6. DOC-009 (LOW): sharedSecret length validation → startup assertion in docker-entrypoint.sh
 
 ### Lab limitations (known, deferred until production infrastructure available):
 - DOC-001 / BUG-001: JwtSession last-write-wins race → Replace with server-side session store (requires infrastructure change)
@@ -376,12 +388,14 @@ Round 3 consolidates the official-doc, source, and external validation findings 
 - [x] SameSite=Lax on session cookies (nginx proxy_cookie_flags)
 - [x] Security headers (X-Frame-Options, X-Content-Type-Options, Referrer-Policy)
 - [x] Bootstrap.sh idempotent Vault init + AppRole regen
+- [x] OAuth2 callback retry protection (`proxy_next_upstream off` on `/openid/app*/callback` across all 6 app vhosts)
+- [x] Backchannel logout JWKS cache is null-safe and uses a 60s failure backoff
+- [x] TokenReferenceFilter fails closed on empty OAuth2 session keys for callback traffic only
+- [x] Shared-infra SLO handlers no longer rely on legacy `openiga` or `:9080` fallbacks
 
 ### NOT Ready ❌ (blocking for production)
 - [ ] TLS (requireHttps: false across all 6 routes)
 - [ ] HttpOnly flag on session cookies (JwtCookieSession source limitation)
-- [ ] nginx: OAuth2 callback retry protection (BUG-002 — add proxy_next_upstream off for /openid/*/callback)
-- [ ] JWKS null-cache bug (AUD-003)
 - [ ] Image version pinning: wordpress, phpmyadmin, grafana (M-5)
 - [ ] Vault transit encryption for Redis payloads (production infrastructure gap)
 - [ ] TLS between components (nginx↔OpenIG↔Vault↔Redis)

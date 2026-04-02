@@ -23,6 +23,7 @@ Path: `/Volumes/OS/claude/openig/sso-lab`
 - [x] Stack A: WordPress + WhoAmI SSO/SLO
 - [x] Stack B: Redmine + Jellyfin SSO/SLO
 - [x] Stack C: Grafana + phpMyAdmin SSO/SLO
+- [x] Fix 4 SSO/SLO logic bugs: BUG-002 nginx callback retry, AUD-003 JWKS null-cache, DOC-007 TokenRef fail-closed, AUD-009 SloHandler legacy fallbacks
 - [x] Vault migration: dev mode → file storage (all stacks)
 - [x] Test cases + test report (`docs/`)
 - [x] CLAUDE.md, .gemini/GEMINI.md, .claude/rules/ setup
