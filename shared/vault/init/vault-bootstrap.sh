@@ -83,29 +83,85 @@ ensure_approle_auth() {
   fi
 }
 
+enable_transit() {
+  vault secrets enable transit 2>/dev/null || true
+
+  for app in 1 2 3 4 5 6; do
+    vault write transit/keys/app${app}-key type=aes256-gcm96 2>/dev/null || true
+  done
+}
+
 write_policies() {
   vault policy write openig-app1-policy - <<'POLICY'
-path "secret/data/wp-creds/*" { capabilities = ["read"] }
+path "secret/data/wp-creds/*" {
+  capabilities = ["read"]
+}
+path "transit/encrypt/app1-key" {
+  capabilities = ["update"]
+}
+path "transit/decrypt/app1-key" {
+  capabilities = ["update"]
+}
 POLICY
 
   vault policy write openig-app2-policy - <<'POLICY'
-path "secret/data/dummy/*" { capabilities = ["read"] }
+path "secret/data/dummy/*" {
+  capabilities = ["read"]
+}
+path "transit/encrypt/app2-key" {
+  capabilities = ["update"]
+}
+path "transit/decrypt/app2-key" {
+  capabilities = ["update"]
+}
 POLICY
 
   vault policy write openig-app3-policy - <<'POLICY'
-path "secret/data/redmine-creds/*" { capabilities = ["read"] }
+path "secret/data/redmine-creds/*" {
+  capabilities = ["read"]
+}
+path "transit/encrypt/app3-key" {
+  capabilities = ["update"]
+}
+path "transit/decrypt/app3-key" {
+  capabilities = ["update"]
+}
 POLICY
 
   vault policy write openig-app4-policy - <<'POLICY'
-path "secret/data/jellyfin-creds/*" { capabilities = ["read"] }
+path "secret/data/jellyfin-creds/*" {
+  capabilities = ["read"]
+}
+path "transit/encrypt/app4-key" {
+  capabilities = ["update"]
+}
+path "transit/decrypt/app4-key" {
+  capabilities = ["update"]
+}
 POLICY
 
   vault policy write openig-app5-policy - <<'POLICY'
-path "secret/data/grafana-creds/*" { capabilities = ["read"] }
+path "secret/data/grafana-creds/*" {
+  capabilities = ["read"]
+}
+path "transit/encrypt/app5-key" {
+  capabilities = ["update"]
+}
+path "transit/decrypt/app5-key" {
+  capabilities = ["update"]
+}
 POLICY
 
   vault policy write openig-app6-policy - <<'POLICY'
-path "secret/data/phpmyadmin/*" { capabilities = ["read"] }
+path "secret/data/phpmyadmin/*" {
+  capabilities = ["read"]
+}
+path "transit/encrypt/app6-key" {
+  capabilities = ["update"]
+}
+path "transit/decrypt/app6-key" {
+  capabilities = ["update"]
+}
 POLICY
 }
 
@@ -196,6 +252,9 @@ path "sys/audit/*" { capabilities = ["create", "read", "update", "delete", "sudo
 path "sys/health" { capabilities = ["read"] }
 path "sys/mounts" { capabilities = ["read"] }
 path "sys/mounts/*" { capabilities = ["read"] }
+path "sys/mounts/transit" { capabilities = ["create", "update", "read", "delete"] }
+path "sys/mounts/transit/tune" { capabilities = ["update"] }
+path "transit/*" { capabilities = ["create", "read", "update", "list"] }
 ADMIN_POLICY
 
   # Admin token: period=720h (30d). Renew with: vault token renew <token> before expiry.
@@ -234,6 +293,7 @@ login_vault
 enable_audit_log
 ensure_secret_engine
 ensure_approle_auth
+enable_transit
 write_policies
 
 for app in 1 2 3 4 5 6; do
