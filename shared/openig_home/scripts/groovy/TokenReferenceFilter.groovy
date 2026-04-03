@@ -4,8 +4,10 @@ import org.forgerock.http.protocol.Response
 import org.forgerock.http.protocol.Status
 import static org.forgerock.util.promise.Promises.newResultPromise
 
+import java.net.HttpURLConnection
 import java.net.InetSocketAddress
 import java.net.Socket
+import java.net.URL
 import java.util.UUID
 
 String configuredClientEndpoint = binding.hasVariable('clientEndpoint') ? (clientEndpoint as String) : null
@@ -23,6 +25,10 @@ if (configuredRedisPasswordEnvVar && configuredRedisPasswordEnvVar != 'REDIS_PAS
     if (overridePassword) { configuredRedisPassword = overridePassword }
 }
 def tokenRefKey = binding.hasVariable('tokenRefKey') ? (tokenRefKey as String) : 'token_ref_id'
+String configuredTransitKeyName = binding.hasVariable('transitKeyName') ? (transitKeyName as String)?.trim() : null
+String configuredTransitAppRoleName = binding.hasVariable('appRoleName') ? (appRoleName as String)?.trim() : 'default'
+String configuredTransitVaultRoleIdFile = binding.hasVariable('vaultRoleIdFile') ? (vaultRoleIdFile as String)?.trim() : (System.getenv('VAULT_ROLE_ID_FILE') ?: '/vault/file/openig-role-id')
+String configuredTransitVaultSecretIdFile = binding.hasVariable('vaultSecretIdFile') ? (vaultSecretIdFile as String)?.trim() : (System.getenv('VAULT_SECRET_ID_FILE') ?: '/vault/file/openig-secret-id')
 
 def readRespLine = { InputStream input ->
     ByteArrayOutputStream buffer = new ByteArrayOutputStream()
@@ -220,12 +226,107 @@ def stripOauth2EntriesFromSession = { String newTokenRefId ->
     session[tokenRefKey] = newTokenRefId
 }
 
+def readVaultResponseBody = { HttpURLConnection connection ->
+    def stream = null
+    try { stream = connection.inputStream } catch (Exception ignored) { stream = connection.errorStream }
+    if (stream == null) return ''
+    try { return stream.getText('UTF-8') } finally { stream.close() }
+}
+
+def getVaultTokenEntry = { String appRoleName, String roleIdFile, String secretIdFile ->
+    String vaultAddr = System.getenv('VAULT_ADDR') ?: 'http://vault:8200'
+    String vaultTokenCacheKey = 'vault_token_' + appRoleName
+    long nowEpochSeconds = (long)(System.currentTimeMillis() / 1000)
+    def tokenEntry = globals.compute(vaultTokenCacheKey) { key, existing ->
+        if (existing != null && existing.expiry > nowEpochSeconds) { return existing }
+        String roleId = new File(roleIdFile).text.trim()
+        String secretId = new File(secretIdFile).text.trim()
+        if (!roleId || !secretId) { throw new IllegalStateException('Role ID or Secret ID file is empty') }
+        HttpURLConnection loginConn = (HttpURLConnection) new URL("${vaultAddr}/v1/auth/approle/login").openConnection()
+        loginConn.requestMethod = 'POST'
+        loginConn.doOutput = true
+        loginConn.setRequestProperty('Content-Type', 'application/json')
+        loginConn.setRequestProperty('Accept', 'application/json')
+        loginConn.connectTimeout = 5000
+        loginConn.readTimeout = 5000
+        loginConn.outputStream.withCloseable { it.write(new groovy.json.JsonOutput().toJson([role_id: roleId, secret_id: secretId]).getBytes('UTF-8')) }
+        int loginStatus = loginConn.responseCode
+        String loginBody = readVaultResponseBody(loginConn)
+        loginConn.disconnect()
+        if (loginStatus < 200 || loginStatus >= 300) { throw new IllegalStateException("Vault AppRole login failed with HTTP ${loginStatus}") }
+        def loginJson = new groovy.json.JsonSlurper().parseText(loginBody)
+        String newToken = loginJson?.auth?.client_token as String
+        long leaseDuration = (loginJson?.auth?.lease_duration ?: 0) as long
+        if (!newToken?.trim()) { throw new IllegalStateException('Vault auth.client_token missing') }
+        return [token: newToken, expiry: nowEpochSeconds + leaseDuration]
+    }
+    tokenEntry
+}
+
+def invokeVaultTransit = { String operation, String transitKeyName, String payload, String appRoleName, String roleIdFile, String secretIdFile ->
+    String vaultAddr = System.getenv('VAULT_ADDR') ?: 'http://vault:8200'
+    String vaultTokenCacheKey = 'vault_token_' + appRoleName
+    Closure doRequest = { String vaultToken ->
+        HttpURLConnection conn = (HttpURLConnection) new URL("${vaultAddr}/v1/transit/${operation}/${transitKeyName}").openConnection()
+        conn.requestMethod = 'POST'
+        conn.doOutput = true
+        conn.setRequestProperty('Content-Type', 'application/json')
+        conn.setRequestProperty('Accept', 'application/json')
+        conn.setRequestProperty('X-Vault-Token', vaultToken)
+        conn.connectTimeout = 5000
+        conn.readTimeout = 5000
+        conn.outputStream.withCloseable { it.write(payload.getBytes('UTF-8')) }
+        int status = conn.responseCode
+        String body = readVaultResponseBody(conn)
+        conn.disconnect()
+        [status: status, body: body]
+    }
+    def tokenEntry = getVaultTokenEntry(appRoleName, roleIdFile, secretIdFile)
+    def result = doRequest(tokenEntry.token as String)
+    if (result.status == 403) {
+        globals.remove(vaultTokenCacheKey)
+        tokenEntry = getVaultTokenEntry(appRoleName, roleIdFile, secretIdFile)
+        result = doRequest(tokenEntry.token as String)
+    }
+    if (result.status < 200 || result.status >= 300) {
+        throw new IllegalStateException("Vault transit ${operation} failed with HTTP ${result.status}")
+    }
+    new groovy.json.JsonSlurper().parseText(result.body)
+}
+
+def vaultTransitEncrypt = { String plaintext, String transitKeyName, String appRoleName, String roleIdFile, String secretIdFile ->
+    String encoded = plaintext.getBytes('UTF-8').encodeBase64().toString()
+    String requestPayload = new groovy.json.JsonOutput().toJson([plaintext: encoded])
+    def responseJson = invokeVaultTransit('encrypt', transitKeyName, requestPayload, appRoleName, roleIdFile, secretIdFile)
+    String ciphertext = responseJson?.data?.ciphertext as String
+    if (!ciphertext?.startsWith('vault:v1:')) {
+        throw new IllegalStateException('Vault Transit encrypt returned unexpected ciphertext format')
+    }
+    ciphertext
+}
+
+def vaultTransitDecryptIfNeeded = { String value, String transitKeyName, String appRoleName, String roleIdFile, String secretIdFile ->
+    if (!value?.startsWith('vault:v1:')) {
+        return value
+    }
+    String requestPayload = new groovy.json.JsonOutput().toJson([ciphertext: value])
+    def responseJson = invokeVaultTransit('decrypt', transitKeyName, requestPayload, appRoleName, roleIdFile, secretIdFile)
+    String encodedPlaintext = responseJson?.data?.plaintext as String
+    if (!encodedPlaintext) {
+        throw new IllegalStateException('Vault Transit decrypt returned empty plaintext')
+    }
+    new String(encodedPlaintext.decodeBase64(), 'UTF-8')
+}
+
 try {
     if (!configuredClientEndpoint) {
         throw new IllegalStateException('TokenReferenceFilter requires clientEndpoint arg')
     }
     if (!configuredRedisHost) {
         throw new IllegalStateException('TokenReferenceFilter requires redisHost arg')
+    }
+    if (!configuredTransitKeyName) {
+        throw new IllegalStateException('TokenReferenceFilter requires transitKeyName arg')
     }
 
     String requestPath = request.uri.path as String
@@ -245,14 +346,28 @@ try {
             return newResultPromise(new Response(Status.BAD_GATEWAY))
         }
 
-        def restoredOauth2Entries = restoreOauth2SessionEntries(new JsonSlurper().parseText(redisPayload))
-        logger.info(
-            '[TokenReferenceFilter] Restored oauth2 session keys={} endpoint={} tokenRefKey={} tokenRefId={}',
-            restoredOauth2Entries.keySet(),
-            configuredClientEndpoint,
-            tokenRefKey,
-            tokenRefId
-        )
+        String decryptedPayload = null
+        boolean skipSessionRestore = false
+        if (isLogoutRequest) {
+            try {
+                decryptedPayload = vaultTransitDecryptIfNeeded(redisPayload, configuredTransitKeyName, configuredTransitAppRoleName, configuredTransitVaultRoleIdFile, configuredTransitVaultSecretIdFile)
+            } catch (Exception decryptEx) {
+                logger.warn('[TokenReferenceFilter] Transit decrypt failed on SLO path, proceeding with logout endpoint={} error={}', configuredClientEndpoint, decryptEx.getMessage())
+                skipSessionRestore = true
+            }
+        } else {
+            decryptedPayload = vaultTransitDecryptIfNeeded(redisPayload, configuredTransitKeyName, configuredTransitAppRoleName, configuredTransitVaultRoleIdFile, configuredTransitVaultSecretIdFile)
+        }
+        if (!skipSessionRestore) {
+            def restoredOauth2Entries = restoreOauth2SessionEntries(new JsonSlurper().parseText(decryptedPayload))
+            logger.info(
+                '[TokenReferenceFilter] Restored oauth2 session keys={} endpoint={} tokenRefKey={} tokenRefId={}',
+                restoredOauth2Entries.keySet(),
+                configuredClientEndpoint,
+                tokenRefKey,
+                tokenRefId
+            )
+        }
     }
 
     return next.handle(context, request).then({ response ->
@@ -346,9 +461,10 @@ try {
                 }
             }
 
-            String newTokenRefId = UUID.randomUUID().toString()
-            String redisPayload = JsonOutput.toJson([oauth2Entries: oauth2EntriesForResponse])
-            setInRedis(newTokenRefId, redisPayload)
+              String newTokenRefId = UUID.randomUUID().toString()
+              String plaintextPayload = JsonOutput.toJson([oauth2Entries: oauth2EntriesForResponse])
+              String redisPayload = vaultTransitEncrypt(plaintextPayload, configuredTransitKeyName, configuredTransitAppRoleName, configuredTransitVaultRoleIdFile, configuredTransitVaultSecretIdFile)
+              setInRedis(newTokenRefId, redisPayload)
             // TARGETED removal: only strip THIS app's oauth2 keys (not session.clear() which wipes other apps)
             discoverOauth2SessionKeys().each { key ->
                 try {
