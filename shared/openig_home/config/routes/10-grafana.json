@@ -82,9 +82,9 @@
           "redisHost": "shared-redis",
           "redisPort": "${env['REDIS_PORT'] != null ? env['REDIS_PORT'] : '6379'}",
           "redisAuth": "${env['REDIS_PASSWORD_APP5'] != null ? env['REDIS_PASSWORD_APP5'] : ''}",
-          "redisUser": "openig-app5",
-          "redisPasswordEnvVar": "REDIS_PASSWORD_APP5",
-          "redisKeyPrefix": "app5"
+            "redisUser": "openig-app5",
+            "redisPasswordEnvVar": "REDIS_PASSWORD_APP5",
+            "redisKeyPrefix": "app5"
         }
       }
     },
@@ -99,10 +99,14 @@
           "redisHost": "shared-redis",
           "redisTtl": 1800,
           "tokenRefKey": "token_ref_id_app5",
-          "sessionCacheKey": "oidc_sid_app5",
-          "redisUser": "openig-app5",
-          "redisPasswordEnvVar": "REDIS_PASSWORD_APP5",
-          "redisKeyPrefix": "app5"
+            "sessionCacheKey": "oidc_sid_app5",
+            "redisUser": "openig-app5",
+            "redisPasswordEnvVar": "REDIS_PASSWORD_APP5",
+            "redisKeyPrefix": "app5",
+            "transitKeyName": "app5-key",
+            "appRoleName": "openig-app5",
+            "vaultRoleIdFile": "/vault/file/openig-app5-role-id",
+            "vaultSecretIdFile": "/vault/file/openig-app5-secret-id"
         }
       }
     },

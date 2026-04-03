@@ -39,6 +39,7 @@ The active runtime shape is:
 |---------|---------------------|-------|
 | Route-local `JwtSession` cookies | Implemented | `SessionApp1..6` with `IG_SSO_APP1..APP6` |
 | Per-app Redis ACL | Implemented | `openig-app1..6`, minimal command set |
+| Vault Transit encryption for Redis token payloads | Implemented | TokenReferenceFilter — all mechanisms |
 | Per-app Vault AppRole isolation | Implemented | `openig-app1..6`, path-scoped policies |
 | Strip gateway session cookies before proxy | Implemented | `StripGatewaySessionCookies.groovy` on all app routes |
 | Backchannel logout with JWT validation | Implemented | `RS256` and `ES256` supported |
@@ -114,6 +115,10 @@ Current per-app Redis ACL mapping:
 - Skip Redis restore on `<clientEndpoint>/callback`
 - Skip Redis offload when the OAuth2 namespace has no real token data yet
 - Remove only the current app's discovered OAuth2 keys from session state
+
+Redis payloads are AES-256-GCM encrypted via Vault Transit before storage. Ciphertext format: `vault:v1:...`. On read, the filter detects the `vault:v1:` prefix and decrypts; legacy plaintext entries are accepted during rollout. Encrypt failure is fail-closed (no plaintext fallback). Decrypt failure on the SLO path logs a warning and proceeds.
+
+Every app route using `TokenReferenceFilter` MUST configure: `transitKeyName`, `appRoleName`, `vaultRoleIdFile`, `vaultSecretIdFile`. Missing `transitKeyName` causes immediate script failure.
 
 ### 3. Vault secret model
 
@@ -223,11 +228,14 @@ Rules:
 
 - [ ] AppRole is unique to the app
 - [ ] Policy is scoped to the app secret path only
+- [ ] Provision a Transit encryption key in Vault (`vault write transit/keys/<app>-key type=aes256-gcm96`)
+- [ ] Add transit encrypt/decrypt paths to the app AppRole policy
 - [ ] No downstream credentials or Vault tokens are serialized into `JwtSession`
 - [ ] Credential rotation owner is documented
 
 ### Logout
 
+- [ ] Configure `transitKeyName`, `appRoleName`, `vaultRoleIdFile`, `vaultSecretIdFile` in both auth and logout route `TokenReferenceFilter` args
 - [ ] RP-initiated logout reads the correct OIDC namespace
 - [ ] Backchannel logout URL is registered
 - [ ] Backchannel logout validates JWT before writing Redis state
@@ -256,7 +264,7 @@ Validated templates:
 
 | Template | Purpose |
 |----------|---------|
-| `TokenReferenceFilter.groovy` | Offload `oauth2:*` to Redis and keep cookies small |
+| `TokenReferenceFilter.groovy` | Offload oauth2 state to Redis with Vault Transit encryption; keep cookies small |
 | `SessionBlacklistFilter.groovy` | Enforce SLO revocation on every request |
 | `BackchannelLogoutHandler.groovy` | Validate logout JWT and write Redis blacklist state |
 | `SloHandler.groovy` | Handle RP-initiated logout for standard routes |
@@ -277,6 +285,7 @@ The current shared-runtime baseline includes the following implementation correc
 - `AUD-003`: `BackchannelLogoutHandler.groovy` now keeps a null-safe JWKS cache and applies a `60s` failure backoff after JWKS fetch failure to avoid hammering Keycloak.
 - `DOC-007`: `TokenReferenceFilter.groovy` fail-closed behavior applies only on the callback path, not on every authenticated request, to avoid false `500` responses on legitimate traffic.
 - `AUD-009`: `SloHandler.groovy` and `SloHandlerJellyfin.groovy` no longer use legacy hostname fallbacks and now fail closed with `500` if `OPENIG_PUBLIC_URL` or `CANONICAL_ORIGIN_APP4` are missing.
+- `VAULT-TRANSIT-001`: Redis token payloads are now encrypted via Vault Transit (AES-256-GCM) before storage. Per-app keys (`app1-key` through `app6-key`) with scoped AppRole policies ensure blast-radius isolation. Dual-format read supports rollout from plaintext.
 
 ## Production deployment on Kubernetes
 

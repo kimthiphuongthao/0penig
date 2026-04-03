@@ -32,7 +32,11 @@
               "tokenRefKey": "token_ref_id_app5",
               "redisUser": "openig-app5",
               "redisPasswordEnvVar": "REDIS_PASSWORD_APP5",
-              "redisKeyPrefix": "app5"
+              "redisKeyPrefix": "app5",
+              "transitKeyName": "app5-key",
+              "appRoleName": "openig-app5",
+              "vaultRoleIdFile": "/vault/file/openig-app5-role-id",
+              "vaultSecretIdFile": "/vault/file/openig-app5-secret-id"
             }
           }
         }

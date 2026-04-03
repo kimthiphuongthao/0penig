@@ -84,7 +84,11 @@
           "tokenRefKey": "token_ref_id_app2",
           "redisUser": "openig-app2",
           "redisPasswordEnvVar": "REDIS_PASSWORD_APP2",
-          "redisKeyPrefix": "app2"
+            "redisKeyPrefix": "app2",
+            "transitKeyName": "app2-key",
+            "appRoleName": "openig-app2",
+            "vaultRoleIdFile": "/vault/file/openig-app2-role-id",
+            "vaultSecretIdFile": "/vault/file/openig-app2-secret-id"
         }
       }
     },

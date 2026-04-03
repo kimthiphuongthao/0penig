@@ -33,7 +33,11 @@
               "sessionCacheKey": "oidc_sid_app6",
               "redisUser": "openig-app6",
               "redisPasswordEnvVar": "REDIS_PASSWORD_APP6",
-              "redisKeyPrefix": "app6"
+              "redisKeyPrefix": "app6",
+              "transitKeyName": "app6-key",
+              "appRoleName": "openig-app6",
+              "vaultRoleIdFile": "/vault/file/openig-app6-role-id",
+              "vaultSecretIdFile": "/vault/file/openig-app6-secret-id"
             }
           }
         }

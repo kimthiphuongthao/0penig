@@ -79,7 +79,11 @@
           "tokenRefKey": "token_ref_id_app4",
           "redisUser": "openig-app4",
           "redisPasswordEnvVar": "REDIS_PASSWORD_APP4",
-          "redisKeyPrefix": "app4"
+            "redisKeyPrefix": "app4",
+            "transitKeyName": "app4-key",
+            "appRoleName": "openig-app4",
+            "vaultRoleIdFile": "/vault/file/openig-app4-role-id",
+            "vaultSecretIdFile": "/vault/file/openig-app4-secret-id"
         }
       }
     },
