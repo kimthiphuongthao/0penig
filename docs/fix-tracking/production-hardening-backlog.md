@@ -11,7 +11,8 @@ This backlog tracks the remaining production-hardening work for the active `shar
 
 | Status | Count |
 |--------|-------|
-| OPEN | 5 |
+| OPEN | 4 |
+| DONE | 1 |
 | TOTAL | 5 |
 
 ## 1. VAULT-TRANSIT-001
@@ -20,7 +21,8 @@ This backlog tracks the remaining production-hardening work for the active `shar
 |-------|-------|
 | ID | VAULT-TRANSIT-001 |
 | Title | Vault Transit encryption for Redis token payloads |
-| Status | OPEN |
+| Status | DONE |
+| Commit hashes | 70d3114 (vault-bootstrap.sh), 37e1e51 (TokenReferenceFilter.groovy), 10d72dc (routes + standard-gateway-pattern.md) |
 | Priority | P1 |
 | Scope (files to change) | `shared/vault/init/vault-bootstrap.sh`<br>`shared/openig_home/scripts/groovy/TokenReferenceFilter.groovy` |
 | Acceptance Criteria | 1. `shared/vault/init/vault-bootstrap.sh` enables Vault Transit and provisions the policies/capabilities needed for shared-runtime bootstrap/admin flow and the relevant OpenIG AppRoles.<br>2. `shared/openig_home/scripts/groovy/TokenReferenceFilter.groovy` uses `globals.compute()` for Vault token caching and takes per-route args for AppRole files and Transit key name instead of hardcoded app-specific values.<br>3. Redis writes encrypt token payloads before `SET`, and Redis reads support both Transit ciphertext and legacy plaintext JSON during rollout.<br>4. Transit/Vault failures stay fail-closed with explicit timeout handling, `403` cache eviction, controlled disconnect/error handling, and no plaintext fallback on encrypt/decrypt failure. |
