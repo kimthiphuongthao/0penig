@@ -234,7 +234,7 @@ def readVaultResponseBody = { HttpURLConnection connection ->
 }
 
 def getVaultTokenEntry = { String appRoleName, String roleIdFile, String secretIdFile ->
-    String vaultAddr = System.getenv('VAULT_ADDR') ?: 'http://vault:8200'
+    String vaultAddr = System.getenv('VAULT_ADDR') ?: 'http://shared-vault:8200'
     String vaultTokenCacheKey = 'vault_token_' + appRoleName
     long nowEpochSeconds = (long)(System.currentTimeMillis() / 1000)
     def tokenEntry = globals.compute(vaultTokenCacheKey) { key, existing ->
@@ -264,7 +264,7 @@ def getVaultTokenEntry = { String appRoleName, String roleIdFile, String secretI
 }
 
 def invokeVaultTransit = { String operation, String transitKeyName, String payload, String appRoleName, String roleIdFile, String secretIdFile ->
-    String vaultAddr = System.getenv('VAULT_ADDR') ?: 'http://vault:8200'
+    String vaultAddr = System.getenv('VAULT_ADDR') ?: 'http://shared-vault:8200'
     String vaultTokenCacheKey = 'vault_token_' + appRoleName
     Closure doRequest = { String vaultToken ->
         HttpURLConnection conn = (HttpURLConnection) new URL("${vaultAddr}/v1/transit/${operation}/${transitKeyName}").openConnection()

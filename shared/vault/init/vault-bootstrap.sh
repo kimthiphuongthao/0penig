@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-export VAULT_ADDR=http://127.0.0.1:8200
+export VAULT_ADDR="${VAULT_ADDR:-http://127.0.0.1:8200}"
 KEYS_FILE=/vault/keys/.vault-keys
 BOOTSTRAP_FLAG=/vault/data/.bootstrap-done
 
